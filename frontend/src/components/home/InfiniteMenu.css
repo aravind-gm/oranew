@@ -1,0 +1,213 @@
+w/* ORA Infinite Menu Component - Styled with ORA Brand Colors */
+/* Colors: Blush Pink (#FFD6E8), Champagne Gold (#D4AF77), Charcoal (#2D2D2D), Ivory (#FDFBF7) */
+
+#infinite-grid-menu-canvas {
+  cursor: grab;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: absolute;
+  top: 0;
+  left: 0;
+  outline: none;
+  background: linear-gradient(135deg, #FDFBF7 0%, #FFFFFF 100%);
+  display: block;
+}
+
+#infinite-grid-menu-canvas:active {
+  cursor: grabbing;
+}
+
+/* Title Styling */
+.infinite-menu-title {
+  user-select: none;
+  position: absolute;
+  font-family: 'Cormorant Garamond', 'Playfair Display', serif;
+  font-weight: 700;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  left: 1.6em;
+  top: 50%;
+  color: #1a1a1a;
+  letter-spacing: 0.12em;
+  margin: 0;
+  text-transform: uppercase;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.infinite-menu-title.active {
+  opacity: 1;
+  transform: translate(20%, -50%);
+  pointer-events: auto;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.infinite-menu-title.inactive {
+  opacity: 0.3;
+  transform: translate(10%, -50%);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Description Styling */
+.infinite-menu-description {
+  user-select: none;
+  position: absolute;
+  font-family: 'Inter', 'Montserrat', sans-serif;
+  max-width: 12ch;
+  top: 50%;
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  right: 1%;
+  color: #1a1a1a;
+  font-weight: 600;
+  line-height: 1.6;
+  margin: 0;
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.infinite-menu-description.active {
+  opacity: 1;
+  transform: translate(-90%, -50%);
+  pointer-events: auto;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.infinite-menu-description.inactive {
+  opacity: 0.3;
+  transform: translate(-60%, -50%);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Action Button Styling - ORA Brand Colors */
+.infinite-menu-button {
+  position: absolute;
+  left: 50%;
+  z-index: 10;
+  width: 60px;
+  height: 60px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #FFD6E8 0%, #FFC0DB 100%);
+  border: 3px solid #2D2D2D;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(255, 214, 232, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.infinite-menu-button:hover:not(.inactive) {
+  box-shadow: 0 8px 24px rgba(255, 214, 232, 0.5);
+  transform: translateX(-50%) scale(1.05);
+}
+
+.infinite-menu-button:active:not(.inactive) {
+  transform: translateX(-50%) scale(0.98);
+}
+
+.infinite-menu-button-icon {
+  user-select: none;
+  position: relative;
+  color: #2D2D2D;
+  top: 2px;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+  transition: all 0.3s ease;
+}
+
+.infinite-menu-button.active {
+  bottom: 3.8em;
+  transform: translateX(-50%) scale(1);
+  opacity: 1;
+  pointer-events: auto;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.infinite-menu-button.inactive {
+  bottom: -80px;
+  transform: translateX(-50%) scale(0);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Responsive Design */
+@media (max-width: 1500px) {
+  .infinite-menu-title,
+  .infinite-menu-description {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  #infinite-grid-menu-canvas {
+    height: 400px;
+  }
+
+  .infinite-menu-title {
+    font-size: clamp(1.5rem, 4vw, 2.5rem);
+    left: 1em;
+  }
+
+  .infinite-menu-description {
+    font-size: 0.95rem;
+    max-width: 10ch;
+  }
+
+  .infinite-menu-button {
+    width: 50px;
+    height: 50px;
+  }
+
+  .infinite-menu-button-icon {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  #infinite-grid-menu-canvas {
+    height: 300px;
+  }
+
+  .infinite-menu-title {
+    font-size: 1.5rem;
+    left: 0.5em;
+  }
+
+  .infinite-menu-description {
+    font-size: 0.85rem;
+    max-width: 8ch;
+    right: 0.5%;
+  }
+
+  .infinite-menu-button {
+    width: 45px;
+    height: 45px;
+    bottom: 2.5em !important;
+  }
+
+  .infinite-menu-button-icon {
+    font-size: 18px;
+    top: 1px;
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .infinite-menu-title,
+  .infinite-menu-description,
+  .infinite-menu-button,
+  .infinite-menu-button-icon {
+    transition: none !important;
+  }
+}
+
+/* Light theme fallback for accessibility */
+@media (prefers-color-scheme: light) {
+  #infinite-grid-menu-canvas {
+    background: linear-gradient(135deg, #FDFBF7 0%, #FFFFFF 100%);
+  }
+}

@@ -1,0 +1,357 @@
+/* stylelint-disable at-rule-no-unknown */
+/* Import Elegant Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Tailwind CSS Directives */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   ORA LUXURY DESIGN SYSTEM
+   own. radiate. adorn.
+   ============================================ */
+
+@layer base {
+  /* ============================================
+     ROOT SEMANTIC TOKENS
+     ============================================ */
+  :root {
+    /* Brand Colors */
+    --primary: theme('colors.primary.500');    /* Blush Pink */
+    --primary-dark: theme('colors.primary.700');
+    --secondary: theme('colors.secondary.500'); /* Champagne Gold */
+    
+    /* Semantic Tokens */
+    --background: theme('colors.background');   /* Warm Ivory */
+    --foreground: theme('colors.foreground');   /* Dark Charcoal */
+    --card-bg: theme('colors.card.bg');
+    --card-border: theme('colors.card.border');
+    
+    /* Text Colors */
+    --text-primary: theme('colors.foreground');
+    --text-secondary: theme('colors.neutral.600');
+    --text-muted: theme('colors.neutral.500');
+    
+    /* UI Elements */
+    --border: theme('colors.card.border');
+    --input-bg: theme('colors.input.bg');
+    --input-border: theme('colors.input.border');
+    --input-focus: theme('colors.input.focus');
+    
+    /* Status Colors */
+    --error: theme('colors.error');
+    --success: theme('colors.success');
+    --warning: theme('colors.warning');
+  }
+
+  /* Global Reset */
+  * {
+    @apply border-neutral-200;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  /* Typography */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif font-light tracking-tight;
+  }
+
+  h1 { @apply text-4xl; }
+  h2 { @apply text-3xl; }
+  h3 { @apply text-2xl; }
+  h4 { @apply text-xl; }
+  h5 { @apply text-lg; }
+  h6 { @apply text-base; }
+}
+
+@layer components {
+  /* ============================================
+     BUTTON COMPONENTS
+     ============================================ */
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-8 py-3
+           bg-primary-500 text-white font-medium rounded-luxury
+           transition-all duration-200 
+           hover:bg-primary-700 hover:shadow-luxury-hover
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
+           active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center px-8 py-3
+           bg-secondary-500 text-black font-medium rounded-luxury
+           transition-all duration-200 
+           hover:bg-secondary-600 hover:shadow-luxury-hover
+           focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:ring-offset-2
+           active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center px-8 py-3
+           border-2 border-primary-500 text-foreground font-medium rounded-luxury
+           transition-all duration-200 
+           hover:bg-primary-500 hover:text-white hover:shadow-luxury-hover
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
+           active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center px-6 py-2
+           text-foreground font-medium rounded-luxury
+           transition-all duration-200 
+           hover:bg-primary-100
+           focus:outline-none focus:ring-2 focus:ring-primary-300
+           active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* ============================================
+     FORM INPUTS
+     ============================================ */
+  .input-luxury {
+    @apply w-full px-4 py-3 
+           border border-neutral-200 rounded-luxury
+           bg-white text-foreground placeholder:text-neutral-500
+           transition-all duration-200 
+           focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500
+           disabled:bg-neutral-100 disabled:cursor-not-allowed;
+  }
+
+  textarea.input-luxury {
+    @apply resize-none;
+  }
+
+  /* ============================================
+     CARD COMPONENTS
+     ============================================ */
+  .card-luxury {
+    @apply bg-white rounded-luxury shadow-luxury
+           border border-neutral-100
+           transition-all duration-300 
+           hover:shadow-luxury-hover;
+  }
+
+  .card-luxury-elevated {
+    @apply card-luxury shadow-luxury-lg;
+  }
+
+  /* Product Card */
+  .product-card {
+    @apply card-luxury overflow-hidden cursor-pointer group;
+  }
+
+  .product-image-container {
+    @apply relative aspect-[3/4] overflow-hidden bg-neutral-100;
+  }
+
+  .product-image {
+    @apply w-full h-full object-cover 
+           transition-transform duration-500 
+           group-hover:scale-105;
+  }
+
+  /* ============================================
+     BADGE COMPONENTS
+     ============================================ */
+  .product-badge-new {
+    @apply px-3 py-1.5 text-[10px] tracking-[0.15em] uppercase font-medium 
+           bg-primary-50 text-primary-700
+           rounded-full shadow-sm border border-primary-100;
+  }
+
+  .product-badge-bestseller {
+    @apply px-3 py-1.5 text-[10px] tracking-[0.15em] uppercase font-medium 
+           bg-primary-500 text-white
+           rounded-full shadow-sm;
+    opacity: 0.9;
+  }
+
+  .product-badge-sale {
+    @apply px-3 py-1.5 text-[10px] tracking-[0.1em] uppercase font-medium 
+           bg-error text-white
+           rounded-full shadow-sm;
+  }
+
+  .badge-luxury {
+    @apply inline-block px-3 py-1 text-sm font-medium rounded-full;
+  }
+
+  .badge-discount {
+    @apply badge-luxury bg-error text-white;
+  }
+
+  .badge-new {
+    @apply badge-luxury bg-primary-100 text-primary-700;
+  }
+
+  /* ============================================
+     SKELETON LOADER
+     ============================================ */
+  .skeleton {
+    @apply bg-neutral-200 animate-skeleton rounded;
+  }
+
+  /* ============================================
+     LAYOUT COMPONENTS
+     ============================================ */
+  .container-luxury {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .section-luxury {
+    @apply py-12 sm:py-16 md:py-20 lg:py-24;
+  }
+
+  /* ============================================
+     TYPOGRAPHY UTILITIES
+     ============================================ */
+  .heading-display {
+    @apply text-4xl sm:text-5xl md:text-6xl lg:text-display-lg 
+           font-serif font-light tracking-tight text-foreground;
+  }
+
+  .heading-section {
+    @apply text-3xl sm:text-4xl md:text-display-md 
+           font-serif font-light tracking-tight text-foreground;
+  }
+
+  .heading-page {
+    @apply text-2xl sm:text-3xl md:text-display-sm 
+           font-serif font-light text-foreground;
+  }
+
+  .heading-subtitle {
+    @apply text-lg sm:text-xl md:text-2xl 
+           font-serif font-light italic text-text-secondary;
+  }
+
+  /* ============================================
+     TEXT UTILITIES
+     ============================================ */
+  .text-luxury {
+    @apply text-neutral-600 leading-relaxed;
+  }
+
+  .text-muted-luxury {
+    @apply text-neutral-500 text-sm;
+  }
+
+  .divider-luxury {
+    @apply w-full h-px bg-neutral-200;
+  }
+
+  .link-luxury {
+    @apply text-primary-500 hover:text-primary-700 
+           transition-colors duration-200 
+           underline-offset-4 hover:underline;
+  }
+
+}
+
+@layer utilities {
+  /* Custom Animations */
+  .animate-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Smooth Scroll */
+  .smooth-scroll {
+    scroll-behavior: smooth;
+  }
+
+  /* Hide Scrollbar */
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Aspect Ratios */
+  .aspect-product {
+    aspect-ratio: 3 / 4;
+  }
+
+  .aspect-banner {
+    aspect-ratio: 16 / 9;
+  }
+
+  .aspect-hero {
+    aspect-ratio: 16 / 9;
+  }
+
+  /* Hero Section Utilities */
+  .hero-gradient-left {
+    background: linear-gradient(
+      to right,
+      rgba(253, 251, 247, 0.95) 0%,
+      rgba(253, 251, 247, 0.8) 30%,
+      rgba(253, 251, 247, 0.4) 60%,
+      transparent 100%
+    );
+  }
+
+  .hero-text-shadow {
+    text-shadow: 0 2px 20px rgba(45, 45, 45, 0.1);
+  }
+
+  /* Accessibility */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+}
+
+/* ============================================
+   TOAST NOTIFICATIONS
+   ============================================ */
+.toast-luxury {
+  @apply bg-white shadow-luxury-hover rounded-luxury px-6 py-4 
+         text-foreground border border-neutral-100;
+}
+
+/* ============================================
+   SELECTION STYLES
+   ============================================ */
+::selection {
+  @apply bg-primary-500 text-white;
+}
+
+::-moz-selection {
+  @apply bg-primary-500 text-white;
+}

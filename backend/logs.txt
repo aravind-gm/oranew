@@ -1,0 +1,188 @@
+prisma:query SELECT "public"."orders"."id", "public"."orders"."order_number", "public"."orders"."user_id", "public"."orders"."status"::text, "public"."orders"."subtotal", "public"."orders"."discount_amount", "public"."orders"."gst_amount", "public"."orders"."shipping_fee", "public"."orders"."total_amount", "public"."orders"."shipping_address_id", "public"."orders"."billing_address_id", "public"."orders"."payment_method", "public"."orders"."payment_status"::text, "public"."orders"."tracking_number", "public"."orders"."shipped_at", "public"."orders"."delivered_at", "public"."orders"."cancelled_at", "public"."orders"."cancel_reason", "public"."orders"."notes", "public"."orders"."created_at", "public"."orders"."updated_at" FROM "public"."orders" WHERE ("public"."orders"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."order_items"."id", "public"."order_items"."order_id", "public"."order_items"."product_id", "public"."order_items"."product_name", "public"."order_items"."product_image", "public"."order_items"."quantity", "public"."order_items"."unit_price", "public"."order_items"."discount", "public"."order_items"."gst_rate", "public"."order_items"."total_price" FROM "public"."order_items" WHERE "public"."order_items"."order_id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."products"."id", "public"."products"."name", "public"."products"."slug", "public"."products"."description", "public"."products"."short_description", "public"."products"."price", "public"."products"."discount_percentage", "public"."products"."final_price", "public"."products"."sku", "public"."products"."category_id", "public"."products"."material", "public"."products"."care_instructions", "public"."products"."weight", "public"."products"."dimensions", "public"."products"."stock_quantity", "public"."products"."low_stock_threshold", "public"."products"."is_active", "public"."products"."is_featured", "public"."products"."meta_title", "public"."products"."meta_description", "public"."products"."average_rating", "public"."products"."review_count", "public"."products"."created_at", "public"."products"."updated_at" FROM "public"."products" WHERE "public"."products"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."users"."id", "public"."users"."email", "public"."users"."password_hash", "public"."users"."full_name", "public"."users"."phone", "public"."users"."role"::text, "public"."users"."is_verified", "public"."users"."created_at", "public"."users"."updated_at" FROM "public"."users" WHERE "public"."users"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."payments"."id", "public"."payments"."order_id", "public"."payments"."payment_gateway"::text, "public"."payments"."transaction_id", "public"."payments"."amount", "public"."payments"."currency", "public"."payments"."status"::text, "public"."payments"."payment_method", "public"."payments"."gateway_response", "public"."payments"."created_at" FROM "public"."payments" WHERE "public"."payments"."order_id" IN ($1) OFFSET $2
+[Payment] Order found: {
+  orderId: '2307e4c1-39b8-4485-9626-27821a354800',
+  status: 'PENDING',
+  paymentStatus: 'PENDING',
+  totalAmount: 51.03
+}
+GET /health
+GET /health
+GET /health
+GET /health
+GET /health
+GET /health
+GET /health
+GET /health
+GET /health
+GET /health
+GET /health
+GET /health
+GET /health
+GET /health
+GET /api/orders
+[Auth Middleware] Verifying token: {
+  endpoint: '/',
+  tokenPrefix: 'eyJhbGciOiJIUzI1NiIs...',
+  tokenLength: 243
+}
+[Auth Middleware] Token verified successfully: {
+  userId: '24ae1f95-17b8-4a59-b9c9-09a2f35c33d2',
+  email: 'test@test.com',
+  endpoint: '/'
+}
+prisma:query SELECT "public"."orders"."id", "public"."orders"."order_number", "public"."orders"."user_id", "public"."orders"."status"::text, "public"."orders"."subtotal", "public"."orders"."discount_amount", "public"."orders"."gst_amount", "public"."orders"."shipping_fee", "public"."orders"."total_amount", "public"."orders"."shipping_address_id", "public"."orders"."billing_address_id", "public"."orders"."payment_method", "public"."orders"."payment_status"::text, "public"."orders"."tracking_number", "public"."orders"."shipped_at", "public"."orders"."delivered_at", "public"."orders"."cancelled_at", "public"."orders"."cancel_reason", "public"."orders"."notes", "public"."orders"."created_at", "public"."orders"."updated_at" FROM "public"."orders" WHERE "public"."orders"."user_id" = $1 ORDER BY "public"."orders"."created_at" DESC OFFSET $2
+prisma:query SELECT "public"."order_items"."id", "public"."order_items"."order_id", "public"."order_items"."product_id", "public"."order_items"."product_name", "public"."order_items"."product_image", "public"."order_items"."quantity", "public"."order_items"."unit_price", "public"."order_items"."discount", "public"."order_items"."gst_rate", "public"."order_items"."total_price" FROM "public"."order_items" WHERE "public"."order_items"."order_id" IN ($1,$2,$3,$4) OFFSET $5
+prisma:query SELECT "public"."payments"."id", "public"."payments"."order_id", "public"."payments"."payment_gateway"::text, "public"."payments"."transaction_id", "public"."payments"."amount", "public"."payments"."currency", "public"."payments"."status"::text, "public"."payments"."payment_method", "public"."payments"."gateway_response", "public"."payments"."created_at" FROM "public"."payments" WHERE "public"."payments"."order_id" IN ($1,$2,$3,$4) OFFSET $5
+GET /health
+GET /health
+GET /health
+GET /health
+POST /api/auth/login
+prisma:query SELECT 1
+prisma:query SELECT "public"."users"."id", "public"."users"."email", "public"."users"."password_hash", "public"."users"."full_name", "public"."users"."phone", "public"."users"."role"::text, "public"."users"."is_verified", "public"."users"."created_at", "public"."users"."updated_at" FROM "public"."users" WHERE ("public"."users"."email" = $1 AND 1=1) LIMIT $2 OFFSET $3
+GET /api/orders
+[Auth Middleware] Verifying token: {
+  endpoint: '/',
+  tokenPrefix: 'eyJhbGciOiJIUzI1NiIs...',
+  tokenLength: 243
+}
+[Auth Middleware] Token verified successfully: {
+  userId: '3020de08-e119-4b49-9ff8-8aa67af57b5a',
+  email: 'admin@orashop.in',
+  endpoint: '/'
+}
+prisma:query SELECT "public"."orders"."id", "public"."orders"."order_number", "public"."orders"."user_id", "public"."orders"."status"::text, "public"."orders"."subtotal", "public"."orders"."discount_amount", "public"."orders"."gst_amount", "public"."orders"."shipping_fee", "public"."orders"."total_amount", "public"."orders"."shipping_address_id", "public"."orders"."billing_address_id", "public"."orders"."payment_method", "public"."orders"."payment_status"::text, "public"."orders"."tracking_number", "public"."orders"."shipped_at", "public"."orders"."delivered_at", "public"."orders"."cancelled_at", "public"."orders"."cancel_reason", "public"."orders"."notes", "public"."orders"."created_at", "public"."orders"."updated_at" FROM "public"."orders" WHERE "public"."orders"."user_id" = $1 ORDER BY "public"."orders"."created_at" DESC OFFSET $2
+prisma:query SELECT "public"."order_items"."id", "public"."order_items"."order_id", "public"."order_items"."product_id", "public"."order_items"."product_name", "public"."order_items"."product_image", "public"."order_items"."quantity", "public"."order_items"."unit_price", "public"."order_items"."discount", "public"."order_items"."gst_rate", "public"."order_items"."total_price" FROM "public"."order_items" WHERE "public"."order_items"."order_id" IN ($1,$2,$3,$4,$5,$6,$7,$8,$9) OFFSET $10
+prisma:query SELECT "public"."payments"."id", "public"."payments"."order_id", "public"."payments"."payment_gateway"::text, "public"."payments"."transaction_id", "public"."payments"."amount", "public"."payments"."currency", "public"."payments"."status"::text, "public"."payments"."payment_method", "public"."payments"."gateway_response", "public"."payments"."created_at" FROM "public"."payments" WHERE "public"."payments"."order_id" IN ($1,$2,$3,$4,$5,$6,$7,$8,$9) OFFSET $10
+POST /api/orders/checkout
+[Auth Middleware] Verifying token: {
+  endpoint: '/checkout',
+  tokenPrefix: 'eyJhbGciOiJIUzI1NiIs...',
+  tokenLength: 243
+}
+[Auth Middleware] Token verified successfully: {
+  userId: '3020de08-e119-4b49-9ff8-8aa67af57b5a',
+  email: 'admin@orashop.in',
+  endpoint: '/checkout'
+}
+prisma:query SELECT "public"."users"."id", "public"."users"."email", "public"."users"."password_hash", "public"."users"."full_name", "public"."users"."phone", "public"."users"."role"::text, "public"."users"."is_verified", "public"."users"."created_at", "public"."users"."updated_at" FROM "public"."users" WHERE ("public"."users"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query INSERT INTO "public"."addresses" ("id","user_id","full_name","phone","address_line1","city","state","pincode","country","is_default","address_type") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,CAST($11::text AS "public"."AddressType")) RETURNING "public"."addresses"."id", "public"."addresses"."user_id", "public"."addresses"."full_name", "public"."addresses"."phone", "public"."addresses"."address_line1", "public"."addresses"."address_line2", "public"."addresses"."city", "public"."addresses"."state", "public"."addresses"."pincode", "public"."addresses"."country", "public"."addresses"."is_default", "public"."addresses"."address_type"::text
+prisma:query SELECT "public"."products"."id", "public"."products"."name", "public"."products"."slug", "public"."products"."description", "public"."products"."short_description", "public"."products"."price", "public"."products"."discount_percentage", "public"."products"."final_price", "public"."products"."sku", "public"."products"."category_id", "public"."products"."material", "public"."products"."care_instructions", "public"."products"."weight", "public"."products"."dimensions", "public"."products"."stock_quantity", "public"."products"."low_stock_threshold", "public"."products"."is_active", "public"."products"."is_featured", "public"."products"."meta_title", "public"."products"."meta_description", "public"."products"."average_rating", "public"."products"."review_count", "public"."products"."created_at", "public"."products"."updated_at" FROM "public"."products" WHERE "public"."products"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."product_images"."id", "public"."product_images"."product_id", "public"."product_images"."image_url", "public"."product_images"."alt_text", "public"."product_images"."sort_order", "public"."product_images"."is_primary" FROM "public"."product_images" WHERE "public"."product_images"."product_id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."addresses"."id", "public"."addresses"."user_id", "public"."addresses"."full_name", "public"."addresses"."phone", "public"."addresses"."address_line1", "public"."addresses"."address_line2", "public"."addresses"."city", "public"."addresses"."state", "public"."addresses"."pincode", "public"."addresses"."country", "public"."addresses"."is_default", "public"."addresses"."address_type"::text FROM "public"."addresses" WHERE ("public"."addresses"."id" = $1 AND "public"."addresses"."user_id" = $2) LIMIT $3 OFFSET $4
+prisma:query SELECT "public"."addresses"."id", "public"."addresses"."user_id", "public"."addresses"."full_name", "public"."addresses"."phone", "public"."addresses"."address_line1", "public"."addresses"."address_line2", "public"."addresses"."city", "public"."addresses"."state", "public"."addresses"."pincode", "public"."addresses"."country", "public"."addresses"."is_default", "public"."addresses"."address_type"::text FROM "public"."addresses" WHERE ("public"."addresses"."id" = $1 AND "public"."addresses"."user_id" = $2) LIMIT $3 OFFSET $4
+prisma:query BEGIN
+prisma:query INSERT INTO "public"."orders" ("id","order_number","user_id","status","subtotal","discount_amount","gst_amount","shipping_fee","total_amount","shipping_address_id","billing_address_id","payment_status","created_at","updated_at") VALUES ($1,$2,$3,CAST($4::text AS "public"."OrderStatus"),$5,$6,$7,$8,$9,$10,$11,CAST($12::text AS "public"."PaymentStatus"),$13,$14) RETURNING "public"."orders"."id"
+prisma:query INSERT INTO "public"."order_items" ("id","order_id","product_id","product_name","product_image","quantity","unit_price","discount","gst_rate","total_price") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING "public"."order_items"."id"
+prisma:query SELECT "public"."orders"."id", "public"."orders"."order_number", "public"."orders"."user_id", "public"."orders"."status"::text, "public"."orders"."subtotal", "public"."orders"."discount_amount", "public"."orders"."gst_amount", "public"."orders"."shipping_fee", "public"."orders"."total_amount", "public"."orders"."shipping_address_id", "public"."orders"."billing_address_id", "public"."orders"."payment_method", "public"."orders"."payment_status"::text, "public"."orders"."tracking_number", "public"."orders"."shipped_at", "public"."orders"."delivered_at", "public"."orders"."cancelled_at", "public"."orders"."cancel_reason", "public"."orders"."notes", "public"."orders"."created_at", "public"."orders"."updated_at" FROM "public"."orders" WHERE "public"."orders"."id" = $1 LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."order_items"."id", "public"."order_items"."order_id", "public"."order_items"."product_id", "public"."order_items"."product_name", "public"."order_items"."product_image", "public"."order_items"."quantity", "public"."order_items"."unit_price", "public"."order_items"."discount", "public"."order_items"."gst_rate", "public"."order_items"."total_price" FROM "public"."order_items" WHERE "public"."order_items"."order_id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."addresses"."id", "public"."addresses"."user_id", "public"."addresses"."full_name", "public"."addresses"."phone", "public"."addresses"."address_line1", "public"."addresses"."address_line2", "public"."addresses"."city", "public"."addresses"."state", "public"."addresses"."pincode", "public"."addresses"."country", "public"."addresses"."is_default", "public"."addresses"."address_type"::text FROM "public"."addresses" WHERE "public"."addresses"."id" IN ($1) OFFSET $2
+prisma:query COMMIT
+prisma:query SELECT "public"."products"."id", "public"."products"."stock_quantity" FROM "public"."products" WHERE ("public"."products"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT SUM("quantity") FROM (SELECT "public"."inventory_locks"."quantity" FROM "public"."inventory_locks" WHERE ("public"."inventory_locks"."product_id" = $1 AND "public"."inventory_locks"."expires_at" > $2) OFFSET $3) AS "sub"
+prisma:query INSERT INTO "public"."inventory_locks" ("id","product_id","order_id","quantity","expires_at","created_at") VALUES ($1,$2,$3,$4,$5,$6) RETURNING "public"."inventory_locks"."id", "public"."inventory_locks"."product_id", "public"."inventory_locks"."order_id", "public"."inventory_locks"."quantity", "public"."inventory_locks"."expires_at", "public"."inventory_locks"."created_at"
+GET /api/orders/9241a060-37b7-4a3d-898d-ac00b1975c29
+[Auth Middleware] Verifying token: {
+  endpoint: '/9241a060-37b7-4a3d-898d-ac00b1975c29',
+  tokenPrefix: 'eyJhbGciOiJIUzI1NiIs...',
+  tokenLength: 243
+}
+[Auth Middleware] Token verified successfully: {
+  userId: '3020de08-e119-4b49-9ff8-8aa67af57b5a',
+  email: 'admin@orashop.in',
+  endpoint: '/9241a060-37b7-4a3d-898d-ac00b1975c29'
+}
+prisma:query SELECT "public"."orders"."id", "public"."orders"."order_number", "public"."orders"."user_id", "public"."orders"."status"::text, "public"."orders"."subtotal", "public"."orders"."discount_amount", "public"."orders"."gst_amount", "public"."orders"."shipping_fee", "public"."orders"."total_amount", "public"."orders"."shipping_address_id", "public"."orders"."billing_address_id", "public"."orders"."payment_method", "public"."orders"."payment_status"::text, "public"."orders"."tracking_number", "public"."orders"."shipped_at", "public"."orders"."delivered_at", "public"."orders"."cancelled_at", "public"."orders"."cancel_reason", "public"."orders"."notes", "public"."orders"."created_at", "public"."orders"."updated_at" FROM "public"."orders" WHERE ("public"."orders"."id" = $1 AND "public"."orders"."user_id" = $2) LIMIT $3 OFFSET $4
+prisma:query SELECT "public"."order_items"."id", "public"."order_items"."order_id", "public"."order_items"."product_id", "public"."order_items"."product_name", "public"."order_items"."product_image", "public"."order_items"."quantity", "public"."order_items"."unit_price", "public"."order_items"."discount", "public"."order_items"."gst_rate", "public"."order_items"."total_price" FROM "public"."order_items" WHERE "public"."order_items"."order_id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."products"."id", "public"."products"."name", "public"."products"."slug", "public"."products"."description", "public"."products"."short_description", "public"."products"."price", "public"."products"."discount_percentage", "public"."products"."final_price", "public"."products"."sku", "public"."products"."category_id", "public"."products"."material", "public"."products"."care_instructions", "public"."products"."weight", "public"."products"."dimensions", "public"."products"."stock_quantity", "public"."products"."low_stock_threshold", "public"."products"."is_active", "public"."products"."is_featured", "public"."products"."meta_title", "public"."products"."meta_description", "public"."products"."average_rating", "public"."products"."review_count", "public"."products"."created_at", "public"."products"."updated_at" FROM "public"."products" WHERE "public"."products"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."addresses"."id", "public"."addresses"."user_id", "public"."addresses"."full_name", "public"."addresses"."phone", "public"."addresses"."address_line1", "public"."addresses"."address_line2", "public"."addresses"."city", "public"."addresses"."state", "public"."addresses"."pincode", "public"."addresses"."country", "public"."addresses"."is_default", "public"."addresses"."address_type"::text FROM "public"."addresses" WHERE "public"."addresses"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."addresses"."id", "public"."addresses"."user_id", "public"."addresses"."full_name", "public"."addresses"."phone", "public"."addresses"."address_line1", "public"."addresses"."address_line2", "public"."addresses"."city", "public"."addresses"."state", "public"."addresses"."pincode", "public"."addresses"."country", "public"."addresses"."is_default", "public"."addresses"."address_type"::text FROM "public"."addresses" WHERE "public"."addresses"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."payments"."id", "public"."payments"."order_id", "public"."payments"."payment_gateway"::text, "public"."payments"."transaction_id", "public"."payments"."amount", "public"."payments"."currency", "public"."payments"."status"::text, "public"."payments"."payment_method", "public"."payments"."gateway_response", "public"."payments"."created_at" FROM "public"."payments" WHERE "public"."payments"."order_id" IN ($1) OFFSET $2
+POST /api/payments/create
+[Auth Middleware] Verifying token: {
+  endpoint: '/create',
+  tokenPrefix: 'eyJhbGciOiJIUzI1NiIs...',
+  tokenLength: 243
+}
+[Auth Middleware] Token verified successfully: {
+  userId: '3020de08-e119-4b49-9ff8-8aa67af57b5a',
+  email: 'admin@orashop.in',
+  endpoint: '/create'
+}
+[Payment] Create payment request: {
+  orderId: '9241a060-37b7-4a3d-898d-ac00b1975c29',
+  userId: '3020de08-e119-4b49-9ff8-8aa67af57b5a'
+}
+prisma:query SELECT "public"."orders"."id", "public"."orders"."order_number", "public"."orders"."user_id", "public"."orders"."status"::text, "public"."orders"."subtotal", "public"."orders"."discount_amount", "public"."orders"."gst_amount", "public"."orders"."shipping_fee", "public"."orders"."total_amount", "public"."orders"."shipping_address_id", "public"."orders"."billing_address_id", "public"."orders"."payment_method", "public"."orders"."payment_status"::text, "public"."orders"."tracking_number", "public"."orders"."shipped_at", "public"."orders"."delivered_at", "public"."orders"."cancelled_at", "public"."orders"."cancel_reason", "public"."orders"."notes", "public"."orders"."created_at", "public"."orders"."updated_at" FROM "public"."orders" WHERE ("public"."orders"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."order_items"."id", "public"."order_items"."order_id", "public"."order_items"."product_id", "public"."order_items"."product_name", "public"."order_items"."product_image", "public"."order_items"."quantity", "public"."order_items"."unit_price", "public"."order_items"."discount", "public"."order_items"."gst_rate", "public"."order_items"."total_price" FROM "public"."order_items" WHERE "public"."order_items"."order_id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."products"."id", "public"."products"."name", "public"."products"."slug", "public"."products"."description", "public"."products"."short_description", "public"."products"."price", "public"."products"."discount_percentage", "public"."products"."final_price", "public"."products"."sku", "public"."products"."category_id", "public"."products"."material", "public"."products"."care_instructions", "public"."products"."weight", "public"."products"."dimensions", "public"."products"."stock_quantity", "public"."products"."low_stock_threshold", "public"."products"."is_active", "public"."products"."is_featured", "public"."products"."meta_title", "public"."products"."meta_description", "public"."products"."average_rating", "public"."products"."review_count", "public"."products"."created_at", "public"."products"."updated_at" FROM "public"."products" WHERE "public"."products"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."users"."id", "public"."users"."email", "public"."users"."password_hash", "public"."users"."full_name", "public"."users"."phone", "public"."users"."role"::text, "public"."users"."is_verified", "public"."users"."created_at", "public"."users"."updated_at" FROM "public"."users" WHERE "public"."users"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."payments"."id", "public"."payments"."order_id", "public"."payments"."payment_gateway"::text, "public"."payments"."transaction_id", "public"."payments"."amount", "public"."payments"."currency", "public"."payments"."status"::text, "public"."payments"."payment_method", "public"."payments"."gateway_response", "public"."payments"."created_at" FROM "public"."payments" WHERE "public"."payments"."order_id" IN ($1) OFFSET $2
+[Payment] Order found: {
+  orderId: '9241a060-37b7-4a3d-898d-ac00b1975c29',
+  status: 'PENDING',
+  paymentStatus: 'PENDING',
+  totalAmount: 51.03
+}
+GET /health
+GET /health
+GET /health
+GET /health
+POST /api/auth/login
+prisma:query SELECT 1
+prisma:query SELECT "public"."users"."id", "public"."users"."email", "public"."users"."password_hash", "public"."users"."full_name", "public"."users"."phone", "public"."users"."role"::text, "public"."users"."is_verified", "public"."users"."created_at", "public"."users"."updated_at" FROM "public"."users" WHERE ("public"."users"."email" = $1 AND 1=1) LIMIT $2 OFFSET $3
+GET /api/orders/9241a060-37b7-4a3d-898d-ac00b1975c29
+[Auth Middleware] Verifying token: {
+  endpoint: '/9241a060-37b7-4a3d-898d-ac00b1975c29',
+  tokenPrefix: 'eyJhbGciOiJIUzI1NiIs...',
+  tokenLength: 243
+}
+[Auth Middleware] Token verified successfully: {
+  userId: '3020de08-e119-4b49-9ff8-8aa67af57b5a',
+  email: 'admin@orashop.in',
+  endpoint: '/9241a060-37b7-4a3d-898d-ac00b1975c29'
+}
+prisma:query SELECT "public"."orders"."id", "public"."orders"."order_number", "public"."orders"."user_id", "public"."orders"."status"::text, "public"."orders"."subtotal", "public"."orders"."discount_amount", "public"."orders"."gst_amount", "public"."orders"."shipping_fee", "public"."orders"."total_amount", "public"."orders"."shipping_address_id", "public"."orders"."billing_address_id", "public"."orders"."payment_method", "public"."orders"."payment_status"::text, "public"."orders"."tracking_number", "public"."orders"."shipped_at", "public"."orders"."delivered_at", "public"."orders"."cancelled_at", "public"."orders"."cancel_reason", "public"."orders"."notes", "public"."orders"."created_at", "public"."orders"."updated_at" FROM "public"."orders" WHERE ("public"."orders"."id" = $1 AND "public"."orders"."user_id" = $2) LIMIT $3 OFFSET $4
+prisma:query SELECT "public"."order_items"."id", "public"."order_items"."order_id", "public"."order_items"."product_id", "public"."order_items"."product_name", "public"."order_items"."product_image", "public"."order_items"."quantity", "public"."order_items"."unit_price", "public"."order_items"."discount", "public"."order_items"."gst_rate", "public"."order_items"."total_price" FROM "public"."order_items" WHERE "public"."order_items"."order_id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."products"."id", "public"."products"."name", "public"."products"."slug", "public"."products"."description", "public"."products"."short_description", "public"."products"."price", "public"."products"."discount_percentage", "public"."products"."final_price", "public"."products"."sku", "public"."products"."category_id", "public"."products"."material", "public"."products"."care_instructions", "public"."products"."weight", "public"."products"."dimensions", "public"."products"."stock_quantity", "public"."products"."low_stock_threshold", "public"."products"."is_active", "public"."products"."is_featured", "public"."products"."meta_title", "public"."products"."meta_description", "public"."products"."average_rating", "public"."products"."review_count", "public"."products"."created_at", "public"."products"."updated_at" FROM "public"."products" WHERE "public"."products"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."addresses"."id", "public"."addresses"."user_id", "public"."addresses"."full_name", "public"."addresses"."phone", "public"."addresses"."address_line1", "public"."addresses"."address_line2", "public"."addresses"."city", "public"."addresses"."state", "public"."addresses"."pincode", "public"."addresses"."country", "public"."addresses"."is_default", "public"."addresses"."address_type"::text FROM "public"."addresses" WHERE "public"."addresses"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."addresses"."id", "public"."addresses"."user_id", "public"."addresses"."full_name", "public"."addresses"."phone", "public"."addresses"."address_line1", "public"."addresses"."address_line2", "public"."addresses"."city", "public"."addresses"."state", "public"."addresses"."pincode", "public"."addresses"."country", "public"."addresses"."is_default", "public"."addresses"."address_type"::text FROM "public"."addresses" WHERE "public"."addresses"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."payments"."id", "public"."payments"."order_id", "public"."payments"."payment_gateway"::text, "public"."payments"."transaction_id", "public"."payments"."amount", "public"."payments"."currency", "public"."payments"."status"::text, "public"."payments"."payment_method", "public"."payments"."gateway_response", "public"."payments"."created_at" FROM "public"."payments" WHERE "public"."payments"."order_id" IN ($1) OFFSET $2
+GET /health
+POST /api/payments/create
+[Auth Middleware] Verifying token: {
+  endpoint: '/create',
+  tokenPrefix: 'eyJhbGciOiJIUzI1NiIs...',
+  tokenLength: 243
+}
+[Auth Middleware] Token verified successfully: {
+  userId: '3020de08-e119-4b49-9ff8-8aa67af57b5a',
+  email: 'admin@orashop.in',
+  endpoint: '/create'
+}
+[Payment] Create payment request: {
+  orderId: '9241a060-37b7-4a3d-898d-ac00b1975c29',
+  userId: '3020de08-e119-4b49-9ff8-8aa67af57b5a'
+}
+prisma:query SELECT "public"."orders"."id", "public"."orders"."order_number", "public"."orders"."user_id", "public"."orders"."status"::text, "public"."orders"."subtotal", "public"."orders"."discount_amount", "public"."orders"."gst_amount", "public"."orders"."shipping_fee", "public"."orders"."total_amount", "public"."orders"."shipping_address_id", "public"."orders"."billing_address_id", "public"."orders"."payment_method", "public"."orders"."payment_status"::text, "public"."orders"."tracking_number", "public"."orders"."shipped_at", "public"."orders"."delivered_at", "public"."orders"."cancelled_at", "public"."orders"."cancel_reason", "public"."orders"."notes", "public"."orders"."created_at", "public"."orders"."updated_at" FROM "public"."orders" WHERE ("public"."orders"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."order_items"."id", "public"."order_items"."order_id", "public"."order_items"."product_id", "public"."order_items"."product_name", "public"."order_items"."product_image", "public"."order_items"."quantity", "public"."order_items"."unit_price", "public"."order_items"."discount", "public"."order_items"."gst_rate", "public"."order_items"."total_price" FROM "public"."order_items" WHERE "public"."order_items"."order_id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."products"."id", "public"."products"."name", "public"."products"."slug", "public"."products"."description", "public"."products"."short_description", "public"."products"."price", "public"."products"."discount_percentage", "public"."products"."final_price", "public"."products"."sku", "public"."products"."category_id", "public"."products"."material", "public"."products"."care_instructions", "public"."products"."weight", "public"."products"."dimensions", "public"."products"."stock_quantity", "public"."products"."low_stock_threshold", "public"."products"."is_active", "public"."products"."is_featured", "public"."products"."meta_title", "public"."products"."meta_description", "public"."products"."average_rating", "public"."products"."review_count", "public"."products"."created_at", "public"."products"."updated_at" FROM "public"."products" WHERE "public"."products"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."users"."id", "public"."users"."email", "public"."users"."password_hash", "public"."users"."full_name", "public"."users"."phone", "public"."users"."role"::text, "public"."users"."is_verified", "public"."users"."created_at", "public"."users"."updated_at" FROM "public"."users" WHERE "public"."users"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."payments"."id", "public"."payments"."order_id", "public"."payments"."payment_gateway"::text, "public"."payments"."transaction_id", "public"."payments"."amount", "public"."payments"."currency", "public"."payments"."status"::text, "public"."payments"."payment_method", "public"."payments"."gateway_response", "public"."payments"."created_at" FROM "public"."payments" WHERE "public"."payments"."order_id" IN ($1) OFFSET $2
+[Payment] Order found: {
+  orderId: '9241a060-37b7-4a3d-898d-ac00b1975c29',
+  status: 'PENDING',
+  paymentStatus: 'PENDING',
+  totalAmount: 51.03
+}
+GET /health
+GET /health
+GET /health
+GET /health
+GET /health
+GET /health
+GET /health

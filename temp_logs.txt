@@ -1,0 +1,300 @@
+ora-backend  | 
+ora-backend  | > ora-backend@1.0.0 start
+ora-backend  | > node dist/server.js
+ora-backend  | 
+ora-backend  | 
+ora-backend  |   ╔════════════════════════════════════════╗
+ora-backend  |   ║   ORA Jewellery API Server Running    ║
+ora-backend  |   ║   own. radiate. adorn.                ║
+ora-backend  |   ╠════════════════════════════════════════╣
+ora-backend  |   ║   Port: 5000                          ║
+ora-backend  |   ║   Env:  development                   ║
+ora-backend  |   ╚════════════════════════════════════════╝
+ora-backend  |   
+ora-backend  | GET /health
+ora-backend  | GET /health
+ora-backend  | GET /health
+ora-backend  | GET /health
+ora-backend  | GET /health
+ora-backend  | GET /health
+ora-backend  | GET /health
+ora-backend  | GET /health
+ora-backend  | GET /health
+ora-backend  | GET /health
+ora-backend  | GET /health
+ora-backend  | GET /health
+ora-backend  | GET /health
+ora-backend  | GET /health
+ora-backend  | GET /health
+ora-backend  | GET /health
+ora-backend  | GET /health
+ora-backend  | GET /health
+ora-backend  | GET /health
+ora-backend  | GET /health
+ora-backend  | GET /health
+ora-backend  | GET /health
+ora-backend  | GET /health
+ora-backend  | GET /health
+ora-backend  | GET /health
+ora-backend  | GET /api/orders
+ora-backend  | [Auth Middleware] Verifying token: {
+ora-backend  |   endpoint: '/',
+ora-backend  |   tokenPrefix: 'eyJhbGciOiJIUzI1NiIs...',
+ora-backend  |   tokenLength: 243
+ora-backend  | }
+ora-backend  | [Auth Middleware] Token verification failed: {
+ora-backend  |   error: 'invalid signature',
+ora-backend  |   endpoint: '/',
+ora-backend  |   headers: { hasAuth: true, contentType: undefined }
+ora-backend  | }
+ora-backend  | Error: AppError: Not authorized, invalid token
+ora-backend  |     at protect (/app/dist/middleware/auth.js:46:14)
+ora-backend  |     at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+ora-backend  |     at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13)
+ora-backend  |     at /app/node_modules/express/lib/router/index.js:286:9
+ora-backend  |     at Function.process_params (/app/node_modules/express/lib/router/index.js:346:12)
+ora-backend  |     at next (/app/node_modules/express/lib/router/index.js:280:10)
+ora-backend  |     at Function.handle (/app/node_modules/express/lib/router/index.js:175:3)
+ora-backend  |     at router (/app/node_modules/express/lib/router/index.js:47:12)
+ora-backend  |     at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+ora-backend  |     at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13) {
+ora-backend  |   statusCode: 401,
+ora-backend  |   isOperational: true
+ora-backend  | }
+ora-backend  | GET /api/orders
+ora-backend  | [Auth Middleware] Verifying token: {
+ora-backend  |   endpoint: '/',
+ora-backend  |   tokenPrefix: 'eyJhbGciOiJIUzI1NiIs...',
+ora-backend  |   tokenLength: 243
+ora-backend  | }
+ora-backend  | [Auth Middleware] Token verification failed: {
+ora-backend  |   error: 'invalid signature',
+ora-backend  |   endpoint: '/',
+ora-backend  |   headers: { hasAuth: true, contentType: undefined }
+ora-backend  | }
+ora-backend  | Error: AppError: Not authorized, invalid token
+ora-backend  |     at protect (/app/dist/middleware/auth.js:46:14)
+ora-backend  |     at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+ora-backend  |     at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13)
+ora-backend  |     at /app/node_modules/express/lib/router/index.js:286:9
+ora-backend  |     at Function.process_params (/app/node_modules/express/lib/router/index.js:346:12)
+ora-backend  |     at next (/app/node_modules/express/lib/router/index.js:280:10)
+ora-backend  |     at Function.handle (/app/node_modules/express/lib/router/index.js:175:3)
+ora-backend  |     at router (/app/node_modules/express/lib/router/index.js:47:12)
+ora-backend  |     at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+ora-backend  |     at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13) {
+ora-backend  |   statusCode: 401,
+ora-backend  |   isOperational: true
+ora-backend  | }
+ora-backend  | POST /api/orders/checkout
+ora-backend  | [Auth Middleware] Verifying token: {
+ora-backend  |   endpoint: '/checkout',
+ora-backend  |   tokenPrefix: 'eyJhbGciOiJIUzI1NiIs...',
+ora-backend  |   tokenLength: 243
+ora-backend  | }
+ora-backend  | [Auth Middleware] Token verification failed: {
+ora-backend  |   error: 'invalid signature',
+ora-backend  |   endpoint: '/checkout',
+ora-backend  |   headers: { hasAuth: true, contentType: 'application/json' }
+ora-backend  | }
+ora-backend  | Error: AppError: Not authorized, invalid token
+ora-backend  |     at protect (/app/dist/middleware/auth.js:46:14)
+ora-backend  |     at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+ora-backend  |     at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13)
+ora-backend  |     at /app/node_modules/express/lib/router/index.js:286:9
+ora-backend  |     at Function.process_params (/app/node_modules/express/lib/router/index.js:346:12)
+ora-backend  |     at next (/app/node_modules/express/lib/router/index.js:280:10)
+ora-backend  |     at Function.handle (/app/node_modules/express/lib/router/index.js:175:3)
+ora-backend  |     at router (/app/node_modules/express/lib/router/index.js:47:12)
+ora-backend  |     at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+ora-backend  |     at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13) {
+ora-backend  |   statusCode: 401,
+ora-backend  |   isOperational: true
+ora-backend  | }
+ora-backend  | POST /api/orders/checkout
+ora-backend  | [Auth Middleware] Verifying token: {
+ora-backend  |   endpoint: '/checkout',
+ora-backend  |   tokenPrefix: 'eyJhbGciOiJIUzI1NiIs...',
+ora-backend  |   tokenLength: 243
+ora-backend  | }
+ora-backend  | [Auth Middleware] Token verification failed: {
+ora-backend  |   error: 'invalid signature',
+ora-backend  |   endpoint: '/checkout',
+ora-backend  |   headers: { hasAuth: true, contentType: 'application/json' }
+ora-backend  | }
+ora-backend  | Error: AppError: Not authorized, invalid token
+ora-backend  |     at protect (/app/dist/middleware/auth.js:46:14)
+ora-backend  |     at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+ora-backend  |     at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13)
+ora-backend  |     at /app/node_modules/express/lib/router/index.js:286:9
+ora-backend  |     at Function.process_params (/app/node_modules/express/lib/router/index.js:346:12)
+ora-backend  |     at next (/app/node_modules/express/lib/router/index.js:280:10)
+ora-backend  |     at Function.handle (/app/node_modules/express/lib/router/index.js:175:3)
+ora-backend  |     at router (/app/node_modules/express/lib/router/index.js:47:12)
+ora-backend  |     at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+ora-backend  |     at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13) {
+ora-backend  |   statusCode: 401,
+ora-backend  |   isOperational: true
+ora-backend  | }
+ora-backend  | POST /api/orders/checkout
+ora-backend  | [Auth Middleware] Verifying token: {
+ora-backend  |   endpoint: '/checkout',
+ora-backend  |   tokenPrefix: 'eyJhbGciOiJIUzI1NiIs...',
+ora-backend  |   tokenLength: 243
+ora-backend  | }
+ora-backend  | [Auth Middleware] Token verification failed: {
+ora-backend  |   error: 'invalid signature',
+ora-backend  |   endpoint: '/checkout',
+ora-backend  |   headers: { hasAuth: true, contentType: 'application/json' }
+ora-backend  | }
+ora-backend  | Error: AppError: Not authorized, invalid token
+ora-backend  |     at protect (/app/dist/middleware/auth.js:46:14)
+ora-backend  |     at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+ora-backend  |     at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13)
+ora-backend  |     at /app/node_modules/express/lib/router/index.js:286:9
+ora-backend  |     at Function.process_params (/app/node_modules/express/lib/router/index.js:346:12)
+ora-backend  |     at next (/app/node_modules/express/lib/router/index.js:280:10)
+ora-backend  |     at Function.handle (/app/node_modules/express/lib/router/index.js:175:3)
+ora-backend  |     at router (/app/node_modules/express/lib/router/index.js:47:12)
+ora-backend  |     at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+ora-backend  |     at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13) {
+ora-backend  |   statusCode: 401,
+ora-backend  |   isOperational: true
+ora-backend  | }
+ora-backend  | GET /api/categories
+ora-backend  | GET /api/products
+ora-backend  | prisma:query SELECT COUNT(*) FROM (SELECT "public"."products"."id" FROM "public"."products" WHERE ("public"."products"."is_active" = $1 AND "public"."products"."final_price" <= $2) OFFSET $3) AS "sub"
+ora-backend  | prisma:query SELECT "public"."products"."id", "public"."products"."name", "public"."products"."slug", "public"."products"."description", "public"."products"."short_description", "public"."products"."price", "public"."products"."discount_percentage", "public"."products"."final_price", "public"."products"."sku", "public"."products"."category_id", "public"."products"."material", "public"."products"."care_instructions", "public"."products"."weight", "public"."products"."dimensions", "public"."products"."stock_quantity", "public"."products"."low_stock_threshold", "public"."products"."is_active", "public"."products"."is_featured", "public"."products"."meta_title", "public"."products"."meta_description", "public"."products"."average_rating", "public"."products"."review_count", "public"."products"."created_at", "public"."products"."updated_at" FROM "public"."products" WHERE ("public"."products"."is_active" = $1 AND "public"."products"."final_price" <= $2) ORDER BY "public"."products"."created_at" DESC LIMIT $3 OFFSET $4
+ora-backend  | prisma:query SELECT "public"."categories"."id", "public"."categories"."name", "public"."categories"."slug", "public"."categories"."description", "public"."categories"."image_url", "public"."categories"."parent_id", "public"."categories"."is_active", "public"."categories"."sort_order" FROM "public"."categories" WHERE ("public"."categories"."is_active" = $1 AND "public"."categories"."parent_id" IS NULL) ORDER BY "public"."categories"."sort_order" ASC OFFSET $2
+ora-backend  | prisma:query SELECT "public"."categories"."id", "public"."categories"."name", "public"."categories"."slug" FROM "public"."categories" WHERE "public"."categories"."id" IN ($1,$2,$3,$4,$5) OFFSET $6
+ora-backend  | prisma:query SELECT "public"."categories"."id", "public"."categories"."name", "public"."categories"."slug", "public"."categories"."description", "public"."categories"."image_url", "public"."categories"."parent_id", "public"."categories"."is_active", "public"."categories"."sort_order" FROM "public"."categories" WHERE ("public"."categories"."is_active" = $1 AND "public"."categories"."parent_id" IN ($2,$3,$4,$5,$6)) ORDER BY "public"."categories"."sort_order" ASC OFFSET $7
+ora-backend  | prisma:query SELECT "public"."product_images"."id", "public"."product_images"."product_id", "public"."product_images"."image_url", "public"."product_images"."alt_text", "public"."product_images"."sort_order", "public"."product_images"."is_primary" FROM "public"."product_images" WHERE ("public"."product_images"."is_primary" = $1 AND "public"."product_images"."product_id" IN ($2,$3,$4,$5,$6,$7,$8,$9)) ORDER BY "public"."product_images"."id" ASC OFFSET $10
+ora-backend  | GET /health
+ora-backend  | POST /api/orders/checkout
+ora-backend  | [Auth Middleware] Verifying token: {
+ora-backend  |   endpoint: '/checkout',
+ora-backend  |   tokenPrefix: 'eyJhbGciOiJIUzI1NiIs...',
+ora-backend  |   tokenLength: 243
+ora-backend  | }
+ora-backend  | [Auth Middleware] Token verification failed: {
+ora-backend  |   error: 'invalid signature',
+ora-backend  |   endpoint: '/checkout',
+ora-backend  |   headers: { hasAuth: true, contentType: 'application/json' }
+ora-backend  | }
+ora-backend  | Error: AppError: Not authorized, invalid token
+ora-backend  |     at protect (/app/dist/middleware/auth.js:46:14)
+ora-backend  |     at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+ora-backend  |     at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13)
+ora-backend  |     at /app/node_modules/express/lib/router/index.js:286:9
+ora-backend  |     at Function.process_params (/app/node_modules/express/lib/router/index.js:346:12)
+ora-backend  |     at next (/app/node_modules/express/lib/router/index.js:280:10)
+ora-backend  |     at Function.handle (/app/node_modules/express/lib/router/index.js:175:3)
+ora-backend  |     at router (/app/node_modules/express/lib/router/index.js:47:12)
+ora-backend  |     at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+ora-backend  |     at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13) {
+ora-backend  |   statusCode: 401,
+ora-backend  |   isOperational: true
+ora-backend  | }
+ora-backend  | POST /api/orders/checkout
+ora-backend  | [Auth Middleware] Verifying token: {
+ora-backend  |   endpoint: '/checkout',
+ora-backend  |   tokenPrefix: 'eyJhbGciOiJIUzI1NiIs...',
+ora-backend  |   tokenLength: 243
+ora-backend  | }
+ora-backend  | [Auth Middleware] Token verification failed: {
+ora-backend  |   error: 'invalid signature',
+ora-backend  |   endpoint: '/checkout',
+ora-backend  |   headers: { hasAuth: true, contentType: 'application/json' }
+ora-backend  | }
+ora-backend  | Error: AppError: Not authorized, invalid token
+ora-backend  |     at protect (/app/dist/middleware/auth.js:46:14)
+ora-backend  |     at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+ora-backend  |     at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13)
+ora-backend  |     at /app/node_modules/express/lib/router/index.js:286:9
+ora-backend  |     at Function.process_params (/app/node_modules/express/lib/router/index.js:346:12)
+ora-backend  |     at next (/app/node_modules/express/lib/router/index.js:280:10)
+ora-backend  |     at Function.handle (/app/node_modules/express/lib/router/index.js:175:3)
+ora-backend  |     at router (/app/node_modules/express/lib/router/index.js:47:12)
+ora-backend  |     at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+ora-backend  |     at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13) {
+ora-backend  |   statusCode: 401,
+ora-backend  |   isOperational: true
+ora-backend  | }
+ora-backend  | POST /api/orders/checkout
+ora-backend  | [Auth Middleware] Verifying token: {
+ora-backend  |   endpoint: '/checkout',
+ora-backend  |   tokenPrefix: 'eyJhbGciOiJIUzI1NiIs...',
+ora-backend  |   tokenLength: 243
+ora-backend  | }
+ora-backend  | [Auth Middleware] Token verification failed: {
+ora-backend  |   error: 'invalid signature',
+ora-backend  |   endpoint: '/checkout',
+ora-backend  |   headers: { hasAuth: true, contentType: 'application/json' }
+ora-backend  | }
+ora-backend  | Error: AppError: Not authorized, invalid token
+ora-backend  |     at protect (/app/dist/middleware/auth.js:46:14)
+ora-backend  |     at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+ora-backend  |     at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13)
+ora-backend  |     at /app/node_modules/express/lib/router/index.js:286:9
+ora-backend  |     at Function.process_params (/app/node_modules/express/lib/router/index.js:346:12)
+ora-backend  |     at next (/app/node_modules/express/lib/router/index.js:280:10)
+ora-backend  |     at Function.handle (/app/node_modules/express/lib/router/index.js:175:3)
+ora-backend  |     at router (/app/node_modules/express/lib/router/index.js:47:12)
+ora-backend  |     at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+ora-backend  |     at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13) {
+ora-backend  |   statusCode: 401,
+ora-backend  |   isOperational: true
+ora-backend  | }
+ora-backend  | POST /api/orders/checkout
+ora-backend  | [Auth Middleware] Verifying token: {
+ora-backend  |   endpoint: '/checkout',
+ora-backend  |   tokenPrefix: 'eyJhbGciOiJIUzI1NiIs...',
+ora-backend  |   tokenLength: 243
+ora-backend  | }
+ora-backend  | [Auth Middleware] Token verification failed: {
+ora-backend  |   error: 'invalid signature',
+ora-backend  |   endpoint: '/checkout',
+ora-backend  |   headers: { hasAuth: true, contentType: 'application/json' }
+ora-backend  | }
+ora-backend  | Error: AppError: Not authorized, invalid token
+ora-backend  |     at protect (/app/dist/middleware/auth.js:46:14)
+ora-backend  |     at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+ora-backend  |     at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13)
+ora-backend  |     at /app/node_modules/express/lib/router/index.js:286:9
+ora-backend  |     at Function.process_params (/app/node_modules/express/lib/router/index.js:346:12)
+ora-backend  |     at next (/app/node_modules/express/lib/router/index.js:280:10)
+ora-backend  |     at Function.handle (/app/node_modules/express/lib/router/index.js:175:3)
+ora-backend  |     at router (/app/node_modules/express/lib/router/index.js:47:12)
+ora-backend  |     at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+ora-backend  |     at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13) {
+ora-backend  |   statusCode: 401,
+ora-backend  |   isOperational: true
+ora-backend  | }
+ora-backend  | POST /api/orders/checkout
+ora-backend  | [Auth Middleware] Verifying token: {
+ora-backend  |   endpoint: '/checkout',
+ora-backend  |   tokenPrefix: 'eyJhbGciOiJIUzI1NiIs...',
+ora-backend  |   tokenLength: 243
+ora-backend  | }
+ora-backend  | [Auth Middleware] Token verification failed: {
+ora-backend  |   error: 'invalid signature',
+ora-backend  |   endpoint: '/checkout',
+ora-backend  |   headers: { hasAuth: true, contentType: 'application/json' }
+ora-backend  | }
+ora-backend  | Error: AppError: Not authorized, invalid token
+ora-backend  |     at protect (/app/dist/middleware/auth.js:46:14)
+ora-backend  |     at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+ora-backend  |     at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13)
+ora-backend  |     at /app/node_modules/express/lib/router/index.js:286:9
+ora-backend  |     at Function.process_params (/app/node_modules/express/lib/router/index.js:346:12)
+ora-backend  |     at next (/app/node_modules/express/lib/router/index.js:280:10)
+ora-backend  |     at Function.handle (/app/node_modules/express/lib/router/index.js:175:3)
+ora-backend  |     at router (/app/node_modules/express/lib/router/index.js:47:12)
+ora-backend  |     at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+ora-backend  |     at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13) {
+ora-backend  |   statusCode: 401,
+ora-backend  |   isOperational: true
+ora-backend  | }
+ora-backend  | GET /health
+ora-backend  | GET /health
+ora-backend  | GET /health
