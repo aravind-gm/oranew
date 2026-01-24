@@ -21,13 +21,12 @@ import { useEffect } from 'react';
 export default function AdminPage() {
   const router = useRouter();
   const { token, user, logout, isHydrated } = useAuthStore();
-  const { stats, statsLoading, fetchDashboardStats, lowStockProducts, lowStockLoading, fetchLowStockProducts, error } = useAdminStore();
+  const { stats, statsLoading, fetchDashboardStats, lowStockProducts, lowStockLoading, fetchLowStockProducts } = useAdminStore();
 
   useEffect(() => {
     if (!isHydrated) return;
     
     if (!token || user?.role !== 'ADMIN') {
-      console.log('[Admin Dashboard] ⚠️ Unauthorized access - redirecting to login', { hasToken: !!token, userRole: user?.role });
       router.push('/admin/login');
     }
   }, [isHydrated, token, user, router]);
@@ -36,46 +35,13 @@ export default function AdminPage() {
     if (!isHydrated) return;
     
     if (token && user?.role === 'ADMIN') {
-      console.log('[Admin Dashboard] 📊 Fetching dashboard data...', { user: user.email });
       fetchDashboardStats();
       fetchLowStockProducts();
     }
   }, [isHydrated, token, user, fetchDashboardStats, fetchLowStockProducts]);
 
-  // Log stats when they change
-  useEffect(() => {
-    if (stats) {
-      console.log('[Admin Dashboard] ✅ Stats loaded:', stats);
-    }
-  }, [stats]);
-
-  useEffect(() => {
-    if (error) {
-      console.error('[Admin Dashboard] ❌ Error:', error);
-    }
-  }, [error]);
-
-  // Show loading state during hydration instead of blank screen
-  if (!isHydrated) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-400">Loading admin panel...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Redirect if not authenticated (after hydration)
   if (!token || user?.role !== 'ADMIN') {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-400">Redirecting to login...</p>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   const formatCurrency = (amount: number) => {
@@ -88,24 +54,6 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen">
-      {/* Error Banner */}
-      {error && (
-        <div className="bg-red-600 text-white px-6 py-3">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <AlertTriangle size={20} />
-              <span>{error}</span>
-            </div>
-            <button 
-              onClick={() => useAdminStore.getState().clearError()}
-              className="text-white/80 hover:text-white"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <div className="bg-gray-800 border-b border-gray-700 px-6 py-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
