@@ -1,0 +1,33 @@
+<!-- Valentine's Day Collection Banner -->
+<svg width="800" height="400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="valentineGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFE8E8;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#FFD1D1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FFBABA;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#valentineGradient)"/>
+  
+  <!-- Hearts decoration -->
+  <circle cx="100" cy="80" r="3" fill="#FF6B9D" opacity="0.6"/>
+  <circle cx="700" cy="100" r="4" fill="#FF6B9D" opacity="0.4"/>
+  <circle cx="650" cy="320" r="3" fill="#FF6B9D" opacity="0.5"/>
+  
+  <!-- Main content -->
+  <text x="400" y="150" text-anchor="middle" font-family="serif" font-size="48" font-weight="600" fill="#2D1B69">
+    Sip Into Love 💕
+  </text>
+  
+  <text x="400" y="200" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#666">
+    Limited Valentine's Day Combos — Gifting Made Effortless
+  </text>
+  
+  <rect x="325" y="240" width="150" height="50" rx="25" fill="#FF6B9D" filter="url(#shadow)"/>
+  <text x="400" y="270" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="500" fill="white">
+    🩷 Shop Valentine Combos
+  </text>
+</svg>

@@ -349,14 +349,14 @@ export default function EditProductPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+      <div className="min-h-screen bg-gray-900 text-gray-100 flex items-center justify-center">
         <Loader2 className="animate-spin h-8 w-8 text-amber-500" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
+    <div className="min-h-screen bg-gray-900 text-gray-100 p-6">
       <div className="max-w-4xl mx-auto">
         <Link href="/admin/products" className="text-blue-400 hover:underline mb-6 inline-block">
           ← Back to Products

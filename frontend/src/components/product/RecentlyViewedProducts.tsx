@@ -35,14 +35,14 @@ export default function RecentlyViewedProducts({
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-          <Clock size={20} className="text-amber-500" />
+        <h3 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
+          <Clock size={20} className="text-secondary-500" />
           {title}
         </h3>
         {showClearButton && (
           <button
             onClick={clearRecentlyViewed}
-            className="text-sm text-gray-400 hover:text-gray-600 flex items-center gap-1 transition-colors"
+            className="text-sm text-neutral-400 hover:text-neutral-600 flex items-center gap-1 transition-colors"
           >
             <X size={14} />
             Clear
@@ -59,7 +59,7 @@ export default function RecentlyViewedProducts({
               href={`/products/${product.slug}`}
               className="flex-shrink-0 w-40 group"
             >
-              <div className="aspect-square bg-gray-100 rounded-xl overflow-hidden mb-3">
+              <div className="aspect-square bg-neutral-100 rounded-xl overflow-hidden mb-3">
                 <Image
                   src={product.image || '/placeholder.png'}
                   alt={product.name}
@@ -84,9 +84,9 @@ export default function RecentlyViewedProducts({
             <Link
               key={product.productId}
               href={`/products/${product.slug}`}
-              className="flex items-center gap-4 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group"
+              className="flex items-center gap-4 p-3 bg-neutral-50 rounded-xl hover:bg-neutral-100 transition-colors group"
             >
-              <div className="w-16 h-16 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
+              <div className="w-16 h-16 bg-neutral-200 rounded-lg overflow-hidden flex-shrink-0">
                 <Image
                   src={product.image || '/placeholder.png'}
                   alt={product.name}

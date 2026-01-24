@@ -18,7 +18,7 @@ const heroSlides = [
     headlineAccent: 'Love Story',
     subheading: 'Handcrafted pieces designed to celebrate your precious moments. Timeless elegance, accessible luxury.',
     primaryCta: { text: 'Shop Collection', href: '/products' },
-    secondaryCta: { text: 'New Arrivals', href: '/products?filter=new' },
+    secondaryCta: { text: 'View Collections', href: '/collections' },
   },
   {
     id: 2,

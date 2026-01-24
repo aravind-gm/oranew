@@ -1,8 +1,69 @@
 import { NextFunction, Response } from 'express';
 import { prisma } from '../config/database';
+import { getSignedUrl } from '../config/supabase';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { calculateFinalPrice, slugify } from '../utils/helpers';
+import { normalizeSupabaseUrl } from '../utils/supabaseUrlHelper';
+
+// Helper function to ensure product images have correct public URLs
+// PUBLIC storefront uses public URLs (no expiration)
+// ADMIN uses signed URLs (temporary, secure access)
+async function transformProductImages(product: any, forPublic: boolean = true) {
+  if (!product.images || product.images.length === 0) {
+    return product;
+  }
+
+  const transformedImages = product.images.map((img: any) => {
+    // Ensure image URL is valid and public
+    if (!img.imageUrl) {
+      return img;
+    }
+
+    // For public storefront: ensure it's a public URL (no signing needed)
+    if (forPublic) {
+      // Normalize the URL to ensure correct format
+      const normalizedUrl = normalizeSupabaseUrl(img.imageUrl);
+      return { ...img, imageUrl: normalizedUrl || img.imageUrl };
+    }
+
+    return img;
+  });
+
+  return { ...product, images: transformedImages };
+}
+
+// Helper function to transform product images to signed URLs (ADMIN only)
+async function transformProductImagesToSigned(product: any) {
+  if (!product.images || product.images.length === 0) {
+    return product;
+  }
+
+  const imagesWithSignedUrls = await Promise.all(
+    product.images.map(async (img: any) => {
+      try {
+        // Extract file path from imageUrl
+        // URL format: https://[project].supabase.co/storage/v1/object/public/product-images/filename
+        const urlMatch = img.imageUrl.match(/product-images\/(.*)/);
+        const filePath = urlMatch ? urlMatch[1] : img.imageUrl;
+        
+        // Generate signed URL for reliable access (ADMIN only)
+        const signedUrl = await getSignedUrl(filePath);
+        return { ...img, imageUrl: signedUrl };
+      } catch (error) {
+        console.error('[Product Controller] ⚠️ Failed to generate signed URL:', {
+          imageUrl: img.imageUrl,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        // Fallback to public URL if signed URL generation fails
+        const fixed = img.imageUrl.replace('/object/', '/object/public/');
+        return { ...img, imageUrl: fixed };
+      }
+    })
+  );
+
+  return { ...product, images: imagesWithSignedUrls };
+}
 
 // @desc    Create product (Admin)
 // @route   POST /api/admin/products
@@ -162,57 +223,137 @@ export const createProduct = async (
   }
 };
 
-// @desc    Get all products (Admin)
-// @route   GET /api/admin/products
-// @access  Private/Admin
+// @desc    Get all products (Public)
+// @route   GET /api/products
+// @access  Public
 export const getProducts = async (
   req: AuthRequest,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const { page = '1', limit = '10', search = '', categoryId = '' } = req.query;
+    const { category, page = '1', limit = '16', maxPrice, sortBy } = req.query;
 
-    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+    // 📊 Log incoming request
+    console.log('[Product Controller] 📊 getProducts() called', {
+      category,
+      page,
+      limit,
+      maxPrice,
+      sortBy,
+      timestamp: new Date().toISOString(),
+    });
 
-    const where: any = {
-      isActive: true,
+    let categoryId: string | undefined = undefined;
+
+    // 🔑 Resolve category slug → categoryId
+    if (category && typeof category === 'string') {
+      const foundCategory = await prisma.category.findFirst({
+        where: {
+          slug: category.toLowerCase(),
+        },
+        select: { id: true },
+      });
+
+      if (foundCategory) {
+        categoryId = foundCategory.id;
+        console.log('[Product Controller] ✅ Category resolved', {
+          slug: category,
+          id: categoryId,
+        });
+      } else {
+        console.warn('[Product Controller] ⚠️ Category slug not found', {
+          requestedSlug: category,
+          fallback: 'showing all active products',
+        });
+      }
+    }
+
+    // 📊 Parse optional filters
+    const parsedMaxPrice = maxPrice ? parseFloat(maxPrice as string) : undefined;
+    const parsedSortBy = sortBy ? (sortBy as string) : 'createdAt';
+
+    // 🔍 Validate sortBy to prevent injection and support valid sorts
+    const allowedSortFields = ['createdAt', 'finalPrice', '-finalPrice', 'averageRating', '-averageRating'];
+    const validSortBy = allowedSortFields.includes(parsedSortBy) ? parsedSortBy : 'createdAt';
+
+    // 🔒 BUILD WHERE CLAUSE — MANDATORY isActive=true FOR STOREFRONT
+    const whereClause: any = {
+      isActive: true,  // ← THIS IS MANDATORY. Products invisible without this.
     };
 
-    if (search) {
-      where.OR = [
-        { name: { contains: search as string, mode: 'insensitive' } },
-        { description: { contains: search as string, mode: 'insensitive' } },
-      ];
-    }
-
     if (categoryId) {
-      where.categoryId = categoryId as string;
+      whereClause.categoryId = categoryId;
     }
 
+    // 💰 Optional price filter
+    if (parsedMaxPrice !== undefined && parsedMaxPrice > 0) {
+      whereClause.finalPrice = {
+        lte: parsedMaxPrice,
+      };
+    }
+
+    // 📊 Build sort order from parameter
+    let orderByClause: any = { createdAt: 'desc' };
+    if (validSortBy === 'finalPrice') {
+      orderByClause = { finalPrice: 'asc' };
+    } else if (validSortBy === '-finalPrice') {
+      orderByClause = { finalPrice: 'desc' };
+    } else if (validSortBy === 'averageRating') {
+      orderByClause = { averageRating: 'desc' };
+    } else if (validSortBy === '-averageRating') {
+      orderByClause = { averageRating: 'asc' };
+    }
+
+    // 🔍 Execute query with filters
     const [products, total] = await Promise.all([
       prisma.product.findMany({
-        where,
-        include: { images: true, category: true },
-        skip,
-        take: parseInt(limit as string),
-        orderBy: { createdAt: 'desc' },
+        where: whereClause,
+        orderBy: orderByClause,
+        skip: (Number(page) - 1) * Number(limit),
+        take: Number(limit),
+        include: {
+          category: true,
+          images: true,
+        },
       }),
-      prisma.product.count({ where }),
+      prisma.product.count({ where: whereClause }),
     ]);
 
+    // 📊 Log result
+    console.log('[Product Controller] ✅ Products fetched for storefront', {
+      totalAvailable: total,
+      returnedCount: products.length,
+      page: Number(page),
+      filters: {
+        hasCategory: !!categoryId,
+        hasPriceFilter: parsedMaxPrice !== undefined,
+        maxPrice: parsedMaxPrice,
+        sortBy: validSortBy,
+        isActiveFilter: 'MANDATORY ✅',
+      },
+    });
+
+    // Transform image URLs to PUBLIC URLs for storefront (no expiration)
+    const productsWithPublicUrls = await Promise.all(
+      products.map((product) => transformProductImages(product, true))
+    );
+
     res.json({
-      success: true,
-      data: products,
+      data: productsWithPublicUrls,
       pagination: {
         total,
-        page: parseInt(page as string),
-        limit: parseInt(limit as string),
-        pages: Math.ceil(total / parseInt(limit as string)),
+        page: Number(page),
+        limit: Number(limit),
+        pages: Math.ceil(total / Number(limit)),
       },
     });
   } catch (error) {
-    next(error);
+    console.error('[Product Controller] ❌ getProducts() error:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    res.status(500).json({ message: 'Failed to fetch products' });
   }
 };
 
@@ -236,9 +377,12 @@ export const getProductById = async (
       throw new AppError('Product not found', 404);
     }
 
+    // Transform images to signed URLs
+    const productWithSignedUrls = await transformProductImages(product);
+
     res.json({
       success: true,
-      data: product,
+      data: productWithSignedUrls,
     });
   } catch (error) {
     next(error);
@@ -289,11 +433,21 @@ export const updateProduct = async (
       include: { images: true, category: true },
     });
 
+    console.log('[Product Controller] ✅ Product updated successfully:', {
+      productId: id,
+      productName: updated.name,
+      fieldsUpdated: Object.keys(updateData),
+    });
+
     res.json({
       success: true,
       data: updated,
     });
   } catch (error) {
+    console.error('[Product Controller] ❌ Update failed:', {
+      productId: req.params.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
     next(error);
   }
 };
@@ -309,14 +463,30 @@ export const deleteProduct = async (
   try {
     const { id } = req.params;
 
-    const product = await prisma.product.findUnique({ where: { id } });
+    const product = await prisma.product.findUnique({ 
+      where: { id },
+      include: { images: true }
+    });
+    
     if (!product) {
       throw new AppError('Product not found', 404);
     }
 
+    // Delete product with all related records in transaction
     await prisma.$transaction(async (tx) => {
-      await tx.productImage.deleteMany({ where: { productId: id } });
+      // Delete images first
+      if (product.images && product.images.length > 0) {
+        await tx.productImage.deleteMany({ where: { productId: id } });
+      }
+      
+      // Then delete product (cascade will handle reviews, wishlist items, etc.)
       await tx.product.delete({ where: { id } });
+    });
+
+    console.log('[Product Controller] ✅ Product deleted successfully:', {
+      productId: id,
+      productName: product.name,
+      imagesCount: product.images?.length || 0,
     });
 
     res.json({
@@ -324,6 +494,10 @@ export const deleteProduct = async (
       message: 'Product deleted successfully',
     });
   } catch (error) {
+    console.error('[Product Controller] ❌ Delete failed:', {
+      productId: req.params.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
     next(error);
   }
 };
@@ -349,9 +523,14 @@ export const getFeaturedProducts = async (
       orderBy: { createdAt: 'desc' },
     });
 
+    // Transform image URLs to signed URLs for reliable access
+    const productsWithSignedUrls = await Promise.all(
+      products.map((product) => transformProductImages(product))
+    );
+
     res.json({
       success: true,
-      data: products,
+      data: productsWithSignedUrls,
     });
   } catch (error) {
     next(error);
@@ -381,9 +560,44 @@ export const getProductBySlug = async (
       throw new AppError('Product not found', 404);
     }
 
+    // Transform images to PUBLIC URLs for storefront
+    const productWithPublicUrls = await transformProductImages(product, true);
+
     res.json({
       success: true,
-      data: product,
+      data: productWithPublicUrls,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get product by ID (Public - for cart stock validation)
+// @route   GET /api/products/id/:id
+// @access  Public
+export const getProductByIdPublic = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+
+    const product = await prisma.product.findUnique({
+      where: { id },
+      include: { images: true, category: true },
+    });
+
+    if (!product) {
+      throw new AppError('Product not found', 404);
+    }
+
+    // Transform images to PUBLIC URLs for storefront
+    const productWithPublicUrls = await transformProductImages(product, true);
+
+    res.json({
+      success: true,
+      data: productWithPublicUrls,
     });
   } catch (error) {
     next(error);
@@ -441,9 +655,14 @@ export const searchProducts = async (
       prisma.product.count({ where }),
     ]);
 
+    // Transform image URLs to signed URLs for reliable access
+    const productsWithSignedUrls = await Promise.all(
+      products.map((product) => transformProductImages(product))
+    );
+
     res.json({
       success: true,
-      data: products,
+      data: productsWithSignedUrls,
       pagination: {
         total,
         page: parseInt(page as string),

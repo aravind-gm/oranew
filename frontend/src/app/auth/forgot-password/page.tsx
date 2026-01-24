@@ -30,37 +30,37 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
+    <div className="min-h-screen bg-neutral-50 flex items-center justify-center py-12 px-4">
       <div className="max-w-md w-full bg-white rounded-lg shadow p-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Forgot Password?</h1>
-        <p className="text-gray-600 text-sm mb-6">Enter your email and we'll send a password reset link.</p>
+        <h1 className="text-2xl font-bold text-neutral-900 mb-2">Forgot Password?</h1>
+        <p className="text-neutral-600 text-sm mb-6">Enter your email and we'll send a password reset link.</p>
 
-        {message && <div className="mb-4 p-3 bg-green-50 text-green-700 rounded">{message}</div>}
-        {error && <div className="mb-4 p-3 bg-red-50 text-red-700 rounded">{error}</div>}
+        {message && <div className="mb-4 p-3 bg-success/10 text-success rounded">{message}</div>}
+        {error && <div className="mb-4 p-3 bg-error/10 text-error rounded">{error}</div>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">Email Address</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-info"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400"
+            className="w-full bg-primary-600 text-white py-2 rounded-lg font-medium hover:bg-primary-700 disabled:bg-neutral-400"
           >
             {loading ? 'Sending...' : 'Send Reset Link'}
           </button>
         </form>
 
-        <p className="mt-6 text-sm text-center text-gray-600">
-          <Link href="/auth/login" className="text-blue-600 hover:underline">
+        <p className="mt-6 text-sm text-center text-neutral-600">
+          <Link href="/auth/login" className="text-primary-600 hover:underline">
             Back to Login
           </Link>
         </p>

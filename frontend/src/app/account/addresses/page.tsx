@@ -87,7 +87,7 @@ export default function AddressesPage() {
       <div className="max-w-2xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-foreground">My Addresses</h1>
-          <Link href="/account" className="text-blue-600 hover:underline">
+          <Link href="/account" className="text-primary-600 hover:underline">
             Back to Account
           </Link>
         </div>
@@ -143,26 +143,26 @@ export default function AddressesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">City</label>
                   <input
                     type="text"
-                    value={form.country}
-                    onChange={(e) => setForm({ ...form, country: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    value={form.city}
+                    onChange={(e) => setForm({ ...form, city: e.target.value })}
+                    className="w-full px-4 py-2 border border-neutral-300 rounded-lg"
                   />
                 </div>
               </div>
               <div className="flex gap-2">
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  className="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700"
                 >
                   Save Address
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+                  className="px-4 py-2 bg-neutral-300 text-neutral-700 rounded hover:bg-neutral-400"
                 >
                   Cancel
                 </button>
@@ -174,13 +174,13 @@ export default function AddressesPage() {
         {/* Addresses List */}
         <div className="bg-white rounded-lg shadow p-6">
           {loading ? (
-            <p className="text-gray-600">Loading addresses...</p>
+            <p className="text-neutral-600">Loading addresses...</p>
           ) : addresses.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-600 mb-4">No addresses yet</p>
-              <button
-                onClick={() => setShowForm(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              <p className="text-neutral-600 mb-4">No addresses yet</p>
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700"
               >
                 Add First Address
               </button>
@@ -189,19 +189,19 @@ export default function AddressesPage() {
             <div>
               <button
                 onClick={() => setShowForm(true)}
-                className="mb-6 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="mb-6 px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700"
               >
                 Add New Address
               </button>
 
               <div className="space-y-4">
                 {addresses.map((addr) => (
-                  <div key={addr.id} className="p-4 border border-gray-300 rounded-lg">
+                  <div key={addr.id} className="p-4 border border-neutral-300 rounded-lg">
                     <div className="flex justify-between items-start mb-2">
                       <h3 className="font-semibold">
                         {addr.street}
                         {addr.isDefault && (
-                          <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                          <span className="ml-2 text-xs bg-info/10 text-info px-2 py-1 rounded">
                             Default
                           </span>
                         )}

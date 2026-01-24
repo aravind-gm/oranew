@@ -2,6 +2,7 @@
 
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
+import { isSupabaseImage } from '@/lib/imageUrlHelper';
 import {
     AlertTriangle,
     Check,
@@ -262,7 +263,7 @@ export default function AdminProductsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen bg-gray-900 text-gray-100">
       {/* Header */}
       <div className="bg-gray-800 border-b border-gray-700 p-6">
         <div className="max-w-7xl mx-auto">
@@ -481,8 +482,7 @@ export default function AdminProductsPage() {
                                 src={product.images[0].imageUrl}
                                 alt={product.name}
                                 width={48}
-                                height={48}
-                                className="w-full h-full object-cover"
+                                height={48}                                unoptimized={isSupabaseImage(product.images[0].imageUrl)}                                className="w-full h-full object-cover"
                               />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-gray-500">

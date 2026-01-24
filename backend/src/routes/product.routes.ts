@@ -3,6 +3,7 @@ import {
     createProduct,
     deleteProduct,
     getFeaturedProducts,
+    getProductByIdPublic,
     getProductBySlug,
     getProducts,
     searchProducts,
@@ -16,6 +17,7 @@ const router = Router();
 router.get('/', getProducts);
 router.get('/featured', getFeaturedProducts);
 router.get('/search', searchProducts);
+router.get('/id/:id', getProductByIdPublic);
 router.get('/:slug', getProductBySlug);
 
 // Admin routes

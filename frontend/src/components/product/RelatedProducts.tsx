@@ -67,7 +67,7 @@ export default function RelatedProducts({
         {[...Array(4)].map((_, i) => (
           <div
             key={i}
-            className="h-64 bg-gray-200 rounded-lg animate-pulse"
+            className="h-64 bg-neutral-200 rounded-lg animate-pulse"
           />
         ))}
       </div>

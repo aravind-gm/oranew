@@ -14,11 +14,11 @@ export default function Error({ error, reset }: ErrorProps) {
         <div className="mb-8">
           <p className="text-6xl font-bold text-red-500 mb-4">⚠️</p>
           <h1 className="text-4xl font-bold text-white mb-4">Something Went Wrong</h1>
-          <p className="text-xl text-gray-400 mb-4">
+          <p className="text-xl text-neutral-400 mb-4">
             An unexpected error occurred. Please try again.
           </p>
           {error?.message && (
-            <p className="text-sm text-gray-500 bg-gray-800 rounded p-4 mt-4 max-w-md mx-auto break-words">
+            <p className="text-sm text-neutral-500 bg-neutral-800 rounded p-4 mt-4 max-w-md mx-auto break-words">
               {error.message}
             </p>
           )}
@@ -27,13 +27,13 @@ export default function Error({ error, reset }: ErrorProps) {
         <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
           <button
             onClick={reset}
-            className="px-8 py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition"
+            className="px-8 py-3 bg-warning hover:bg-warning/90 text-white font-semibold rounded-lg transition"
           >
             Try Again
           </button>
           <Link
             href="/"
-            className="px-8 py-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg transition inline-block"
+            className="px-8 py-3 bg-neutral-700 hover:bg-neutral-600 text-white font-semibold rounded-lg transition inline-block"
           >
             Go Home
           </Link>

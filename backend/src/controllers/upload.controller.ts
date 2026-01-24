@@ -71,13 +71,18 @@ export const uploadImages = async (
         );
         uploadedUrls.push(url);
         console.log('[Upload Controller] ✅ File uploaded successfully:', {
-          fileName: file.originalname,
-          url: url.substring(0, 50) + '...',
+          originalFileName: file.originalname,
+          fileSize: file.size,
+          mimeType: file.mimetype,
+          uploadedUrl: url,  // Full URL for debugging
         });
       } catch (error: any) {
         const errorMsg = `Failed to upload ${file.originalname}: ${error.message}`;
         errors.push(errorMsg);
-        console.error('[Upload Controller] ❌ File upload failed:', errorMsg);
+        console.error('[Upload Controller] ❌ File upload failed:', {
+          fileName: file.originalname,
+          error: error.message,
+        });
       }
     }
 
@@ -93,6 +98,7 @@ export const uploadImages = async (
     console.log('[Upload Controller] ✅ IMAGE UPLOAD COMPLETE', {
       uploadedCount: uploadedUrls.length,
       failedCount: errors.length,
+      uploadedUrls: uploadedUrls,  // Log all URLs for verification
       userId: req.user.id,
       userEmail: req.user.email,
     });

@@ -2,6 +2,7 @@
 
 import { useCartStore } from '@/store/cartStore';
 import { useWishlistStore } from '@/store/wishlistStore';
+import { normalizeImageUrl, isSupabaseImage } from '@/lib/imageUrlHelper';
 import { motion } from 'framer-motion';
 import { Heart, ShoppingBag, Star } from 'lucide-react';
 import Image from 'next/image';
@@ -112,9 +113,10 @@ export default function ProductCard({ product, showQuickAdd = true }: ProductCar
           {/* Primary Image */}
           {primaryImage && (
             <Image
-              src={primaryImage.imageUrl}
+              src={normalizeImageUrl(primaryImage.imageUrl) || '/placeholder.png'}
               alt={primaryImage.altText || product.name}
               fill
+              unoptimized={isSupabaseImage(primaryImage.imageUrl)}
               className={`object-cover transition-all duration-700 ${
                 isHovered && hoverImage !== primaryImage ? 'opacity-0 scale-105' : 'opacity-100 scale-100'
               }`}
@@ -125,9 +127,10 @@ export default function ProductCard({ product, showQuickAdd = true }: ProductCar
           {/* Hover Image */}
           {hoverImage && hoverImage !== primaryImage && (
             <Image
-              src={hoverImage.imageUrl}
+              src={normalizeImageUrl(hoverImage.imageUrl) || '/placeholder.png'}
               alt={`${product.name} alternate view`}
               fill
+              unoptimized={isSupabaseImage(hoverImage.imageUrl)}
               className={`object-cover transition-all duration-700 ${
                 isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
               }`}

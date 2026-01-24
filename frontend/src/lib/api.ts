@@ -17,7 +17,9 @@ api.interceptors.request.use(
       const authStore = useAuthStore.getState();
       const storeToken = authStore.token;
       const localToken = localStorage.getItem('ora_token');
-      const token = storeToken || localToken;
+      // CRITICAL FIX: Prefer localStorage (source of truth) during hydration
+      // During Zustand hydration, storeToken is null but localStorage has the real token
+      const token = localToken || storeToken;
       
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;

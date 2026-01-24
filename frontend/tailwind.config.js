@@ -22,18 +22,19 @@ module.exports = {
       black: '#000000',
       
       // Semantic Layers
-      background: '#FDFBF7', // Warm ivory base
+      background: '#FFFFFF', // White background (storefront - clean luxury - REQUIRED FOR PREMIUM FEEL)
       foreground: '#1A1A1A', // Dark charcoal text
       
       // Primary Brand Color (Blush Pink)
       primary: {
+        DEFAULT: '#ec4899',  // Primary pink (brand) - for bg-primary, text-primary fallback
         50: '#fdf2f8',   // Lightest blush
         100: '#fce7f3',  // Very light blush
         200: '#fbcfe8',  // Light blush
         300: '#f8b4e6',  // Blush
         400: '#f472b6',  // Medium pink
         500: '#ec4899',  // Primary pink (brand)
-        600: '#db2777',  // Deep pink
+        600: '#db2777',  // Deep pink / hover
         700: '#be185d',  // Dark pink
         800: '#9d174d',  // Very dark pink
         900: '#831843',  // Darkest pink
@@ -41,6 +42,7 @@ module.exports = {
       
       // Secondary: Champagne Gold
       secondary: {
+        DEFAULT: '#d4af37',  // Champagne gold - for bg-secondary, text-secondary fallback
         50: '#fef9f0',
         100: '#fef3e1',
         200: '#fce3c3',
@@ -55,6 +57,7 @@ module.exports = {
       
       // Neutral/Gray (for secondary text, borders)
       neutral: {
+        DEFAULT: '#78716b',  // For text-neutral, bg-neutral fallback
         50: '#fafaf9',
         100: '#f5f5f4',
         200: '#e7e5e4',
@@ -90,14 +93,16 @@ module.exports = {
       // Semantic Color Aliases for Components (DO NOT USE bg-text-primary etc directly)
       'text-primary': '#1A1A1A',     // Dark charcoal = foreground
       'text-secondary': '#78716b',   // neutral-500
+      'text-muted': '#a8a29e',       // neutral-400
+      'accent': '#d4af37',           // Champagne gold = secondary-500
       'background-white': '#FFFFFF', // White background
       border: '#E5E5E5',             // Default border color
       
       // Component-Specific Tokens
       card: {
-        bg: '#FDFBF7',      // Same as background
-        border: '#E5E5E5',
-        hover: '#FAF8F4',
+        bg: '#FFFFFF',      // White cards on white background
+        border: '#E5E5E5',  // Subtle neutral border (not pink)
+        hover: '#F9F9F9',   // Very subtle gray hover
       },
       
       input: {

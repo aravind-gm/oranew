@@ -11,7 +11,7 @@ export default function Footer() {
           <div className="max-w-2xl mx-auto text-center">
             <h3 className="text-2xl font-serif font-light mb-3 text-primary">Join the ORA Family</h3>
             <p className="text-white/60 text-sm mb-6">
-              Subscribe for exclusive offers, new arrivals, and styling inspiration.
+              Subscribe for exclusive offers, latest collections, and styling inspiration.
             </p>
             <form className="flex gap-3 max-w-md mx-auto">
               <input
@@ -21,7 +21,7 @@ export default function Footer() {
               />
               <button
                 type="submit"
-                className="px-6 py-3 bg-primary text-foreground rounded-full font-medium hover:bg-primary-600 transition-colors text-sm"
+                className="px-6 py-3 bg-primary text-foreground rounded-full font-medium hover:bg-primary/80 transition-colors text-sm"
               >
                 Subscribe
               </button>
@@ -94,11 +94,6 @@ export default function Footer() {
               <li>
                 <Link href="/products?category=rings" className="text-sm text-white/60 hover:text-primary transition-colors">
                   Rings
-                </Link>
-              </li>
-              <li>
-                <Link href="/products?category=new" className="text-sm text-white/60 hover:text-primary transition-colors">
-                  New Arrivals
                 </Link>
               </li>
             </ul>

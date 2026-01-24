@@ -3,6 +3,7 @@
 import { ChevronLeft, ChevronRight, ZoomIn } from 'lucide-react';
 import Image from 'next/image';
 import React, { useState } from 'react';
+import { isSupabaseImage } from '@/lib/imageUrlHelper';
 
 interface ProductImage {
   id: string;
@@ -44,7 +45,7 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
     <div className="space-y-4">
       {/* Main Image */}
       <div
-        className="relative h-96 w-full overflow-hidden rounded-lg bg-gray-100 group cursor-zoom-in"
+        className="relative h-96 w-full overflow-hidden rounded-lg bg-neutral-100 group cursor-zoom-in"
         onMouseMove={handleMouseMove}
         onMouseEnter={() => setIsZoomed(true)}
         onMouseLeave={() => setIsZoomed(false)}
@@ -55,6 +56,7 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
               src={selectedImage.imageUrl}
               alt={selectedImage.altText || productName}
               fill
+              unoptimized={isSupabaseImage(selectedImage.imageUrl)}
               className={`object-cover transition-transform duration-300 ${
                 isZoomed ? 'scale-150' : 'scale-100'
               }`}
@@ -110,7 +112,7 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
               key={image.id}
               onClick={() => setSelectedImageIndex(index)}
               className={`relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all ${
-                selectedImageIndex === index ? 'border-blue-600' : 'border-gray-200'
+                selectedImageIndex === index ? 'border-primary-600' : 'border-neutral-200'
               }`}
             >
               <Image

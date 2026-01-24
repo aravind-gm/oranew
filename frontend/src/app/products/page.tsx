@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Products Page — New Arrivals Editorial Experience
+ * Products Page — Editorial Experience
  * 
  * Premium, curated editorial page for new jewellery drops.
  * NOT a traditional product listing—feels like a gallery opening.
@@ -106,7 +106,7 @@ const staggerContainer = {
 // MAIN COMPONENT
 // ============================================================================
 
-export default function NewArrivalsPage() {
+export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -144,7 +144,7 @@ export default function NewArrivalsPage() {
         <div className="absolute inset-0">
           <Image
             src="/val banner.png"
-            alt="New Arrivals — Fresh designs from ORA Atelier"
+            alt="Fresh designs from ORA Atelier"
             fill
             className="object-cover object-center"
             priority
@@ -373,7 +373,7 @@ export default function NewArrivalsPage() {
           ) : (
             <div className="text-center py-20">
               <Sparkles className="w-12 h-12 text-primary/30 mx-auto mb-4" />
-              <p className="text-text-secondary">New arrivals coming soon. Check back soon!</p>
+              <p className="text-text-secondary">Products coming soon. Check back soon!</p>
             </div>
           )}
 

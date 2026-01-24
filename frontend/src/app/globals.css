@@ -23,7 +23,7 @@
     --secondary: theme('colors.secondary.500'); /* Champagne Gold */
     
     /* Semantic Tokens */
-    --background: theme('colors.background');   /* Warm Ivory */
+    --background: theme('colors.background');   /* WHITE - Premium luxury feel */
     --foreground: theme('colors.foreground');   /* Dark Charcoal */
     --card-bg: theme('colors.card.bg');
     --card-border: theme('colors.card.border');

@@ -1,0 +1,21 @@
+<!-- Valentine's Day Urgency Strip -->
+<svg width="1200" height="50" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="urgencyGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#FF6B9D;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#FF8A9B;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FF6B9D;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#urgencyGradient)"/>
+  
+  <!-- Animated pulse dot -->
+  <circle cx="100" cy="25" r="3" fill="white" opacity="0.8">
+    <animate attributeName="opacity" values="0.4;1;0.4" dur="1.5s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Text -->
+  <text x="600" y="32" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="500" fill="white">
+    ⏰ Limited Valentine Stock — Once It's Gone, It's Gone
+  </text>
+</svg>

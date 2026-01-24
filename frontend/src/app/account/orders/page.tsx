@@ -119,7 +119,7 @@ export default function OrdersPage() {
                                     : order.status === 'CANCELLED'
                                       ? 'bg-error/10 text-error'
                                       : order.status === 'RETURNED'
-                                        ? 'bg-gray-500/10 text-gray-600'
+                                        ? 'bg-neutral-500/10 text-neutral-600'
                                         : 'bg-border text-text-muted'
                           }`}
                         >

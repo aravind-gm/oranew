@@ -192,7 +192,7 @@ export default function AdminOrderDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white p-6 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-900 text-gray-100 p-6 flex items-center justify-center">
         <div className="animate-spin h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full"></div>
       </div>
     );
@@ -200,7 +200,7 @@ export default function AdminOrderDetailPage() {
 
   if (error && !order) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white p-6">
+      <div className="min-h-screen bg-gray-900 text-gray-100 p-6">
         <div className="max-w-4xl mx-auto">
           <Link href="/admin/orders" className="text-blue-400 hover:underline mb-6 inline-block">
             ← Back to Orders
@@ -216,7 +216,7 @@ export default function AdminOrderDetailPage() {
   if (!order) return null;
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
+    <div className="min-h-screen bg-gray-900 text-gray-100 p-6">
       <div className="max-w-5xl mx-auto">
         <Link href="/admin/orders" className="text-blue-400 hover:underline mb-6 inline-block">
           ← Back to Orders

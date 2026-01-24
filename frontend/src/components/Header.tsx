@@ -87,8 +87,8 @@ export default function Header() {
           <div className="hidden md:flex items-center">
             <PillNav 
               items={[
+                { label: '💕 Valentine\'s Special', href: '/valentine-drinkware' },
                 { label: 'Collections', href: '/collections' },
-                { label: 'New Arrivals', href: '/products?category=new' },
                 { label: 'Our Story', href: '/about' },
                 { label: 'Contact', href: '/contact' },
                 ...(isAdmin ? [{ label: 'Admin', href: '/admin' }] : [])
@@ -234,18 +234,18 @@ export default function Header() {
           <div className="md:hidden py-6 border-t border-border bg-background-white">
             <div className="space-y-1">
               <Link 
+                href="/valentine-drinkware" 
+                className="block px-4 py-3 text-accent hover:bg-accent/10 rounded-xl transition-colors font-medium"
+                onClick={() => setIsOpen(false)}
+              >
+                💕 Valentine&apos;s Special
+              </Link>
+              <Link 
                 href="/collections" 
                 className="block px-4 py-3 text-text-primary hover:bg-primary/10 rounded-xl transition-colors font-medium"
                 onClick={() => setIsOpen(false)}
               >
                 Collections
-              </Link>
-              <Link 
-                href="/products?category=new" 
-                className="block px-4 py-3 text-text-primary hover:bg-primary/10 rounded-xl transition-colors font-medium"
-                onClick={() => setIsOpen(false)}
-              >
-                New Arrivals
               </Link>
               <Link 
                 href="/about" 

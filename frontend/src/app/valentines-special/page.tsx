@@ -145,7 +145,6 @@ export default function ValentinesSpecialPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [addOnSelected, setAddOnSelected] = useState(false);
 
   // Fetch products under ₹1500
   const fetchProducts = useCallback(async () => {
@@ -453,84 +452,6 @@ export default function ValentinesSpecialPage() {
                 </div>
               </motion.div>
             ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ================================================================
-          SECTION 4: Complete the Gift (Subtle Add-on)
-          ================================================================ */}
-      <section className="py-16 bg-background-white border-y border-border">
-        <div className="container-luxury">
-          <motion.div
-            className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            {/* Add-on Image */}
-            <div className="relative w-full lg:w-1/3 aspect-square max-w-sm">
-              <div className="absolute inset-0 rounded-luxury overflow-hidden bg-gradient-to-br from-primary/10 to-accent/5 border border-border">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  {/* Placeholder for Stanley Cup image */}
-                  <div className="text-center">
-                    <div className="w-32 h-40 mx-auto bg-gradient-to-b from-accent/20 to-accent/5 rounded-lg mb-4 flex items-center justify-center">
-                      <Package className="w-16 h-16 text-accent/40" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Optional Tag */}
-              <div className="absolute -top-3 -right-3 px-4 py-2 bg-background-white rounded-full shadow-luxury border border-border">
-                <span className="text-xs tracking-[0.1em] uppercase text-accent font-medium">Optional Add-on</span>
-              </div>
-            </div>
-
-            {/* Add-on Content */}
-            <div className="flex-1 text-center lg:text-left">
-              <span className="text-sm tracking-[0.2em] uppercase text-text-muted">Complete the Gift</span>
-              <h3 className="font-serif text-2xl sm:text-3xl text-text-primary mt-3 mb-4">
-                Pair with a Keepsake
-              </h3>
-              <p className="text-text-secondary leading-relaxed mb-6 max-w-lg mx-auto lg:mx-0">
-                Make your gift extra special. Add a premium Stanley tumbler — 
-                perfect for her morning coffee ritual. A thoughtful touch that 
-                shows you care about the little moments.
-              </p>
-
-              {/* Add-on Option */}
-              <div 
-                className={`inline-flex items-center gap-4 p-4 rounded-luxury border-2 transition-all duration-300 cursor-pointer ${
-                  addOnSelected 
-                    ? 'border-accent bg-accent/5' 
-                    : 'border-border hover:border-accent/50'
-                }`}
-                onClick={() => setAddOnSelected(!addOnSelected)}
-              >
-                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
-                  addOnSelected 
-                    ? 'border-accent bg-accent' 
-                    : 'border-text-muted'
-                }`}>
-                  {addOnSelected && (
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </div>
-                <div className="text-left">
-                  <p className="font-medium text-text-primary">Stanley Quencher 40oz</p>
-                  <p className="text-sm text-text-muted">Soft Pink Edition</p>
-                </div>
-                <span className="font-serif text-lg text-text-primary ml-4">+ ₹499</span>
-              </div>
-
-              <p className="text-xs text-text-muted mt-4">
-                * Add-on will be included with your jewellery order
-              </p>
-            </div>
           </motion.div>
         </div>
       </section>

@@ -175,7 +175,7 @@ export const useCartStore = create<CartState>()(
           // Fetch stock for each product
           for (const productId of productIds) {
             try {
-              const response = await api.get(`/products/${productId}`);
+              const response = await api.get(`/products/id/${productId}`);
               const product = response.data.data;
               const cartItem = state.items.find((i) => i.productId === productId);
               

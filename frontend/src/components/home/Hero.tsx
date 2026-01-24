@@ -92,10 +92,10 @@ export default function Hero() {
                   </svg>
                 </Link>
                 <Link 
-                  href="/products?filter=new" 
+                  href="/collections" 
                   className="inline-flex items-center justify-center gap-2 px-8 py-4 border-2 border-text-primary/20 text-text-primary font-medium rounded-full transition-all duration-300 hover:border-primary hover:bg-primary/10"
                 >
-                  New Arrivals
+                  View Collections
                 </Link>
               </motion.div>
 

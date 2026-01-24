@@ -1,5 +1,6 @@
 import { NextFunction, Response } from 'express';
 import { prisma } from '../config/database';
+import { getSignedUrl } from '../config/supabase';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import {
@@ -8,6 +9,47 @@ import {
     sendOrderShippedEmail
 } from '../services/email.service';
 import { cleanupExpiredLocks, restoreInventory } from '../utils/inventory';
+import { normalizeSupabaseUrl } from '../utils/supabaseUrlHelper';
+
+// Helper function to transform product images to signed URLs with timeout
+async function transformProductImages(product: any) {
+  if (!product.images || product.images.length === 0) {
+    return product;
+  }
+
+  const imagesWithSignedUrls = await Promise.all(
+    product.images.map(async (img: any) => {
+      try {
+        // Normalize URL first to ensure correct format
+        const normalizedUrl = normalizeSupabaseUrl(img.imageUrl);
+        
+        // Extract file path from imageUrl
+        // URL format: https://[project].supabase.co/storage/v1/object/public/product-images/filename
+        const urlMatch = (normalizedUrl || img.imageUrl).match(/product-images\/(.*)/);
+        const filePath = urlMatch ? urlMatch[1] : (normalizedUrl || img.imageUrl);
+        
+        // Generate signed URL with 2-second timeout
+        const signedUrlPromise = getSignedUrl(filePath);
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Signed URL generation timeout')), 2000)
+        );
+        
+        const signedUrl = await Promise.race([signedUrlPromise, timeoutPromise]);
+        return { ...img, imageUrl: signedUrl };
+      } catch (error) {
+        console.warn('[Admin Controller] ⚠️ Failed to generate signed URL, using normalized public URL fallback:', {
+          originalUrl: img.imageUrl,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        // Fallback: ensure image URL is properly normalized and public (not signed)
+        const normalizedUrl = normalizeSupabaseUrl(img.imageUrl);
+        return { ...img, imageUrl: normalizedUrl || img.imageUrl };
+      }
+    })
+  );
+
+  return { ...product, images: imagesWithSignedUrls };
+}
 
 // ============================================
 // DASHBOARD
@@ -409,6 +451,19 @@ export const getAdminProducts = async (
     const { page = '1', limit = '20', search, category, isActive, lowStock, outOfStock } = req.query;
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
 
+    // 📊 Log incoming request
+    console.log('[Admin Controller] 🔍 getAdminProducts() called', {
+      page,
+      limit,
+      hasSearch: !!search,
+      hasCategory: !!category,
+      hasIsActiveFilter: isActive !== undefined,
+      isActive: isActive || '(no filter - see all)',
+      hasLowStock: lowStock === 'true',
+      hasOutOfStock: outOfStock === 'true',
+      timestamp: new Date().toISOString(),
+    });
+
     const where: any = {};
     
     if (search) {
@@ -448,10 +503,29 @@ export const getAdminProducts = async (
       prisma.product.count({ where }),
     ]);
 
+    // 📊 Log result
+    console.log('[Admin Controller] ✅ Admin products fetched', {
+      totalInDatabase: total,
+      returnedCount: products.length,
+      page: parseInt(page as string),
+      includesInactive: !where.isActive,  // ← Key insight: admin sees inactive products
+      filters: {
+        hasIsActiveFilter: isActive !== undefined,
+        hasCategory: !!category,
+        hasSearch: !!search,
+        hasStockFilter: lowStock === 'true' || outOfStock === 'true',
+      },
+    });
+
+    // Transform image URLs to signed URLs for reliable access
+    const productsWithSignedUrls = await Promise.all(
+      products.map((product) => transformProductImages(product))
+    );
+
     res.json({
       success: true,
       data: {
-        products,
+        products: productsWithSignedUrls,
         pagination: {
           page: parseInt(page as string),
           limit: parseInt(limit as string),

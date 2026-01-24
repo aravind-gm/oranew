@@ -58,14 +58,10 @@ interface PaginationInfo {
 // CONSTANTS
 // ============================================================================
 
-const CATEGORIES = [
-  { id: 'necklaces', label: 'Necklaces' },
-  { id: 'rings', label: 'Rings' },
-  { id: 'bracelets', label: 'Bracelets' },
-] as const;
-
+// NOTE: Categories are NOW fetched dynamically from backend
+// NO hardcoded category list
+// Default collections page shows ALL products (no category filter)
 const MAX_PRICE = 1500;
-const DEFAULT_CATEGORY = 'necklaces';
 const SORT_OPTIONS = [
   { value: 'createdAt', label: 'Newest' },
   { value: 'finalPrice', label: 'Price: Low to High' },
@@ -78,28 +74,27 @@ const SORT_OPTIONS = [
 
 /**
  * Modern Filter Dropdown
- * Floating panel with price slider, category pills, and sort
+ * Floating panel with category pills and sort
+ * Categories are now DYNAMIC (fetched from backend)
  */
 function FilterDropdown({
   isOpen,
   onClose,
   activeCategory,
   onCategoryChange,
-  maxPrice,
-  onPriceChange,
   sortBy,
   onSortChange,
   triggerRef,
+  categories = [],
 }: {
   isOpen: boolean;
   onClose: () => void;
   activeCategory: string;
   onCategoryChange: (category: string) => void;
-  maxPrice: number;
-  onPriceChange: (price: number) => void;
   sortBy: string;
   onSortChange: (sort: string) => void;
   triggerRef: React.RefObject<HTMLButtonElement>;
+  categories?: Array<{ id: string; name: string }>;
 }) {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -134,8 +129,6 @@ function FilterDropdown({
 
   if (!isOpen) return null;
 
-  const percentage = (maxPrice / MAX_PRICE) * 100;
-
   return (
     <div
       ref={dropdownRef}
@@ -164,92 +157,48 @@ function FilterDropdown({
           </button>
         </div>
 
-        {/* CATEGORY PILLS */}
-        <div className="space-y-3">
-          <label className="text-xs text-text-muted tracking-[0.12em] uppercase font-semibold block">
-            Category
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {CATEGORIES.map((cat) => (
+        {/* CATEGORY PILLS — Dynamic from Backend */}
+        {categories.length > 0 && (
+          <div className="space-y-3">
+            <label className="text-xs text-text-muted tracking-[0.12em] uppercase font-semibold block">
+              Category
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {/* "ALL PRODUCTS" pill to clear category filter */}
               <button
-                key={cat.id}
-                onClick={() => onCategoryChange(cat.id)}
+                onClick={() => onCategoryChange('')}
                 className={`
                   px-4 py-2 text-xs font-medium tracking-[0.08em] uppercase
                   rounded-full transition-all duration-200
-                  ${activeCategory === cat.id
+                  ${activeCategory === ''
                     ? 'bg-primary text-white shadow-sm'
                     : 'bg-background border border-neutral-200 text-neutral-600 hover:border-secondary hover:text-foreground'
                   }
                 `}
               >
-                {cat.label}
+                All Products
               </button>
-            ))}
+              
+              {/* Category pills from backend */}
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => onCategoryChange(cat.id)}
+                  className={`
+                    px-4 py-2 text-xs font-medium tracking-[0.08em] uppercase
+                    rounded-full transition-all duration-200
+                    ${activeCategory === cat.id
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'bg-background border border-neutral-200 text-neutral-600 hover:border-secondary hover:text-foreground'
+                    }
+                  `}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-
-        {/* PRICE SLIDER */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <label htmlFor="price-slider" className="text-xs text-text-muted tracking-[0.12em] uppercase font-semibold">
-              Price
-            </label>
-            <span className="text-sm font-medium text-accent tabular-nums">
-              ₹{maxPrice.toLocaleString('en-IN')}
-            </span>
-          </div>
-
-          {/* Slider Track */}
-          <div className="relative">
-            <div className="absolute w-full h-1 bg-border/30 rounded-full top-1/2 -translate-y-1/2" />
-            <div
-              className="absolute h-1 bg-gradient-to-r from-accent to-accent/80 rounded-full top-1/2 -translate-y-1/2 transition-all duration-150"
-              style={{ width: `${percentage}%` }}
-            />
-            <input
-              id="price-slider"
-              type="range"
-              min={0}
-              max={MAX_PRICE}
-              value={maxPrice}
-              onChange={(e) => onPriceChange(Number(e.target.value))}
-              className="
-                relative w-full h-2 bg-transparent cursor-pointer appearance-none
-                [&::-webkit-slider-thumb]:appearance-none
-                [&::-webkit-slider-thumb]:w-5
-                [&::-webkit-slider-thumb]:h-5
-                [&::-webkit-slider-thumb]:rounded-full
-                [&::-webkit-slider-thumb]:bg-accent
-                [&::-webkit-slider-thumb]:border-3
-                [&::-webkit-slider-thumb]:border-background-white
-                [&::-webkit-slider-thumb]:shadow-luxury
-                [&::-webkit-slider-thumb]:cursor-pointer
-                [&::-webkit-slider-thumb]:transition-all
-                [&::-webkit-slider-thumb]:duration-200
-                [&::-webkit-slider-thumb]:hover:scale-125
-                [&::-webkit-slider-thumb]:hover:shadow-luxury-hover
-                [&::-moz-range-thumb]:w-5
-                [&::-moz-range-thumb]:h-5
-                [&::-moz-range-thumb]:rounded-full
-                [&::-moz-range-thumb]:bg-accent
-                [&::-moz-range-thumb]:border-3
-                [&::-moz-range-thumb]:border-background-white
-                [&::-moz-range-thumb]:shadow-luxury
-                [&::-moz-range-thumb]:cursor-pointer
-                [&::-moz-range-thumb]:transition-all
-                [&::-moz-range-thumb]:duration-200
-                focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2
-              "
-            />
-          </div>
-
-          {/* Price Range */}
-          <div className="flex justify-between text-xs text-text-muted">
-            <span>₹0</span>
-            <span className="font-medium">MAX ₹{MAX_PRICE.toLocaleString('en-IN')}</span>
-          </div>
-        </div>
+        )}
 
         {/* SORT DROPDOWN */}
         <div className="space-y-3 border-t border-border/30 pt-6">
@@ -285,8 +234,7 @@ function FilterDropdown({
         {/* CLEAR FILTERS */}
         <button
           onClick={() => {
-            onCategoryChange(DEFAULT_CATEGORY);
-            onPriceChange(MAX_PRICE);
+            onCategoryChange('');  // Empty string = show ALL products
             onSortChange('createdAt');
           }}
           className="
@@ -361,8 +309,10 @@ export default function CollectionsPage() {
   const searchParams = useSearchParams();
   
   // State
-  const [activeCategory, setActiveCategory] = useState<string>(DEFAULT_CATEGORY);
-  const [maxPrice, setMaxPrice] = useState<number>(MAX_PRICE);
+  // NOTE: activeCategory now starts as empty string (no default category)
+  // Categories are fetched dynamically from backend
+  const [activeCategory, setActiveCategory] = useState<string>('');
+  const [availableCategories, setAvailableCategories] = useState<Array<{ id: string; name: string }>>([]);
   const [sortBy, setSortBy] = useState<string>('createdAt');
   const [products, setProducts] = useState<Product[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo>({
@@ -375,43 +325,60 @@ export default function CollectionsPage() {
   const [filterOpen, setFilterOpen] = useState(false);
   const filterButtonRef = useRef<HTMLButtonElement>(null);
 
+  // Fetch categories from backend on mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await api.get('/categories');
+        const cats = response.data.data || response.data.success ? response.data.data : [];
+        setAvailableCategories(cats);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        setAvailableCategories([]);
+      }
+    };
+    
+    fetchCategories();
+  }, []);
+
   // Parse URL params on mount
   useEffect(() => {
-    const urlMaxPrice = searchParams.get('maxPrice');
     const urlCategory = searchParams.get('category');
-    const urlMaterial = searchParams.get('material');
 
-    if (urlMaxPrice) {
-      setMaxPrice(parseInt(urlMaxPrice));
-    }
+    // Only set category if explicitly provided in URL
     if (urlCategory) {
       setActiveCategory(urlCategory);
     }
-    // Note: material param could be used for additional filtering if needed
+    // Otherwise activeCategory stays empty (show ALL products)
   }, [searchParams]);
 
   // Fetch products
+  // CRITICAL: When activeCategory is empty, DO NOT send it to backend
+  // Backend will return ALL products when category param is missing
   const fetchProducts = useCallback(async (page: number = 1) => {
     try {
       setLoading(true);
-      const params = {
+      const params: any = {
         page,
         limit: pagination.limit,
-        category: activeCategory,
-        maxPrice,
-        sortBy,
       };
 
+      // Only add category to params if user has selected one
+      // When category is empty, fetch ALL products
+      if (activeCategory) {
+        params.category = activeCategory;
+      }
+
       const response = await api.get('/products', { params });
-      setProducts(response.data.data.products || []);
-      setPagination(response.data.data.pagination);
+      setProducts(response.data.data || []);
+      setPagination(response.data.pagination);
     } catch (error) {
       console.error('Error fetching products:', error);
       setProducts([]);
     } finally {
       setLoading(false);
     }
-  }, [activeCategory, maxPrice, sortBy]);
+  }, [activeCategory, pagination.limit]);
 
   // Fetch on filter change
   useEffect(() => {
@@ -424,10 +391,9 @@ export default function CollectionsPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Handle reset
+  // Handle reset - clears ALL filters and shows products again
   const handleReset = () => {
-    setActiveCategory(DEFAULT_CATEGORY);
-    setMaxPrice(MAX_PRICE);
+    setActiveCategory('');  // Empty string = fetch ALL products
     setSortBy('createdAt');
     setFilterOpen(false);
   };
@@ -489,11 +455,10 @@ export default function CollectionsPage() {
             onClose={() => setFilterOpen(false)}
             activeCategory={activeCategory}
             onCategoryChange={setActiveCategory}
-            maxPrice={maxPrice}
-            onPriceChange={setMaxPrice}
             sortBy={sortBy}
             onSortChange={setSortBy}
             triggerRef={filterButtonRef}
+            categories={availableCategories}
           />
         </div>
       </div>

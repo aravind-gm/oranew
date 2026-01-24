@@ -1,5 +1,5 @@
-w/* ORA Infinite Menu Component - Styled with ORA Brand Colors */
-/* Colors: Blush Pink (#FFD6E8), Champagne Gold (#D4AF77), Charcoal (#2D2D2D), Ivory (#FDFBF7) */
+/* ORA Infinite Menu Component - Styled with ORA Brand Colors */
+/* Colors: Blush Pink (#ec4899 - ACCENT ONLY), Champagne Gold (#D4AF37), Charcoal (#1A1A1A), WHITE (#FFFFFF) */
 
 #infinite-grid-menu-canvas {
   cursor: grab;
@@ -10,7 +10,7 @@ w/* ORA Infinite Menu Component - Styled with ORA Brand Colors */
   top: 0;
   left: 0;
   outline: none;
-  background: linear-gradient(135deg, #FDFBF7 0%, #FFFFFF 100%);
+  background: linear-gradient(135deg, #FFFFFF 0%, #FFFFFF 100%);
   display: block;
 }
 
@@ -81,7 +81,7 @@ w/* ORA Infinite Menu Component - Styled with ORA Brand Colors */
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Action Button Styling - ORA Brand Colors */
+/* Action Button Styling - ORA Brand Colors (Pink accent only) */
 .infinite-menu-button {
   position: absolute;
   left: 50%;
@@ -90,16 +90,16 @@ w/* ORA Infinite Menu Component - Styled with ORA Brand Colors */
   height: 60px;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #FFD6E8 0%, #FFC0DB 100%);
-  border: 3px solid #2D2D2D;
+  background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+  border: 3px solid #1A1A1A;
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(255, 214, 232, 0.3);
+  box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .infinite-menu-button:hover:not(.inactive) {
-  box-shadow: 0 8px 24px rgba(255, 214, 232, 0.5);
+  box-shadow: 0 8px 24px rgba(236, 72, 153, 0.5);
   transform: translateX(-50%) scale(1.05);
 }
 
@@ -208,6 +208,6 @@ w/* ORA Infinite Menu Component - Styled with ORA Brand Colors */
 /* Light theme fallback for accessibility */
 @media (prefers-color-scheme: light) {
   #infinite-grid-menu-canvas {
-    background: linear-gradient(135deg, #FDFBF7 0%, #FFFFFF 100%);
+    background: linear-gradient(135deg, #FFFFFF 0%, #FFFFFF 100%);
   }
 }

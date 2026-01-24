@@ -62,7 +62,7 @@ export default function StarRating({
                     ? 'fill-yellow-400 text-yellow-400'
                     : isHalf
                     ? 'fill-yellow-400/50 text-yellow-400'
-                    : 'fill-none text-gray-300'
+                    : 'fill-none text-neutral-300'
                 } transition-colors`}
               />
             </button>
@@ -70,7 +70,7 @@ export default function StarRating({
         })}
       </div>
       {showValue && (
-        <span className="text-sm text-gray-600 ml-1">
+        <span className="text-sm text-neutral-600 ml-1">
           {rating.toFixed(1)}
         </span>
       )}

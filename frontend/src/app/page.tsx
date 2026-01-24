@@ -92,36 +92,36 @@ const CATEGORIES = [
 
 const VALENTINE_COMBOS: ComboItem[] = [
   {
-    id: 'eternal-love',
-    name: 'Eternal Love Set',
-    tagline: 'For the one who has your heart',
-    description: 'A delicate necklace paired with matching stud earrings — timeless elegance for everyday wear.',
-    products: ['necklace', 'earrings'],
+    id: 'everyday-love-cup',
+    name: 'Everyday Love Cup',
+    tagline: 'Simple. Thoughtful. Always there.',
+    description: 'Hydration meets heart. The Everyday Love Cup is designed for daily use — office desks, long drives, and cozy evenings. Minimal, elegant, and built to last.',
+    products: ['tumbler'],
+    originalPrice: 999,
+    comboPrice: 999,
+    image: '/val banner.png',
+  },
+  {
+    id: 'marble-love-cup',
+    name: 'Marble Love Cup',
+    tagline: 'A little luxury, made to last.',
+    description: 'Turn everyday hydration into a statement. The Marble Love Cup features a premium swirl finish that feels as good as it looks — elegant, modern, and gift-worthy.',
+    products: ['premium-tumbler'],
     originalPrice: 1499,
-    comboPrice: 1299,
-    image: '/combo-eternal.jpg',
-    badge: 'Most Gifted'
+    comboPrice: 1499,
+    image: '/val banner.png',
+    badge: 'Premium'
   },
   {
-    id: 'promise-duo',
-    name: 'Promise Duo',
-    tagline: 'Two hearts, one promise',
-    description: 'Matching couple bracelets crafted with intention — wear your bond wherever you go.',
-    products: ['bracelet', 'bracelet'],
-    originalPrice: 1299,
-    comboPrice: 1099,
-    image: '/combo-promise.jpg'
-  },
-  {
-    id: 'sweetheart-collection',
-    name: 'Sweetheart Collection',
-    tagline: 'The complete gesture',
-    description: 'Ring and bracelet set designed to complement — a complete expression of affection.',
-    products: ['ring', 'bracelet'],
-    originalPrice: 1399,
-    comboPrice: 1199,
-    image: '/combo-sweetheart.jpg',
-    badge: 'Editor\'s Pick'
+    id: 'ultimate-valentine-gift-box',
+    name: 'Ultimate Valentine Gift Box',
+    tagline: 'The gift that says "I went all out."',
+    description: 'This is not just a cup — it\'s a complete Valentine experience. Beautifully packed, thoughtfully curated, and ready to impress the moment it\'s opened.',
+    products: ['marble-cup', 'gift-box', 'velvet-pouch'],
+    originalPrice: 3200,
+    comboPrice: 2499,
+    image: '/val banner.png',
+    badge: 'Best Value'
   },
 ];
 
@@ -146,7 +146,6 @@ export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [addOnSelected, setAddOnSelected] = useState(false);
 
   // Fetch products under ₹1500
   const fetchProducts = useCallback(async () => {
@@ -212,7 +211,7 @@ export default function HomePage() {
                 >
                   <span className="w-12 h-px bg-accent" />
                   <span className="text-sm tracking-[0.3em] uppercase text-accent font-medium">
-                    Valentine&apos;s Special
+                    ✨ Now Live — Discover ORA
                   </span>
                 </motion.div>
 
@@ -223,9 +222,9 @@ export default function HomePage() {
                   transition={{ delay: 0.3, duration: 0.6 }}
                   className="font-serif text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-light leading-[1.05] text-text-primary mb-8"
                 >
-                  Gift the Glow
+                  Adorn Your
                   <br />
-                  <span className="italic text-accent">She Deserves</span>
+                  <span className="italic text-accent">Everyday Elegance</span>
                 </motion.h1>
 
                 {/* Subheading — Soft, Inviting */}
@@ -235,9 +234,8 @@ export default function HomePage() {
                   transition={{ delay: 0.4, duration: 0.6 }}
                   className="text-lg sm:text-xl text-text-secondary leading-relaxed mb-10 max-w-lg"
                 >
-                  Curated pieces under ₹1500 — thoughtfully designed for 
-                  moments that matter. Because love doesn&apos;t need a grand gesture, 
-                  just the right one.
+                  Handcrafted jewellery designed for modern living.
+                  Thoughtful designs, refined details, and effortless elegance — made to be worn every day.
                 </motion.p>
 
                 {/* CTA Buttons */}
@@ -248,19 +246,19 @@ export default function HomePage() {
                   className="flex flex-col sm:flex-row gap-4"
                 >
                   <Link 
-                    href="#valentine-picks"
+                    href="/collections"
                     className="group inline-flex items-center justify-center gap-3 px-8 py-4 bg-primary text-text-primary font-medium rounded-full transition-all duration-300 hover:bg-primary-dark hover:shadow-luxury-hover hover:scale-[1.02]"
                   >
                     <Heart className="w-5 h-5" />
-                    <span>Shop Valentine Picks</span>
+                    <span>Explore Collection →</span>
                     <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
                   </Link>
                   <Link 
-                    href="#gift-combos"
+                    href="/products"
                     className="inline-flex items-center justify-center gap-2 px-8 py-4 border-2 border-text-primary/20 text-text-primary font-medium rounded-full transition-all duration-300 hover:border-accent hover:bg-accent/5"
                   >
                     <Gift className="w-5 h-5" />
-                    <span>Explore Combos</span>
+                    <span>New Arrivals</span>
                   </Link>
                 </motion.div>
               </motion.div>
@@ -372,10 +370,10 @@ export default function HomePage() {
             transition={{ duration: 0.6 }}
           >
             <span className="text-sm tracking-[0.3em] uppercase text-accent">Curated with Love</span>
-            <h2 className="heading-section mt-3 text-text-primary">Valentine Combos</h2>
+            <h2 className="heading-section mt-3 text-text-primary">Valentine Drinkware Combos</h2>
             <p className="text-text-secondary mt-4 max-w-xl mx-auto">
-              Thoughtfully paired pieces that tell a complete story — 
-              designed to make gifting effortless.
+              From everyday elegance to luxury gift experiences — 
+              drinkware designed to make gifting effortless.
             </p>
           </motion.div>
 
@@ -454,84 +452,6 @@ export default function HomePage() {
                 </div>
               </motion.div>
             ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ================================================================
-          SECTION 4: Complete the Gift (Subtle Add-on)
-          ================================================================ */}
-      <section className="py-16 bg-background-white border-y border-border">
-        <div className="container-luxury">
-          <motion.div
-            className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            {/* Add-on Image */}
-            <div className="relative w-full lg:w-1/3 aspect-square max-w-sm">
-              <div className="absolute inset-0 rounded-luxury overflow-hidden bg-gradient-to-br from-primary/10 to-accent/5 border border-border">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  {/* Placeholder for Stanley Cup image */}
-                  <div className="text-center">
-                    <div className="w-32 h-40 mx-auto bg-gradient-to-b from-accent/20 to-accent/5 rounded-lg mb-4 flex items-center justify-center">
-                      <Package className="w-16 h-16 text-accent/40" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Optional Tag */}
-              <div className="absolute -top-3 -right-3 px-4 py-2 bg-background-white rounded-full shadow-luxury border border-border">
-                <span className="text-xs tracking-[0.1em] uppercase text-accent font-medium">Optional Add-on</span>
-              </div>
-            </div>
-
-            {/* Add-on Content */}
-            <div className="flex-1 text-center lg:text-left">
-              <span className="text-sm tracking-[0.2em] uppercase text-text-muted">Complete the Gift</span>
-              <h3 className="font-serif text-2xl sm:text-3xl text-text-primary mt-3 mb-4">
-                Pair with a Keepsake
-              </h3>
-              <p className="text-text-secondary leading-relaxed mb-6 max-w-lg mx-auto lg:mx-0">
-                Make your gift extra special. Add a premium Stanley tumbler — 
-                perfect for her morning coffee ritual. A thoughtful touch that 
-                shows you care about the little moments.
-              </p>
-
-              {/* Add-on Option */}
-              <div 
-                className={`inline-flex items-center gap-4 p-4 rounded-luxury border-2 transition-all duration-300 cursor-pointer ${
-                  addOnSelected 
-                    ? 'border-accent bg-accent/5' 
-                    : 'border-border hover:border-accent/50'
-                }`}
-                onClick={() => setAddOnSelected(!addOnSelected)}
-              >
-                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
-                  addOnSelected 
-                    ? 'border-accent bg-accent' 
-                    : 'border-text-muted'
-                }`}>
-                  {addOnSelected && (
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </div>
-                <div className="text-left">
-                  <p className="font-medium text-text-primary">Stanley Quencher 40oz</p>
-                  <p className="text-sm text-text-muted">Soft Pink Edition</p>
-                </div>
-                <span className="font-serif text-lg text-text-primary ml-4">+ ₹499</span>
-              </div>
-
-              <p className="text-xs text-text-muted mt-4">
-                * Add-on will be included with your jewellery order
-              </p>
-            </div>
           </motion.div>
         </div>
       </section>
@@ -696,7 +616,7 @@ export default function HomePage() {
       </section>
 
       {/* ================================================================
-          FINAL CTA SECTION
+          SECTION 7: Final CTA
           ================================================================ */}
       <section className="py-20 bg-gradient-to-b from-background to-primary/10">
         <div className="container-luxury">

@@ -123,21 +123,30 @@ export async function uploadToStorage(
       fileName: sanitizedFileName,
     });
 
-    // ✅ CRITICAL: Generate public URL and VERIFY it's accessible
+    // ✅ CRITICAL: Generate public URL
+    // Use Supabase SDK method, with manual fallback
     const { data: publicUrlData } = supabase.storage
       .from(STORAGE_BUCKET)
       .getPublicUrl(data.path);
 
-    const publicUrl = publicUrlData.publicUrl;
+    let publicUrl = publicUrlData.publicUrl;
+
+    // Fallback: Manually construct URL if SDK doesn't provide it
+    if (!publicUrl || publicUrl.includes('undefined')) {
+      const { url: supabaseUrl } = getSupabaseEnv();
+      publicUrl = `${supabaseUrl}/storage/v1/object/public/${STORAGE_BUCKET}/${data.path}`;
+      console.warn('[Supabase Storage] ⚠️ SDK URL was empty, using manually constructed URL');
+    }
 
     console.log('[Supabase Storage] 🔗 Generated public URL:', publicUrl);
 
-    // Verify public URL is accessible by checking bucket RLS
-    // (This is informational - actual permission checking happens in Supabase)
-    console.log('[Supabase Storage] ℹ️ Bucket must have public read access for:', {
+    // Verify URL format
+    console.log('[Supabase Storage] ℹ️ Bucket configuration:', {
       bucket: STORAGE_BUCKET,
+      fileSize: file.length,
+      fileName: sanitizedFileName,
       publicUrl,
-      note: 'Configure in Supabase Dashboard > Storage > product-images > Policies',
+      note: 'Ensure Supabase Dashboard > Storage > product-images > Policies allows public SELECT',
     });
 
     return publicUrl;
@@ -172,6 +181,31 @@ export async function testStorageConnection(): Promise<{ success: boolean; error
     const errorMsg = error instanceof Error ? error.message : String(error);
     console.error('[Supabase Storage] ❌ Connection test error:', errorMsg);
     return { success: false, error: errorMsg };
+  }
+}
+
+/**
+ * Generate signed URL for private storage access
+ * @param filePath - Path of the file in storage
+ * @returns Signed URL that works for 1 hour
+ */
+export async function getSignedUrl(filePath: string): Promise<string> {
+  try {
+    const supabase = getSupabaseAdmin();
+    
+    const { data, error } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .createSignedUrl(filePath, 3600); // 1 hour expiry
+    
+    if (error) {
+      console.error('[Supabase Storage] ❌ Signed URL generation failed:', error);
+      throw new Error(`Failed to generate signed URL: ${error.message}`);
+    }
+    
+    return data.signedUrl;
+  } catch (error) {
+    console.error('[Supabase Storage] 🔴 SIGNED URL ERROR:', error);
+    throw error;
   }
 }
 

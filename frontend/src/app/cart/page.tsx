@@ -431,6 +431,8 @@ export default function CartPage() {
           </div>
         </div>
 
+        {/* Valentine's Day add-ons removed - Gift Box and Pouch products don't exist in inventory */}
+
         {/* ============================================================
             SMART BILL BREAKDOWN (Receipt Style - NO BOX)
             ============================================================ */}
