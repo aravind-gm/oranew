@@ -87,7 +87,7 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen">
       {/* Error Banner */}
       {error && (
         <div className="bg-red-600 text-white px-6 py-3">
