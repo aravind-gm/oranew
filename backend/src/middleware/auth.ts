@@ -1,5 +1,7 @@
 import { UserRole } from '@prisma/client';
+import type { ParamsDictionary } from 'express-serve-static-core';
 import { NextFunction, Request, Response } from 'express';
+import type { ParsedQs } from 'qs';
 import jwt from 'jsonwebtoken';
 import { AppError } from './errorHandler';
 
@@ -15,12 +17,24 @@ declare global {
   }
 }
 
-export interface AuthRequest extends Request {
+export interface AuthRequest<
+  Params = ParamsDictionary,
+  ResBody = any,
+  ReqBody = any,
+  ReqQuery = ParsedQs
+> extends Request<Params, ResBody, ReqBody, ReqQuery> {
   user?: {
     id: string;
     email: string;
     role: UserRole;
   };
+  params: Params;
+  body: ReqBody;
+  query: ReqQuery;
+  headers: Request['headers'];
+  method: Request['method'];
+  path: Request['path'];
+  files?: any;
 }
 
 export const protect = async (

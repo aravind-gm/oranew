@@ -44,7 +44,7 @@ export const uploadImages = async (
       );
     }
 
-    const files = req.files as Express.Multer.File[];
+    const files = (req.files as any[]) || [];
 
     if (!files || files.length === 0) {
       console.warn('[Upload Controller] ⚠️ NO FILES UPLOADED', {

@@ -30,7 +30,7 @@ const uploadImages = async (req, res, next) => {
             });
             throw new errorHandler_1.AppError('Storage not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in environment variables.', 500);
         }
-        const files = req.files;
+        const files = req.files || [];
         if (!files || files.length === 0) {
             console.warn('[Upload Controller] ⚠️ NO FILES UPLOADED', {
                 userId: req.user.id,
