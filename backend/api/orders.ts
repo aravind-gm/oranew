@@ -6,9 +6,9 @@ import { prisma } from '../lib/prisma';
 async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'POST') {
     // POST /api/orders - Create order
-    const { items, shippingAddress, email, phone } = req.body;
+    const { items, shippingAddressId, billingAddressId, userId } = req.body;
 
-    if (!items || !shippingAddress) {
+    if (!items || !shippingAddressId || !billingAddressId || !userId) {
       return errorResponse(res, 'Missing required fields', 400);
     }
 
@@ -18,36 +18,46 @@ async function handler(req: VercelRequest, res: VercelResponse) {
       where: { id: { in: productIds } },
     });
 
-    // Calculate total
-    let total = 0;
+    // Calculate totals
+    let subtotal = 0;
     const orderItems = items.map((item: any) => {
       const product = products.find(p => p.id === item.productId);
       if (!product) throw new Error(`Product ${item.productId} not found`);
-      total += product.price * item.quantity;
+      const itemTotal = Number(product.price) * item.quantity;
+      subtotal += itemTotal;
       return {
-        productId: product.id,
+        productName: product.name,
+        productImage: null,
         quantity: item.quantity,
-        price: product.price,
-        size: item.size || null,
+        unitPrice: product.price,
+        gstRate: 18,
+        totalPrice: itemTotal,
+        discount: 0,
       };
     });
+
+    const gstAmount = Math.round(subtotal * 0.18 * 100) / 100;
+    const shippingFee = 50;
+    const totalAmount = subtotal + gstAmount + shippingFee;
 
     // Create order
     const order = await prisma.order.create({
       data: {
-        email,
-        phone,
-        shippingAddress,
-        subtotal: total,
-        tax: Math.round(total * 0.18 * 100) / 100,
-        shipping: 50,
-        total: total + Math.round(total * 0.18 * 100) / 100 + 50,
+        orderNumber: `ORD-${Date.now()}`,
+        userId,
+        shippingAddressId,
+        billingAddressId,
+        subtotal,
+        gstAmount,
+        shippingFee,
+        totalAmount,
+        paymentStatus: 'PENDING',
         status: 'PENDING',
-        orderItems: {
+        items: {
           create: orderItems,
         },
       },
-      include: { orderItems: true },
+      include: { items: true },
     });
 
     return successResponse(res, order, 201);
@@ -64,11 +74,13 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     const order = await prisma.order.findUnique({
       where: { id: id as string },
       include: {
-        orderItems: {
+        items: {
           include: {
             product: true,
           },
         },
+        shippingAddress: true,
+        billingAddress: true,
       },
     });
 

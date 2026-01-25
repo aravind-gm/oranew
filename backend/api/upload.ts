@@ -8,7 +8,6 @@ import {
 } from '../lib/handlers';
 import { requireAdmin } from '../lib/auth';
 import { uploadToSupabase } from '../lib/supabase';
-import multipart from 'parse-multipart';
 
 async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -20,28 +19,30 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   requireAdmin(authHeader);
 
   try {
-    // Parse multipart form data
-    const boundary = (req.headers['content-type'] || '').split('boundary=')[1];
+    // For Vercel serverless, handle file upload from FormData sent by frontend
+    // The body will be the raw file buffer
+    const buffer = typeof req.body === 'string' 
+      ? Buffer.from(req.body, 'binary')
+      : req.body;
 
-    if (!boundary) {
+    if (!buffer || buffer.length === 0) {
       return errorResponse(res, 'No file provided', 400);
     }
 
-    const parts = multipart.parse(Buffer.from(req.body), boundary);
+    // Get filename from content-disposition header
+    const contentDisposition = req.headers['content-disposition'] || '';
+    const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+    const filename = filenameMatch ? filenameMatch[1] : `upload-${Date.now()}`;
 
-    if (!parts || parts.length === 0) {
-      return errorResponse(res, 'No file provided', 400);
-    }
-
-    const file = parts[0];
-    const filename = `products/${Date.now()}-${file.filename}`;
+    // Get content type
+    const contentType = req.headers['content-type'] as string || 'image/jpeg';
 
     // Upload to Supabase
     const publicUrl = await uploadToSupabase(
       'product-images',
-      filename,
-      file.data,
-      file.type
+      `products/${Date.now()}-${filename}`,
+      buffer as Buffer,
+      contentType
     );
 
     return successResponse(res, { url: publicUrl }, 201);

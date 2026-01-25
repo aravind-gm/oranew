@@ -25,8 +25,8 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     const where = search
       ? {
           OR: [
-            { name: { contains: search as string, mode: 'insensitive' } },
-            { sku: { contains: search as string, mode: 'insensitive' } },
+            { name: { contains: search as string, mode: 'insensitive' as const } },
+            { sku: { contains: search as string, mode: 'insensitive' as const } },
           ],
         }
       : {};
@@ -36,7 +36,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         where,
         include: {
           category: true,
-          productImages: true,
+          images: true,
         },
         skip,
         take: pageSize,
@@ -76,20 +76,22 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         slug,
         description,
         price: parseFloat(price),
-        stock: parseInt(stock) || 0,
+        finalPrice: parseFloat(price),
+        stockQuantity: parseInt(stock) || 0,
         sku,
         categoryId,
         isActive: true,
-        productImages: {
+        images: {
           create: images.map((url: string) => ({
             imageUrl: url,
-            isMain: false,
+            altText: name,
+            sortOrder: 0,
           })),
         },
       },
       include: {
         category: true,
-        productImages: true,
+        images: true,
       },
     });
 
@@ -112,12 +114,12 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         ...(slug && { slug }),
         ...(description && { description }),
         ...(price && { price: parseFloat(price) }),
-        ...(stock !== undefined && { stock: parseInt(stock) }),
+        ...(stock !== undefined && { stockQuantity: parseInt(stock) }),
         ...(categoryId && { categoryId }),
       },
       include: {
         category: true,
-        productImages: true,
+        images: true,
       },
     });
 

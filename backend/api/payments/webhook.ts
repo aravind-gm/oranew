@@ -34,8 +34,16 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         await prisma.order.update({
           where: { id: orderId },
           data: {
+            paymentStatus: 'CONFIRMED',
             status: 'CONFIRMED',
-            paymentId: razorpay_payment_id,
+            payments: {
+              create: {
+                transactionId: razorpay_payment_id,
+                amount: 0,
+                status: 'CONFIRMED',
+                paymentGateway: 'RAZORPAY',
+              },
+            },
           },
         });
       }
@@ -48,7 +56,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
       if (orderId) {
         await prisma.order.update({
           where: { id: orderId },
-          data: { status: 'FAILED' },
+          data: { paymentStatus: 'FAILED', status: 'CANCELLED' },
         });
       }
     }

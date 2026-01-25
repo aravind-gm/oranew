@@ -21,7 +21,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     const productIds = items.map((item: any) => item.productId);
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
-      include: { productImages: true },
+      include: { images: true },
     });
 
     if (products.length !== productIds.length) {
@@ -35,7 +35,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         throw new Error(`Product ${item.productId} not found`);
       }
 
-      if (item.quantity > product.stock) {
+      if (item.quantity > product.stockQuantity) {
         throw new Error(`Insufficient stock for ${product.name}`);
       }
 

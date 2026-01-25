@@ -31,23 +31,24 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Verify password
-  const isValid = await bcrypt.compare(password, user.password);
+  const isValid = await bcrypt.compare(password, user.passwordHash);
   if (!isValid) {
     return errorResponse(res, 'Invalid credentials', 401);
   }
 
-  // Generate JWT
+  // Generate JWT (only ADMIN and USER roles allowed)
+  const role = user.role === 'CUSTOMER' ? 'USER' : user.role;
   const token = createJWT({
     id: user.id,
     email: user.email,
-    role: user.role,
+    role: role as 'ADMIN' | 'USER',
   });
 
   successResponse(res, {
     token,
     user: {
       id: user.id,
-      name: user.name,
+      name: user.fullName,
       email: user.email,
       role: user.role,
     },

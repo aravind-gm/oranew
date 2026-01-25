@@ -14,11 +14,11 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         where: { slug: slug as string },
         include: {
           category: true,
-          productImages: true,
+          images: true,
           reviews: {
             include: {
               user: {
-                select: { name: true, email: true },
+                select: { fullName: true, email: true },
               },
             },
           },
@@ -42,7 +42,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         where: { isActive: true },
         include: {
           category: true,
-          productImages: true,
+          images: true,
         },
         skip,
         take: pageSize,
