@@ -88,14 +88,14 @@ function QuantityEditor({ quantity, productId, onUpdate, maxQuantity = 10 }: Qua
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1 sm:gap-2">
       <button
         onClick={handleDecrement}
         disabled={quantity <= 1}
-        className="w-6 h-6 flex items-center justify-center text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        className="w-8 h-8 sm:w-6 sm:h-6 flex items-center justify-center text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors rounded-full hover:bg-primary/10"
         aria-label="Decrease quantity"
       >
-        <Minus className="w-3 h-3" />
+        <Minus className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
       </button>
       
       <input
@@ -104,7 +104,7 @@ function QuantityEditor({ quantity, productId, onUpdate, maxQuantity = 10 }: Qua
         onChange={handleInputChange}
         onFocus={() => setIsFocused(true)}
         onBlur={handleInputBlur}
-        className={`w-12 text-center text-sm bg-transparent border-b transition-all ${
+        className={`w-10 sm:w-12 text-center text-sm bg-transparent border-b transition-all ${
           isFocused ? 'border-text-primary' : 'border-transparent'
         } focus:outline-none`}
       />
@@ -112,10 +112,10 @@ function QuantityEditor({ quantity, productId, onUpdate, maxQuantity = 10 }: Qua
       <button
         onClick={handleIncrement}
         disabled={quantity >= maxQuantity}
-        className="w-6 h-6 flex items-center justify-center text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        className="w-8 h-8 sm:w-6 sm:h-6 flex items-center justify-center text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors rounded-full hover:bg-primary/10"
         aria-label="Increase quantity"
       >
-        <Plus className="w-3 h-3" />
+        <Plus className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
       </button>
     </div>
   );
@@ -293,29 +293,31 @@ export default function CartPage() {
 
   // ====== MAIN RENDER ======
   return (
-    <main className="bg-background min-h-screen">
-      <div className="max-w-4xl mx-auto px-6 py-12 lg:py-16">
+    <main className="bg-background min-h-screen pb-32 sm:pb-0">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-12 lg:py-16">
         
         {/* ============================================================
-            HEADER
+            HEADER - Mobile Optimized
             ============================================================ */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+          className="mb-6 sm:mb-8"
         >
-          <h1 className="font-serif text-3xl lg:text-4xl text-text-primary mb-1">
+          <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-text-primary mb-1">
             Your Order
           </h1>
-          <p className="text-sm text-text-secondary">
+          <p className="text-xs sm:text-sm text-text-secondary">
             Review before checkout
           </p>
         </motion.div>
 
         {/* ============================================================
-            SYSTEM STEPPER
+            SYSTEM STEPPER - Compact on mobile
             ============================================================ */}
-        <SystemStepper currentStep="cart" />
+        <div className="mb-6 sm:mb-12">
+          <SystemStepper currentStep="cart" />
+        </div>
 
         {/* ============================================================
             STOCK ERRORS (if any)
@@ -341,25 +343,25 @@ export default function CartPage() {
         </AnimatePresence>
 
         {/* ============================================================
-            LIVE INVOICE ROWS
+            LIVE INVOICE ROWS - Mobile Optimized
             ============================================================ */}
-        <div className="mb-12">
-          <div className="mb-4">
-            <p className="text-xs uppercase tracking-widest text-text-muted">
+        <div className="mb-8 sm:mb-12">
+          <div className="mb-3 sm:mb-4">
+            <p className="text-[10px] sm:text-xs uppercase tracking-widest text-text-muted">
               Items ({itemCount})
             </p>
           </div>
 
-          {/* Invoice table header - subtle */}
-          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 pb-2 border-b border-border/40 mb-2">
+          {/* Invoice table header - Hidden on mobile, card layout instead */}
+          <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto] gap-4 pb-2 border-b border-border/40 mb-2">
             <p className="text-xs text-text-muted uppercase tracking-wide">Product</p>
             <p className="text-xs text-text-muted uppercase tracking-wide text-center">Qty</p>
             <p className="text-xs text-text-muted uppercase tracking-wide text-right">Price</p>
             <div className="w-6" /> {/* Spacer for remove button */}
           </div>
 
-          {/* Invoice rows */}
-          <div className="space-y-0">
+          {/* Invoice rows - Card layout on mobile */}
+          <div className="space-y-3 sm:space-y-0">
             {items.map((item, index) => (
               <motion.div
                 key={item.productId}
@@ -375,53 +377,72 @@ export default function CartPage() {
                   duration: 0.3,
                   delay: index * 0.03,
                 }}
-                className="grid grid-cols-[1fr_auto_auto_auto] gap-4 py-4 border-b border-border/20 items-center hover:bg-primary/5 transition-colors"
+                className="
+                  sm:grid sm:grid-cols-[1fr_auto_auto_auto] sm:gap-4 sm:py-4 sm:border-b sm:border-border/20 sm:items-center 
+                  bg-white sm:bg-transparent rounded-xl sm:rounded-none p-3 sm:p-0 border sm:border-0 border-border/30
+                  hover:bg-primary/5 transition-colors
+                "
               >
                 {/* Product Info */}
-                <div className="flex items-center gap-3">
-                  <div className="relative w-14 h-14 flex-shrink-0 rounded overflow-hidden bg-background-white border border-border/30">
+                <div className="flex items-start sm:items-center gap-3">
+                  <div className="relative w-16 h-16 sm:w-14 sm:h-14 flex-shrink-0 rounded-lg sm:rounded overflow-hidden bg-background-white border border-border/30">
                     <Image
                       src={item.image}
                       alt={item.name}
                       fill
                       className="object-cover"
-                      sizes="56px"
+                      sizes="(max-width: 640px) 64px, 56px"
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-text-primary font-medium truncate">
+                    <p className="text-sm text-text-primary font-medium line-clamp-2 sm:truncate">
                       {item.name}
                     </p>
+                    {/* Mobile: Show price inline */}
+                    <p className="sm:hidden text-sm text-text-primary font-medium mt-1">
+                      ₹{(item.price * item.quantity).toLocaleString('en-IN')}
+                    </p>
                     {item.stockQuantity !== undefined && (
-                      <p className="text-xs text-text-muted mt-0.5">
+                      <p className="text-[10px] sm:text-xs text-text-muted mt-0.5">
                         {item.stockQuantity > 0 
                           ? `${item.stockQuantity} in stock` 
                           : 'Out of stock'}
                       </p>
                     )}
                   </div>
+                  {/* Mobile: Remove button at top right */}
+                  <button
+                    onClick={() => handleRemoveItem(item.productId)}
+                    className="sm:hidden w-8 h-8 flex items-center justify-center text-text-muted hover:text-error transition-colors -mt-1 -mr-1"
+                    aria-label="Remove item"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
 
-                {/* Quantity Editor */}
-                <QuantityEditor
-                  quantity={item.quantity}
-                  productId={item.productId}
-                  onUpdate={handleQuantityUpdate}
-                  maxQuantity={item.stockQuantity || 10}
-                />
+                {/* Mobile: Quantity controls below */}
+                <div className="flex items-center justify-between sm:justify-center mt-3 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-0 border-border/20">
+                  <span className="sm:hidden text-xs text-text-muted">Quantity</span>
+                  <QuantityEditor
+                    quantity={item.quantity}
+                    productId={item.productId}
+                    onUpdate={handleQuantityUpdate}
+                    maxQuantity={item.stockQuantity || 10}
+                  />
+                </div>
 
-                {/* Price */}
-                <div className="text-right min-w-[80px]">
+                {/* Desktop: Price */}
+                <div className="hidden sm:block text-right min-w-[80px]">
                   <AnimatedPrice 
                     value={item.price * item.quantity}
                     className="text-sm text-text-primary font-medium"
                   />
                 </div>
 
-                {/* Remove Button */}
+                {/* Desktop: Remove Button */}
                 <button
                   onClick={() => handleRemoveItem(item.productId)}
-                  className="w-6 h-6 flex items-center justify-center text-text-muted hover:text-error transition-colors"
+                  className="hidden sm:flex w-6 h-6 items-center justify-center text-text-muted hover:text-error transition-colors"
                   aria-label="Remove item"
                 >
                   <X className="w-4 h-4" />
@@ -434,13 +455,13 @@ export default function CartPage() {
         {/* Valentine's Day add-ons removed - Gift Box and Pouch products don't exist in inventory */}
 
         {/* ============================================================
-            SMART BILL BREAKDOWN (Receipt Style - NO BOX)
+            SMART BILL BREAKDOWN - Mobile Optimized
             ============================================================ */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="mb-12 max-w-sm ml-auto"
+          className="mb-8 sm:mb-12 sm:max-w-sm sm:ml-auto"
         >
           {/* Subtotal */}
           <div className="flex justify-between items-baseline py-2 text-sm">
@@ -470,19 +491,19 @@ export default function CartPage() {
             <span className="text-text-primary font-medium">Total</span>
             <AnimatedPrice 
               value={total}
-              className="text-xl font-medium text-text-primary"
+              className="text-lg sm:text-xl font-medium text-text-primary"
             />
           </div>
         </motion.div>
 
         {/* ============================================================
-            PRIMARY ACTION
+            PRIMARY ACTION - Hidden on mobile (moved to sticky bar)
             ============================================================ */}
-        <div className="space-y-4">
+        <div className="hidden sm:block space-y-4">
           <button
             onClick={handleCheckout}
             disabled={isCheckingOut || stockErrors.length > 0 || stockValidating}
-            className="w-full py-4 bg-text-primary text-background rounded-full font-medium hover:bg-text-secondary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-4 bg-text-primary text-background rounded-full font-medium hover:bg-text-secondary transition-all disabled:opacity-50 disabled:cursor-not-allowed min-h-[52px]"
           >
             {isCheckingOut ? 'Preparing...' : 'Continue to Secure Checkout'}
           </button>
@@ -493,6 +514,30 @@ export default function CartPage() {
           </p>
         </div>
 
+      </div>
+
+      {/* ============================================================
+          MOBILE STICKY CHECKOUT BAR
+          ============================================================ */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-50 safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
+        <div className="flex items-center gap-3">
+          {/* Total Display */}
+          <div className="flex-1">
+            <p className="text-xs text-text-muted">Total</p>
+            <p className="text-lg font-bold text-text-primary">
+              ₹{total.toLocaleString('en-IN')}
+            </p>
+          </div>
+          
+          {/* Checkout Button */}
+          <button
+            onClick={handleCheckout}
+            disabled={isCheckingOut || stockErrors.length > 0 || stockValidating}
+            className="flex-1 py-3.5 bg-text-primary text-background rounded-full font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+          >
+            {isCheckingOut ? 'Preparing...' : 'Checkout'}
+          </button>
+        </div>
       </div>
     </main>
   );

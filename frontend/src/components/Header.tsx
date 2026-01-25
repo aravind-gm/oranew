@@ -1,5 +1,6 @@
 'use client';
 
+import MobilePillNav from '@/components/MobilePillNav';
 import PillNav from '@/components/PillNav';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
@@ -15,7 +16,6 @@ export default function Header() {
   const router = useRouter();
   const { token, user, logout } = useAuthStore();
   const { items } = useCartStore();
-  const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [scrollDirection, setScrollDirection] = useState<'up' | 'down'>('up');
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -55,6 +55,7 @@ export default function Header() {
   const cartCount = isClient ? items.length : 0;
 
   return (
+    <>
     <header className={`sticky top-0 z-50 transition-all duration-300 ${
       scrollDirection === 'down' ? '-translate-y-full' : 'translate-y-0'
     } ${
@@ -62,23 +63,23 @@ export default function Header() {
         ? 'bg-background-white/95 backdrop-blur-md shadow-luxury' 
         : 'bg-background-white'
     }`}>
-      {/* Announcement Bar */}
-      <div className="bg-primary/30 py-2 text-center">
-        <p className="text-xs tracking-wider text-text-primary">
-          ✨ Free Shipping on Orders Above ₹999 | Use Code: <span className="font-semibold">ORA20</span> for 20% Off
+      {/* Announcement Bar - Mobile optimized */}
+      <div className="bg-primary/30 py-2 sm:py-2 text-center px-4">
+        <p className="text-[11px] sm:text-xs tracking-wider text-text-primary leading-tight">
+          ✨ Free Shipping Above ₹999 | Code: <span className="font-semibold">ORA20</span> for 20% Off
         </p>
       </div>
 
       <nav className="container-luxury">
-        <div className="flex items-center justify-between h-20">
-          {/* Logo */}
-          <Link href="/" className="flex items-center group">
+        <div className="flex items-center justify-between h-16 sm:h-20">
+          {/* Logo - smaller on mobile */}
+          <Link href="/" className="flex items-center group flex-shrink-0">
             <Image
               src="/oralogo.png"
               alt="ORA Jewellery Logo"
               width={120}
               height={50}
-              className="h-auto object-contain transition-opacity group-hover:opacity-80"
+              className="h-8 sm:h-10 w-auto object-contain transition-opacity group-hover:opacity-80"
               priority
             />
           </Link>
@@ -100,12 +101,12 @@ export default function Header() {
             />
           </div>
 
-          {/* Right Side Actions */}
-          <div className="flex items-center gap-5">
-            {/* Search */}
+          {/* Right Side Actions - Mobile optimized spacing */}
+          <div className="flex items-center gap-1 sm:gap-3 md:gap-5">
+            {/* Search - Larger tap area on mobile */}
             <Link
               href="/search"
-              className="text-text-primary hover:text-accent transition-colors p-2 rounded-full hover:bg-primary/20"
+              className="text-text-primary hover:text-accent transition-colors p-2.5 sm:p-2 rounded-full hover:bg-primary/20 -mr-1 sm:mr-0"
               title="Search"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -113,10 +114,10 @@ export default function Header() {
               </svg>
             </Link>
 
-            {/* Wishlist */}
+            {/* Wishlist - Hidden on very small screens */}
             <Link
               href="/wishlist"
-              className="text-text-primary hover:text-accent transition-colors p-2 rounded-full hover:bg-primary/20"
+              className="hidden xs:flex text-text-primary hover:text-accent transition-colors p-2.5 sm:p-2 rounded-full hover:bg-primary/20"
               title="Wishlist"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -124,17 +125,17 @@ export default function Header() {
               </svg>
             </Link>
 
-            {/* Cart */}
+            {/* Cart - Always visible with larger tap area */}
             <Link
               href="/cart"
-              className="text-text-primary hover:text-accent transition-colors p-2 rounded-full hover:bg-primary/20 relative"
+              className="text-text-primary hover:text-accent transition-colors p-2.5 sm:p-2 rounded-full hover:bg-primary/20 relative"
               title="Cart"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent text-background-white rounded-full text-xs flex items-center justify-center font-semibold">
+                <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 w-5 h-5 bg-accent text-background-white rounded-full text-xs flex items-center justify-center font-semibold">
                   {cartCount}
                 </span>
               )}
@@ -213,86 +214,24 @@ export default function Header() {
               </div>
             )}
 
-            {/* Mobile Menu Button */}
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="md:hidden p-2 text-text-primary hover:text-accent transition-colors"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {isOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
-                )}
-              </svg>
-            </button>
+            {/* Mobile Menu Button - REMOVED: Now using MobilePillNav below header */}
           </div>
         </div>
 
-        {/* Mobile Menu */}
-        {isOpen && (
-          <div className="md:hidden py-6 border-t border-border bg-background-white">
-            <div className="space-y-1">
-              <Link 
-                href="/valentine-drinkware" 
-                className="block px-4 py-3 text-accent hover:bg-accent/10 rounded-xl transition-colors font-medium"
-                onClick={() => setIsOpen(false)}
-              >
-                💕 Valentine&apos;s Special
-              </Link>
-              <Link 
-                href="/collections" 
-                className="block px-4 py-3 text-text-primary hover:bg-primary/10 rounded-xl transition-colors font-medium"
-                onClick={() => setIsOpen(false)}
-              >
-                Collections
-              </Link>
-              <Link 
-                href="/about" 
-                className="block px-4 py-3 text-text-primary hover:bg-primary/10 rounded-xl transition-colors font-medium"
-                onClick={() => setIsOpen(false)}
-              >
-                Our Story
-              </Link>
-              <Link 
-                href="/contact" 
-                className="block px-4 py-3 text-text-primary hover:bg-primary/10 rounded-xl transition-colors font-medium"
-                onClick={() => setIsOpen(false)}
-              >
-                Contact
-              </Link>
-              {isAdmin && (
-                <Link 
-                  href="/admin" 
-                  className="block px-4 py-3 text-accent hover:bg-primary/10 rounded-xl transition-colors font-medium"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Admin Panel
-                </Link>
-              )}
-            </div>
-            
-            {!isLoggedIn && (
-              <div className="mt-6 pt-6 border-t border-border space-y-3 px-4">
-                <Link 
-                  href="/auth/login" 
-                  className="block text-center py-3 text-text-primary border border-border rounded-xl hover:bg-primary/10 transition-colors font-medium"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Sign In
-                </Link>
-                <Link 
-                  href="/auth/register" 
-                  className="block text-center btn-primary"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Join ORA
-                </Link>
-              </div>
-            )}
-          </div>
-        )}
+        {/* Mobile Navigation - Now using MobilePillNav component below header */}
       </nav>
     </header>
+
+    {/* Mobile Horizontal Pill Navigation - Only visible on mobile screens */}
+    <MobilePillNav 
+      items={[
+        { label: '💕 Valentine\'s', href: '/valentine-drinkware', icon: '💕' },
+        { label: 'Collections', href: '/collections' },
+        { label: 'Our Story', href: '/about' },
+        { label: 'Contact', href: '/contact' },
+        ...(isAdmin ? [{ label: 'Admin', href: '/admin' }] : [])
+      ]}
+    />
+    </>
   );
 }

@@ -67,11 +67,11 @@ function SystemStepper({ currentStep = 'address' }: { currentStep?: string }) {
   const currentIndex = CHECKOUT_STEPS.findIndex(s => s.id === currentStep);
 
   return (
-    <div className="flex items-center gap-2 mb-12">
+    <div className="flex items-center gap-2 mb-6 sm:mb-12">
       {CHECKOUT_STEPS.map((step, index) => (
         <div key={step.id} className="flex items-center">
           <span
-            className={`text-xs tracking-wider transition-colors ${
+            className={`text-[10px] sm:text-xs tracking-wider transition-colors ${
               index === currentIndex
                 ? 'text-text-primary font-medium'
                 : index < currentIndex
@@ -82,7 +82,7 @@ function SystemStepper({ currentStep = 'address' }: { currentStep?: string }) {
             {step.label}
           </span>
           {index < CHECKOUT_STEPS.length - 1 && (
-            <span className="mx-3 text-text-muted">—</span>
+            <span className="mx-2 sm:mx-3 text-text-muted">—</span>
           )}
         </div>
       ))}
@@ -106,18 +106,18 @@ function CollapsibleSection({ section, isExpanded, onToggle, children }: Collaps
     <div className="border-b border-border/30 last:border-0">
       <button
         onClick={onToggle}
-        className="w-full py-6 flex items-center justify-between group hover:bg-primary/5 transition-colors"
+        className="w-full py-4 sm:py-6 flex items-center justify-between group hover:bg-primary/5 transition-colors min-h-[56px]"
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {section.isComplete && (
-            <div className="w-5 h-5 rounded-full bg-success flex items-center justify-center">
+            <div className="w-5 h-5 rounded-full bg-success flex items-center justify-center flex-shrink-0">
               <Check className="w-3 h-3 text-white" />
             </div>
           )}
-          <h2 className="text-lg font-medium text-text-primary">{section.title}</h2>
+          <h2 className="text-base sm:text-lg font-medium text-text-primary">{section.title}</h2>
         </div>
         
-        <div className="text-text-muted">
+        <div className="text-text-muted p-2 -mr-2">
           {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </div>
       </button>
@@ -131,7 +131,7 @@ function CollapsibleSection({ section, isExpanded, onToggle, children }: Collaps
             transition={{ duration: 0.3, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <div className="pb-8 px-1">
+            <div className="pb-6 sm:pb-8 px-1">
               {children}
             </div>
           </motion.div>
@@ -260,21 +260,21 @@ export default function CheckoutPage() {
 
   // ====== MAIN RENDER ======
   return (
-    <main className="bg-background min-h-screen">
-      <div className="max-w-4xl mx-auto px-6 py-12 lg:py-16">
+    <main className="bg-background min-h-screen pb-32 sm:pb-0">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-12 lg:py-16">
         
         {/* ============================================================
-            HEADER
+            HEADER - Mobile Optimized
             ============================================================ */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+          className="mb-6 sm:mb-8"
         >
-          <h1 className="font-serif text-3xl lg:text-4xl text-text-primary mb-1">
+          <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-text-primary mb-1">
             Secure Checkout
           </h1>
-          <p className="text-sm text-text-secondary">
+          <p className="text-xs sm:text-sm text-text-secondary">
             Complete your order
           </p>
         </motion.div>
@@ -293,14 +293,14 @@ export default function CheckoutPage() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="mb-8 p-4 bg-error/10 border border-error/20 rounded-lg"
+              className="mb-6 sm:mb-8 p-3 sm:p-4 bg-error/10 border border-error/20 rounded-lg"
             >
               <p className="text-sm text-error">{error}</p>
             </motion.div>
           )}
         </AnimatePresence>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8 lg:gap-12">
           
           {/* ============================================================
               LEFT: PROGRESSIVE SECTIONS
@@ -324,11 +324,11 @@ export default function CheckoutPage() {
                     value={address.street}
                     onChange={handleAddressChange}
                     placeholder="123 Main Street"
-                    className="w-full px-4 py-3 bg-background-white border border-border/40 rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-text-primary transition-colors"
+                    className="w-full px-4 py-3.5 sm:py-3 bg-background-white border border-border/40 rounded-lg text-base sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-text-primary transition-colors min-h-[52px]"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs text-text-muted uppercase tracking-wide mb-2">
                       City
@@ -339,7 +339,7 @@ export default function CheckoutPage() {
                       value={address.city}
                       onChange={handleAddressChange}
                       placeholder="Mumbai"
-                      className="w-full px-4 py-3 bg-background-white border border-border/40 rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-text-primary transition-colors"
+                      className="w-full px-4 py-3.5 sm:py-3 bg-background-white border border-border/40 rounded-lg text-base sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-text-primary transition-colors min-h-[52px]"
                     />
                   </div>
 
@@ -353,12 +353,12 @@ export default function CheckoutPage() {
                       value={address.state}
                       onChange={handleAddressChange}
                       placeholder="Maharashtra"
-                      className="w-full px-4 py-3 bg-background-white border border-border/40 rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-text-primary transition-colors"
+                      className="w-full px-4 py-3.5 sm:py-3 bg-background-white border border-border/40 rounded-lg text-base sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-text-primary transition-colors min-h-[52px]"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs text-text-muted uppercase tracking-wide mb-2">
                       ZIP Code
@@ -369,7 +369,7 @@ export default function CheckoutPage() {
                       value={address.zipCode}
                       onChange={handleAddressChange}
                       placeholder="400001"
-                      className="w-full px-4 py-3 bg-background-white border border-border/40 rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-text-primary transition-colors"
+                      className="w-full px-4 py-3.5 sm:py-3 bg-background-white border border-border/40 rounded-lg text-base sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-text-primary transition-colors min-h-[52px]"
                     />
                   </div>
 
@@ -381,7 +381,7 @@ export default function CheckoutPage() {
                       name="country"
                       value={address.country}
                       onChange={handleAddressChange}
-                      className="w-full px-4 py-3 bg-background-white border border-border/40 rounded-lg text-sm text-text-primary focus:outline-none focus:border-text-primary transition-colors"
+                      className="w-full px-4 py-3.5 sm:py-3 bg-background-white border border-border/40 rounded-lg text-base sm:text-sm text-text-primary focus:outline-none focus:border-text-primary transition-colors min-h-[52px]"
                     >
                       <option value="India">India</option>
                     </select>
@@ -390,7 +390,7 @@ export default function CheckoutPage() {
 
                 <button
                   onClick={handleAddressComplete}
-                  className="mt-6 px-6 py-3 bg-text-primary text-background rounded-full text-sm font-medium hover:bg-text-secondary transition-colors"
+                  className="mt-6 w-full sm:w-auto px-6 py-3.5 sm:py-3 bg-text-primary text-background rounded-full text-sm font-medium hover:bg-text-secondary transition-colors min-h-[48px]"
                 >
                   Continue to Delivery
                 </button>
@@ -406,7 +406,7 @@ export default function CheckoutPage() {
               {sections[0].isComplete ? (
                 <div className="space-y-6">
                   {/* Address Receipt Line */}
-                  <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
+                  <div className="p-3 sm:p-4 bg-primary/5 rounded-lg border border-primary/20">
                     <p className="text-xs text-text-muted uppercase tracking-wide mb-2">
                       Shipping to
                     </p>
@@ -417,7 +417,7 @@ export default function CheckoutPage() {
                     </div>
                     <button
                       onClick={() => setCurrentStep('contact')}
-                      className="mt-3 text-xs text-accent hover:underline"
+                      className="mt-3 text-xs text-accent hover:underline p-1 -ml-1"
                     >
                       Edit address
                     </button>
@@ -425,7 +425,7 @@ export default function CheckoutPage() {
 
                   <button
                     onClick={handleDeliveryConfirm}
-                    className="px-6 py-3 bg-text-primary text-background rounded-full text-sm font-medium hover:bg-text-secondary transition-colors"
+                    className="w-full sm:w-auto px-6 py-3.5 sm:py-3 bg-text-primary text-background rounded-full text-sm font-medium hover:bg-text-secondary transition-colors min-h-[48px]"
                   >
                     Confirm Delivery
                   </button>
@@ -445,8 +445,8 @@ export default function CheckoutPage() {
                 <div className="space-y-6">
                   {/* Payment Method Selection */}
                   <div className="space-y-3">
-                    <label className="flex items-center gap-3 p-4 border border-border/40 rounded-lg cursor-pointer hover:border-text-primary transition-colors">
-                      <input type="radio" name="payment" value="razorpay" defaultChecked className="w-4 h-4" />
+                    <label className="flex items-center gap-3 p-4 border border-border/40 rounded-lg cursor-pointer hover:border-text-primary transition-colors min-h-[60px]">
+                      <input type="radio" name="payment" value="razorpay" defaultChecked className="w-5 h-5 sm:w-4 sm:h-4" />
                       <div className="flex-1">
                         <p className="text-sm font-medium text-text-primary">Razorpay</p>
                         <p className="text-xs text-text-muted">Card, UPI, Netbanking, Wallets</p>
@@ -454,10 +454,11 @@ export default function CheckoutPage() {
                     </label>
                   </div>
 
+                  {/* Desktop Place Order - Hidden on mobile */}
                   <button
                     onClick={handleCreateOrder}
                     disabled={loading}
-                    className="w-full py-4 bg-text-primary text-background rounded-full font-medium hover:bg-text-secondary transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="hidden sm:flex w-full py-4 bg-text-primary text-background rounded-full font-medium hover:bg-text-secondary transition-all disabled:opacity-50 disabled:cursor-not-allowed items-center justify-center gap-2 min-h-[52px]"
                   >
                     {loading ? (
                       <>
@@ -472,7 +473,7 @@ export default function CheckoutPage() {
                     )}
                   </button>
 
-                  <p className="text-center text-xs text-text-muted">
+                  <p className="hidden sm:block text-center text-xs text-text-muted">
                     Your payment information is encrypted and secure
                   </p>
                 </div>
@@ -484,9 +485,9 @@ export default function CheckoutPage() {
           </div>
 
           {/* ============================================================
-              RIGHT: ORDER SUMMARY (Minimal)
+              RIGHT: ORDER SUMMARY - Hidden on mobile, shown below on tablet+
               ============================================================ */}
-          <aside className="lg:sticky lg:top-24 lg:self-start">
+          <aside className="hidden lg:block lg:sticky lg:top-24 lg:self-start">
             <div className="space-y-6">
               
               {/* Summary Header */}
@@ -551,6 +552,42 @@ export default function CheckoutPage() {
         </div>
 
       </div>
+
+      {/* ============================================================
+          MOBILE STICKY PLACE ORDER BAR
+          ============================================================ */}
+      {currentStep === 'payment' && sections[1].isComplete && (
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-50 safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
+          <div className="flex items-center gap-3">
+            {/* Total Display */}
+            <div className="flex-1">
+              <p className="text-xs text-text-muted">Total</p>
+              <p className="text-lg font-bold text-text-primary">
+                ₹{totalPrice.toLocaleString('en-IN')}
+              </p>
+            </div>
+            
+            {/* Place Order Button */}
+            <button
+              onClick={handleCreateOrder}
+              disabled={loading}
+              className="flex-1 py-3.5 bg-text-primary text-background rounded-full font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" />
+                  <span>Processing</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Place Order</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

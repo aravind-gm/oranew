@@ -40,20 +40,20 @@ function LoginForm() {
   return (
     <div className="min-h-screen bg-background flex">
       {/* Left Side - Form */}
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex-1 flex items-center justify-center px-4 py-8 sm:p-8">
         <div className="w-full max-w-md">
           {/* Logo */}
-          <Link href="/" className="inline-block mb-8">
-            <span className="text-3xl font-serif font-bold text-text-primary">ORA</span>
+          <Link href="/" className="inline-block mb-6 sm:mb-8">
+            <span className="text-2xl sm:text-3xl font-serif font-bold text-text-primary">ORA</span>
           </Link>
 
-          <h1 className="text-3xl font-serif font-light text-text-primary mb-2">Welcome Back</h1>
-          <p className="text-text-muted mb-8">Sign in to continue your jewellery journey</p>
+          <h1 className="text-2xl sm:text-3xl font-serif font-light text-text-primary mb-1 sm:mb-2">Welcome Back</h1>
+          <p className="text-sm sm:text-base text-text-muted mb-6 sm:mb-8">Sign in to continue your jewellery journey</p>
 
           {error && (
-            <div className="mb-6 p-4 bg-error/10 border border-error/30 rounded-xl">
+            <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-error/10 border border-error/30 rounded-xl">
               <p className="text-error text-sm flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 {error}
@@ -61,7 +61,7 @@ function LoginForm() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
             <div>
               <label className="block text-sm font-medium text-text-primary mb-2">Email Address</label>
               <div className="relative">
@@ -112,12 +112,12 @@ function LoginForm() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="w-4 h-4 rounded border-border text-accent focus:ring-primary" />
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 text-sm">
+              <label className="flex items-center gap-2 cursor-pointer min-h-[44px] sm:min-h-0">
+                <input type="checkbox" className="w-5 h-5 sm:w-4 sm:h-4 rounded border-border text-accent focus:ring-primary" />
                 <span className="text-text-muted">Remember me</span>
               </label>
-              <Link href="/auth/forgot-password" className="text-accent hover:underline">
+              <Link href="/auth/forgot-password" className="text-accent hover:underline py-2 sm:py-0">
                 Forgot password?
               </Link>
             </div>
@@ -125,7 +125,7 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full py-4 text-base disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary w-full py-4 text-base disabled:opacity-50 disabled:cursor-not-allowed min-h-[52px]"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -161,8 +161,8 @@ function LoginForm() {
           </div>
 
           {/* Social Login */}
-          <div className="grid grid-cols-2 gap-4">
-            <button className="flex items-center justify-center gap-2 px-4 py-3 border border-border rounded-xl hover:bg-primary/10 transition-colors">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <button className="flex items-center justify-center gap-2 px-4 py-3.5 sm:py-3 border border-border rounded-xl hover:bg-primary/10 transition-colors min-h-[48px]">
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -171,7 +171,7 @@ function LoginForm() {
               </svg>
               <span className="text-sm font-medium text-text-primary">Google</span>
             </button>
-            <button className="flex items-center justify-center gap-2 px-4 py-3 border border-border rounded-xl hover:bg-primary/10 transition-colors">
+            <button className="flex items-center justify-center gap-2 px-4 py-3.5 sm:py-3 border border-border rounded-xl hover:bg-primary/10 transition-colors min-h-[48px]">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
               </svg>

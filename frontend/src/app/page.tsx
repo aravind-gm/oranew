@@ -175,9 +175,9 @@ export default function HomePage() {
   return (
     <main className="bg-background min-h-screen">
       {/* ================================================================
-          SECTION 1: Editorial Valentine Hero
+          SECTION 1: Editorial Valentine Hero - Mobile Optimized
           ================================================================ */}
-      <section className="relative w-full min-h-[85vh] lg:min-h-[90vh] overflow-hidden">
+      <section className="relative w-full min-h-[70vh] sm:min-h-[80vh] lg:min-h-[90vh] overflow-hidden">
         {/* Background Image */}
         <div className="absolute inset-0">
           <Image
@@ -188,76 +188,75 @@ export default function HomePage() {
             priority
             quality={90}
           />
-          {/* Elegant Gradient Overlays */}
-          <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/60 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-60" />
+          {/* Elegant Gradient Overlays - Stronger on mobile for readability */}
+          <div className="absolute inset-0 bg-gradient-to-r from-background/98 via-background/70 to-transparent sm:from-background/95 sm:via-background/60" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-70 sm:opacity-60" />
         </div>
 
-        {/* Hero Content */}
-        <div className="relative z-10 h-full min-h-[85vh] lg:min-h-[90vh] flex items-center">
-          <div className="container-luxury w-full py-20 lg:py-0">
-            <div className="max-w-xl lg:max-w-2xl">
+        {/* Hero Content - Mobile-first layout */}
+        <div className="relative z-10 h-full min-h-[70vh] sm:min-h-[80vh] lg:min-h-[90vh] flex items-center">
+          <div className="container-luxury w-full py-12 sm:py-16 lg:py-0">
+            <div className="max-w-[90%] sm:max-w-xl lg:max-w-2xl">
               <motion.div
                 initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, ease: 'easeOut' }}
               >
-                {/* Editorial Tag */}
+                {/* Editorial Tag - Smaller on mobile */}
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.2, duration: 0.5 }}
-                  className="inline-flex items-center gap-3 mb-8"
+                  className="inline-flex items-center gap-2 sm:gap-3 mb-5 sm:mb-8"
                 >
-                  <span className="w-12 h-px bg-accent" />
-                  <span className="text-sm tracking-[0.3em] uppercase text-accent font-medium">
+                  <span className="w-8 sm:w-12 h-px bg-accent" />
+                  <span className="text-xs sm:text-sm tracking-[0.2em] sm:tracking-[0.3em] uppercase text-accent font-medium">
                     ✨ Now Live — Discover ORA
                   </span>
                 </motion.div>
 
-                {/* Main Headline — Emotional, Editorial */}
+                {/* Main Headline — Responsive sizing */}
                 <motion.h1
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3, duration: 0.6 }}
-                  className="font-serif text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-light leading-[1.05] text-text-primary mb-8"
+                  className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-light leading-[1.1] sm:leading-[1.05] text-text-primary mb-5 sm:mb-8"
                 >
                   Adorn Your
                   <br />
                   <span className="italic text-accent">Everyday Elegance</span>
                 </motion.h1>
 
-                {/* Subheading — Soft, Inviting */}
+                {/* Subheading — More compact on mobile */}
                 <motion.p
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4, duration: 0.6 }}
-                  className="text-lg sm:text-xl text-text-secondary leading-relaxed mb-10 max-w-lg"
+                  className="text-base sm:text-lg md:text-xl text-text-secondary leading-relaxed mb-8 sm:mb-10 max-w-md lg:max-w-lg"
                 >
-                  Handcrafted jewellery designed for modern living.
-                  Thoughtful designs, refined details, and effortless elegance — made to be worn every day.
+                  Handcrafted jewellery designed for modern living. Thoughtful designs, refined details.
                 </motion.p>
 
-                {/* CTA Buttons */}
+                {/* CTA Buttons - Stacked on mobile, side by side on larger screens */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.5, duration: 0.6 }}
-                  className="flex flex-col sm:flex-row gap-4"
+                  className="flex flex-col gap-3 sm:flex-row sm:gap-4"
                 >
                   <Link 
                     href="/collections"
-                    className="group inline-flex items-center justify-center gap-3 px-8 py-4 bg-primary text-text-primary font-medium rounded-full transition-all duration-300 hover:bg-primary-dark hover:shadow-luxury-hover hover:scale-[1.02]"
+                    className="group inline-flex items-center justify-center gap-2 sm:gap-3 px-6 sm:px-8 py-4 bg-primary text-text-primary font-medium rounded-full transition-all duration-300 hover:bg-primary-dark hover:shadow-luxury-hover hover:scale-[1.02] text-sm sm:text-base"
                   >
-                    <Heart className="w-5 h-5" />
-                    <span>Explore Collection →</span>
-                    <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+                    <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span>Explore Collection</span>
+                    <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1 hidden sm:inline" />
                   </Link>
                   <Link 
                     href="/products"
-                    className="inline-flex items-center justify-center gap-2 px-8 py-4 border-2 border-text-primary/20 text-text-primary font-medium rounded-full transition-all duration-300 hover:border-accent hover:bg-accent/5"
+                    className="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-4 border-2 border-text-primary/20 text-text-primary font-medium rounded-full transition-all duration-300 hover:border-accent hover:bg-accent/5 text-sm sm:text-base"
                   >
-                    <Gift className="w-5 h-5" />
+                    <Gift className="w-4 h-4 sm:w-5 sm:h-5" />
                     <span>New Arrivals</span>
                   </Link>
                 </motion.div>
@@ -266,9 +265,9 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Scroll Indicator */}
+        {/* Scroll Indicator - Hidden on mobile */}
         <motion.div
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10"
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 hidden sm:block"
           initial={{ opacity: 0 }}
           animate={{ opacity: 0.6 }}
           transition={{ delay: 1, duration: 0.8 }}
@@ -287,110 +286,113 @@ export default function HomePage() {
       </section>
 
       {/* ================================================================
-          SECTION 2: Gift by Category
+          SECTION 2: Gift by Category - Mobile Optimized
           ================================================================ */}
       <section className="section-luxury bg-background-white" id="gift-by-category">
         <div className="container-luxury">
-          {/* Section Header */}
+          {/* Section Header - Mobile optimized */}
           <motion.div 
-            className="text-center mb-16"
+            className="text-center mb-8 sm:mb-12 lg:mb-16"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <span className="text-sm tracking-[0.3em] uppercase text-accent">Find the Perfect Gift</span>
-            <h2 className="heading-section mt-3 text-text-primary">Gift by Category</h2>
-            <p className="text-text-secondary mt-4 max-w-xl mx-auto">
+            <span className="text-xs sm:text-sm tracking-[0.2em] sm:tracking-[0.3em] uppercase text-accent">Find the Perfect Gift</span>
+            <h2 className="heading-section mt-2 sm:mt-3 text-text-primary">Gift by Category</h2>
+            <p className="text-text-secondary mt-3 sm:mt-4 max-w-xl mx-auto text-sm sm:text-base px-4">
               Every love story is unique. Find the piece that speaks to yours.
             </p>
           </motion.div>
 
-          {/* Category Cards */}
-          <motion.div 
-            className="grid grid-cols-1 md:grid-cols-3 gap-8"
-            variants={staggerContainer}
-            initial="initial"
-            whileInView="animate"
-            viewport={{ once: true }}
-          >
-            {CATEGORIES.map((category) => (
-              <motion.div
-                key={category.id}
-                variants={fadeInUp}
-                className="group relative"
-              >
-                <Link href={`/collections?category=${category.id}`}>
-                  <div className="relative aspect-[3/4] rounded-luxury overflow-hidden bg-background">
-                    {/* Category Image */}
-                    <Image
-                      src={category.image}
-                      alt={category.label}
-                      fill
-                      className="object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
-                    {/* Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-text-primary/80 via-text-primary/20 to-transparent" />
-                    
-                    {/* Content */}
-                    <div className="absolute inset-0 flex flex-col justify-end p-8">
-                      <span className="text-xs tracking-[0.2em] uppercase text-primary-light mb-2">
-                        {category.tagline}
-                      </span>
-                      <h3 className="font-serif text-3xl text-white mb-2">
-                        {category.label}
-                      </h3>
-                      <p className="text-white/70 text-sm mb-4">
-                        {category.description}
-                      </p>
-                      <div className="flex items-center gap-2 text-primary transition-all duration-300 group-hover:gap-3">
-                        <span className="text-sm font-medium">Shop Now</span>
-                        <ArrowRight className="w-4 h-4" />
+          {/* Category Cards - Horizontal scroll on mobile, grid on desktop */}
+          <div className="-mx-4 px-4 sm:mx-0 sm:px-0">
+            <motion.div 
+              className="flex gap-4 overflow-x-auto pb-4 sm:pb-0 sm:overflow-visible sm:grid sm:grid-cols-3 sm:gap-6 lg:gap-8 mobile-scroll-snap"
+              variants={staggerContainer}
+              initial="initial"
+              whileInView="animate"
+              viewport={{ once: true }}
+            >
+              {CATEGORIES.map((category) => (
+                <motion.div
+                  key={category.id}
+                  variants={fadeInUp}
+                  className="group relative flex-shrink-0 w-[75vw] sm:w-auto"
+                >
+                  <Link href={`/collections?category=${category.id}`}>
+                    <div className="relative aspect-[3/4] rounded-luxury overflow-hidden bg-background">
+                      {/* Category Image */}
+                      <Image
+                        src={category.image}
+                        alt={category.label}
+                        fill
+                        className="object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                      {/* Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-text-primary/80 via-text-primary/20 to-transparent" />
+                      
+                      {/* Content - More compact on mobile */}
+                      <div className="absolute inset-0 flex flex-col justify-end p-5 sm:p-6 lg:p-8">
+                        <span className="text-[10px] sm:text-xs tracking-[0.15em] sm:tracking-[0.2em] uppercase text-primary-light mb-1 sm:mb-2">
+                          {category.tagline}
+                        </span>
+                        <h3 className="font-serif text-xl sm:text-2xl lg:text-3xl text-white mb-1 sm:mb-2">
+                          {category.label}
+                        </h3>
+                        <p className="text-white/70 text-xs sm:text-sm mb-3 sm:mb-4 line-clamp-2">
+                          {category.description}
+                        </p>
+                        <div className="flex items-center gap-2 text-primary transition-all duration-300 group-hover:gap-3">
+                          <span className="text-xs sm:text-sm font-medium">Shop Now</span>
+                          <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
+                  </Link>
               </motion.div>
             ))}
           </motion.div>
         </div>
-      </section>
+      </div>
+    </section>
 
       {/* ================================================================
-          SECTION 3: Valentine Combos (Jewellery Only)
+          SECTION 3: Valentine Combos - Mobile Optimized
           ================================================================ */}
       <section className="section-luxury bg-background" id="gift-combos">
         <div className="container-luxury">
           {/* Section Header */}
           <motion.div 
-            className="text-center mb-16"
+            className="text-center mb-8 sm:mb-12 lg:mb-16"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <span className="text-sm tracking-[0.3em] uppercase text-accent">Curated with Love</span>
-            <h2 className="heading-section mt-3 text-text-primary">Valentine Drinkware Combos</h2>
-            <p className="text-text-secondary mt-4 max-w-xl mx-auto">
+            <span className="text-xs sm:text-sm tracking-[0.2em] sm:tracking-[0.3em] uppercase text-accent">Curated with Love</span>
+            <h2 className="heading-section mt-2 sm:mt-3 text-text-primary">Valentine Drinkware Combos</h2>
+            <p className="text-text-secondary mt-3 sm:mt-4 max-w-xl mx-auto text-sm sm:text-base px-4">
               From everyday elegance to luxury gift experiences — 
               drinkware designed to make gifting effortless.
             </p>
           </motion.div>
 
-          {/* Combo Cards */}
-          <motion.div 
-            className="grid grid-cols-1 lg:grid-cols-3 gap-8"
-            variants={staggerContainer}
-            initial="initial"
-            whileInView="animate"
-            viewport={{ once: true }}
-          >
-            {VALENTINE_COMBOS.map((combo) => (
-              <motion.div
-                key={combo.id}
-                variants={fadeInUp}
-                className="group bg-background-white rounded-luxury overflow-hidden shadow-luxury transition-all duration-300 hover:shadow-luxury-hover"
-              >
+          {/* Combo Cards - Horizontal scroll on mobile */}
+          <div className="-mx-4 px-4 sm:mx-0 sm:px-0">
+            <motion.div 
+              className="flex gap-4 overflow-x-auto pb-4 sm:pb-0 sm:overflow-visible sm:grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 sm:gap-6 lg:gap-8 mobile-scroll-snap"
+              variants={staggerContainer}
+              initial="initial"
+              whileInView="animate"
+              viewport={{ once: true }}
+            >
+              {VALENTINE_COMBOS.map((combo) => (
+                <motion.div
+                  key={combo.id}
+                  variants={fadeInUp}
+                  className="group bg-background-white rounded-luxury overflow-hidden shadow-luxury transition-all duration-300 hover:shadow-luxury-hover flex-shrink-0 w-[85vw] sm:w-auto"
+                >
                 {/* Combo Image */}
                 <div className="relative aspect-[4/3] bg-background overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/10" />
@@ -420,33 +422,33 @@ export default function HomePage() {
                   )}
                 </div>
 
-                {/* Combo Details */}
-                <div className="p-6">
-                  <span className="text-xs tracking-[0.15em] uppercase text-accent">
+                {/* Combo Details - More compact on mobile */}
+                <div className="p-4 sm:p-5 lg:p-6">
+                  <span className="text-[10px] sm:text-xs tracking-[0.1em] sm:tracking-[0.15em] uppercase text-accent">
                     {combo.tagline}
                   </span>
-                  <h3 className="font-serif text-xl text-text-primary mt-2 mb-3">
+                  <h3 className="font-serif text-lg sm:text-xl text-text-primary mt-1.5 sm:mt-2 mb-2 sm:mb-3">
                     {combo.name}
                   </h3>
-                  <p className="text-text-secondary text-sm leading-relaxed mb-6">
+                  <p className="text-text-secondary text-xs sm:text-sm leading-relaxed mb-4 sm:mb-6 line-clamp-2 sm:line-clamp-none">
                     {combo.description}
                   </p>
 
                   {/* Pricing */}
-                  <div className="flex items-baseline gap-3 mb-6">
-                    <span className="font-serif text-2xl text-text-primary">
+                  <div className="flex flex-wrap items-baseline gap-2 sm:gap-3 mb-4 sm:mb-6">
+                    <span className="font-serif text-xl sm:text-2xl text-text-primary">
                       ₹{combo.comboPrice.toLocaleString('en-IN')}
                     </span>
-                    <span className="text-sm text-text-muted line-through">
+                    <span className="text-xs sm:text-sm text-text-muted line-through">
                       ₹{combo.originalPrice.toLocaleString('en-IN')}
                     </span>
-                    <span className="text-xs text-success font-medium">
+                    <span className="text-[10px] sm:text-xs text-success font-medium">
                       Save ₹{(combo.originalPrice - combo.comboPrice).toLocaleString('en-IN')}
                     </span>
                   </div>
 
                   {/* CTA */}
-                  <button className="w-full py-3 px-6 bg-primary text-text-primary font-medium rounded-full transition-all duration-300 hover:bg-primary-dark hover:shadow-luxury group-hover:scale-[1.02]">
+                  <button className="w-full py-3 sm:py-3 px-4 sm:px-6 bg-primary text-text-primary font-medium rounded-full transition-all duration-300 hover:bg-primary-dark hover:shadow-luxury group-hover:scale-[1.02] text-sm sm:text-base">
                     Add Combo to Bag
                   </button>
                 </div>
@@ -454,39 +456,41 @@ export default function HomePage() {
             ))}
           </motion.div>
         </div>
-      </section>
+      </div>
+    </section>
 
       {/* ================================================================
-          SECTION 5: Valentine Picks Grid (₹1500 max)
+          SECTION 5: Valentine Picks Grid (₹1500 max) - Mobile Optimized
           ================================================================ */}
       <section className="section-luxury bg-background" id="valentine-picks">
         <div className="container-luxury">
           {/* Section Header */}
           <motion.div 
-            className="text-center mb-12"
+            className="text-center mb-8 sm:mb-12"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <span className="text-sm tracking-[0.3em] uppercase text-accent">Under ₹1500</span>
-            <h2 className="heading-section mt-3 text-text-primary">Valentine Picks</h2>
-            <p className="text-text-secondary mt-4 max-w-xl mx-auto">
+            <span className="text-xs sm:text-sm tracking-[0.2em] sm:tracking-[0.3em] uppercase text-accent">Under ₹1500</span>
+            <h2 className="heading-section mt-2 sm:mt-3 text-text-primary">Valentine Picks</h2>
+            <p className="text-text-secondary mt-3 sm:mt-4 max-w-xl mx-auto text-sm sm:text-base px-4">
               Handpicked pieces that prove thoughtfulness doesn&apos;t have a price tag.
             </p>
           </motion.div>
 
-          {/* Category Filter Pills */}
-          <motion.div 
-            className="flex flex-wrap justify-center gap-3 mb-12"
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-            <button
-              onClick={() => setSelectedCategory(null)}
-              className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ${
+          {/* Category Filter Pills - Horizontal scroll on mobile */}
+          <div className="-mx-4 px-4 sm:mx-0 sm:px-0 mb-8 sm:mb-12">
+            <motion.div 
+              className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 sm:pb-0 sm:overflow-visible sm:flex-wrap sm:justify-center mobile-scroll-snap"
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className={`flex-shrink-0 px-4 sm:px-6 py-2.5 rounded-full text-xs sm:text-sm font-medium transition-all duration-300 whitespace-nowrap ${
                 selectedCategory === null
                   ? 'bg-primary text-text-primary shadow-luxury'
                   : 'bg-background-white text-text-secondary border border-border hover:border-primary'
@@ -498,7 +502,7 @@ export default function HomePage() {
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ${
+                className={`flex-shrink-0 px-4 sm:px-6 py-2.5 rounded-full text-xs sm:text-sm font-medium transition-all duration-300 whitespace-nowrap ${
                   selectedCategory === cat.id
                     ? 'bg-primary text-text-primary shadow-luxury'
                     : 'bg-background-white text-text-secondary border border-border hover:border-primary'
@@ -509,20 +513,20 @@ export default function HomePage() {
             ))}
           </motion.div>
 
-          {/* Products Grid */}
+          {/* Products Grid - 2 columns on mobile */}
           {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
               {[...Array(8)].map((_, i) => (
                 <div key={i} className="animate-pulse">
-                  <div className="aspect-[3/4] bg-border rounded-luxury mb-4" />
-                  <div className="h-4 bg-border rounded w-3/4 mb-2" />
-                  <div className="h-4 bg-border rounded w-1/2" />
+                  <div className="aspect-[3/4] bg-border rounded-luxury mb-3 sm:mb-4" />
+                  <div className="h-3 sm:h-4 bg-border rounded w-3/4 mb-2" />
+                  <div className="h-3 sm:h-4 bg-border rounded w-1/2" />
                 </div>
               ))}
             </div>
           ) : products.length > 0 ? (
             <motion.div 
-              className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+              className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6"
               variants={staggerContainer}
               initial="initial"
               whileInView="animate"
@@ -562,7 +566,8 @@ export default function HomePage() {
             </motion.div>
           )}
         </div>
-      </section>
+      </div>
+    </section>
 
       {/* ================================================================
           SECTION 6: Gift Assurance Strip (Minimal)

@@ -43,88 +43,145 @@
     --error: theme('colors.error');
     --success: theme('colors.success');
     --warning: theme('colors.warning');
+    
+    /* Mobile-specific spacing */
+    --mobile-padding: 1rem;
+    --mobile-gap: 0.75rem;
   }
 
   /* Global Reset */
   * {
     @apply border-neutral-200;
+    /* Prevent horizontal overflow on mobile */
+    max-width: 100%;
   }
 
   html {
     scroll-behavior: smooth;
+    /* Prevent text size adjustment on orientation change */
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    /* Mobile-first: prevent horizontal scroll */
+    overflow-x: hidden;
+    /* Improved touch scrolling */
+    -webkit-overflow-scrolling: touch;
   }
 
-  /* Typography */
+  /* Typography - Mobile-first with responsive scaling */
   h1, h2, h3, h4, h5, h6 {
     @apply font-serif font-light tracking-tight;
+    /* Better line height for mobile readability */
+    line-height: 1.2;
   }
 
-  h1 { @apply text-4xl; }
-  h2 { @apply text-3xl; }
-  h3 { @apply text-2xl; }
-  h4 { @apply text-xl; }
-  h5 { @apply text-lg; }
-  h6 { @apply text-base; }
+  /* Mobile-first font sizes */
+  h1 { @apply text-2xl sm:text-3xl md:text-4xl; }
+  h2 { @apply text-xl sm:text-2xl md:text-3xl; }
+  h3 { @apply text-lg sm:text-xl md:text-2xl; }
+  h4 { @apply text-base sm:text-lg md:text-xl; }
+  h5 { @apply text-base sm:text-lg; }
+  h6 { @apply text-sm sm:text-base; }
+
+  /* Improved body text for mobile */
+  p {
+    @apply text-sm sm:text-base leading-relaxed;
+  }
+
+  /* Minimum tap target size for all interactive elements */
+  button, a, input, select, textarea {
+    min-height: 44px;
+  }
+
+  /* Exception for inline links */
+  p a, span a, li a {
+    min-height: auto;
+  }
 }
 
 @layer components {
   /* ============================================
      BUTTON COMPONENTS
      ============================================ */
+  /* Mobile-optimized buttons with proper tap targets */
   .btn-primary {
-    @apply inline-flex items-center justify-center px-8 py-3
+    @apply inline-flex items-center justify-center 
+           px-6 py-3.5 sm:px-8 sm:py-3
+           text-sm sm:text-base
            bg-primary-500 text-white font-medium rounded-luxury
            transition-all duration-200 
            hover:bg-primary-700 hover:shadow-luxury-hover
            focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
-           active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+           active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+    /* Ensure minimum tap target on mobile */
+    min-height: 48px;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center px-8 py-3
+    @apply inline-flex items-center justify-center 
+           px-6 py-3.5 sm:px-8 sm:py-3
+           text-sm sm:text-base
            bg-secondary-500 text-black font-medium rounded-luxury
            transition-all duration-200 
            hover:bg-secondary-600 hover:shadow-luxury-hover
            focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:ring-offset-2
-           active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+           active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+    min-height: 48px;
   }
 
   .btn-outline {
-    @apply inline-flex items-center justify-center px-8 py-3
+    @apply inline-flex items-center justify-center 
+           px-6 py-3.5 sm:px-8 sm:py-3
+           text-sm sm:text-base
            border-2 border-primary-500 text-foreground font-medium rounded-luxury
            transition-all duration-200 
            hover:bg-primary-500 hover:text-white hover:shadow-luxury-hover
            focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
-           active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+           active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+    min-height: 48px;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center px-6 py-2
+    @apply inline-flex items-center justify-center 
+           px-5 py-3 sm:px-6 sm:py-2
+           text-sm sm:text-base
            text-foreground font-medium rounded-luxury
            transition-all duration-200 
            hover:bg-primary-100
            focus:outline-none focus:ring-2 focus:ring-primary-300
-           active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+           active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+    min-height: 44px;
   }
 
   /* ============================================
-     FORM INPUTS
+     FORM INPUTS - Mobile-optimized
      ============================================ */
   .input-luxury {
-    @apply w-full px-4 py-3 
+    @apply w-full px-4 py-4 sm:py-3
+           text-base sm:text-sm
            border border-neutral-200 rounded-luxury
-           bg-white text-foreground placeholder:text-neutral-500
+           bg-white text-foreground placeholder:text-neutral-400
            transition-all duration-200 
            focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500
            disabled:bg-neutral-100 disabled:cursor-not-allowed;
+    /* Minimum height for mobile tap targets */
+    min-height: 52px;
+    /* Prevent iOS zoom on focus */
+    font-size: 16px;
+  }
+
+  @media (min-width: 640px) {
+    .input-luxury {
+      font-size: 14px;
+      min-height: 48px;
+    }
   }
 
   textarea.input-luxury {
     @apply resize-none;
+    min-height: 120px;
   }
 
   /* ============================================
@@ -198,14 +255,23 @@
   }
 
   /* ============================================
-     LAYOUT COMPONENTS
+     LAYOUT COMPONENTS - Mobile-first
      ============================================ */
   .container-luxury {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+    /* Prevent content from touching screen edges on mobile */
+    width: 100%;
   }
 
   .section-luxury {
-    @apply py-12 sm:py-16 md:py-20 lg:py-24;
+    @apply py-10 sm:py-12 md:py-16 lg:py-20;
+  }
+
+  /* Mobile-specific container with tighter padding */
+  .container-mobile {
+    @apply px-4 sm:px-6;
+    width: 100%;
+    max-width: 100%;
   }
 
   /* ============================================
@@ -295,6 +361,16 @@
     scrollbar-width: none;
   }
 
+  /* No Scrollbar - For horizontal scroll containers (mobile pill nav) */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
   /* Aspect Ratios */
   .aspect-product {
     aspect-ratio: 3 / 4;
@@ -354,4 +430,79 @@
 
 ::-moz-selection {
   @apply bg-primary-500 text-white;
+}
+
+/* ============================================
+   MOBILE-SPECIFIC UTILITIES
+   ============================================ */
+
+/* Sticky bottom CTA bar for mobile */
+.sticky-bottom-cta {
+  @apply fixed bottom-0 left-0 right-0 z-40
+         bg-white/95 backdrop-blur-md
+         border-t border-neutral-200
+         px-4 py-3
+         shadow-[0_-4px_20px_rgba(0,0,0,0.08)];
+}
+
+@media (min-width: 768px) {
+  .sticky-bottom-cta {
+    @apply relative shadow-none border-0 bg-transparent backdrop-blur-none p-0;
+  }
+}
+
+/* Mobile bottom sheet for filters */
+.mobile-bottom-sheet {
+  @apply fixed inset-x-0 bottom-0 z-50
+         bg-white rounded-t-3xl
+         shadow-[0_-10px_40px_rgba(0,0,0,0.15)]
+         transform transition-transform duration-300 ease-out;
+  max-height: 85vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-bottom-sheet-overlay {
+  @apply fixed inset-0 bg-black/40 z-40
+         transition-opacity duration-300;
+}
+
+/* Tap highlight removal for cleaner mobile UX */
+@media (hover: none) {
+  button, a, input, select, textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Safe area padding for notched devices */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+/* Mobile scroll snap for carousels */
+.mobile-scroll-snap {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.mobile-scroll-snap::-webkit-scrollbar {
+  display: none;
+}
+
+.mobile-scroll-snap > * {
+  scroll-snap-align: start;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

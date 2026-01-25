@@ -112,20 +112,20 @@ export default function RegisterPage() {
       </div>
 
       {/* Right Side - Form */}
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex-1 flex items-center justify-center px-4 py-8 sm:p-8">
         <div className="w-full max-w-md">
           {/* Logo */}
-          <Link href="/" className="inline-block mb-8">
-            <span className="text-3xl font-serif font-bold text-text-primary">ORA</span>
+          <Link href="/" className="inline-block mb-6 sm:mb-8">
+            <span className="text-2xl sm:text-3xl font-serif font-bold text-text-primary">ORA</span>
           </Link>
 
-          <h1 className="text-3xl font-serif font-light text-text-primary mb-2">Create Account</h1>
-          <p className="text-text-muted mb-8">Join the ORA family today</p>
+          <h1 className="text-2xl sm:text-3xl font-serif font-light text-text-primary mb-1 sm:mb-2">Create Account</h1>
+          <p className="text-sm sm:text-base text-text-muted mb-6 sm:mb-8">Join the ORA family today</p>
 
           {error && (
-            <div className="mb-6 p-4 bg-error/10 border border-error/30 rounded-xl">
+            <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-error/10 border border-error/30 rounded-xl">
               <p className="text-error text-sm flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 {error}
@@ -133,8 +133,8 @@ export default function RegisterPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="grid grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-2">First Name</label>
                 <input
@@ -222,9 +222,9 @@ export default function RegisterPage() {
               />
             </div>
 
-            <div className="flex items-start gap-2">
-              <input type="checkbox" required className="w-4 h-4 mt-1 rounded border-border text-accent focus:ring-primary" />
-              <label className="text-sm text-text-muted">
+            <div className="flex items-start gap-3">
+              <input type="checkbox" required className="w-5 h-5 sm:w-4 sm:h-4 mt-0.5 rounded border-border text-accent focus:ring-primary flex-shrink-0" />
+              <label className="text-sm text-text-muted leading-relaxed">
                 I agree to the{' '}
                 <Link href="/terms" className="text-accent hover:underline">Terms of Service</Link>
                 {' '}and{' '}
@@ -235,7 +235,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full py-4 text-base disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary w-full py-4 text-base disabled:opacity-50 disabled:cursor-not-allowed min-h-[52px]"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">

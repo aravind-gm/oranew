@@ -401,16 +401,16 @@ export default function CollectionsPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* ================================================================
-          HEADER & TITLE
+          HEADER & TITLE - Mobile Optimized
           ================================================================ */}
-      <header className="w-full px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 lg:pt-20 pb-10 sm:pb-12 lg:pb-16 border-b border-border/40">
+      <header className="w-full px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 lg:pt-20 pb-6 sm:pb-10 lg:pb-16 border-b border-border/40">
         <div className="max-w-screen-2xl mx-auto">
           {/* Page Title - Editorial Style */}
           <div className="text-center max-w-2xl mx-auto">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-light text-text-primary mb-3 leading-tight">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-serif font-light text-text-primary mb-2 sm:mb-3 leading-tight">
               Collections
             </h1>
-            <p className="text-sm sm:text-base text-text-secondary tracking-wide">
+            <p className="text-xs sm:text-sm md:text-base text-text-secondary tracking-wide">
               Everyday luxury under ₹1,500
             </p>
           </div>
@@ -418,33 +418,34 @@ export default function CollectionsPage() {
       </header>
 
       {/* ================================================================
-          FILTER BAR - MODERN FLOATING BUTTON
+          FILTER BAR - Mobile Optimized
           ================================================================ */}
       <div className="sticky top-0 z-40 w-full bg-background/95 backdrop-blur-xl border-b border-border/40">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-20 flex items-center justify-between">
           {/* Results Count */}
           <div className="flex items-center">
-            <p className="text-xs sm:text-sm text-text-muted tracking-[0.1em] uppercase font-medium">
+            <p className="text-[10px] sm:text-xs md:text-sm text-text-muted tracking-[0.08em] sm:tracking-[0.1em] uppercase font-medium">
               {loading ? '...' : `${pagination?.total || 0} piece${pagination?.total !== 1 ? 's' : ''}`}
             </p>
           </div>
 
-          {/* Filter Button - Icon + Label */}
+          {/* Filter Button - Larger touch target on mobile */}
           <button
             ref={filterButtonRef}
             onClick={() => setFilterOpen(!filterOpen)}
             className={`
-              relative flex items-center gap-2 px-4 py-2.5
+              relative flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5
               rounded-full border transition-all duration-300
               focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2
+              min-h-[44px]
               ${filterOpen
                 ? 'bg-primary border-primary text-text-primary shadow-luxury'
                 : 'border-border/40 text-text-secondary hover:border-accent hover:text-text-primary'
               }
             `}
           >
-            <SlidersHorizontal size={18} />
-            <span className="text-xs font-medium tracking-[0.08em] uppercase hidden sm:inline">
+            <SlidersHorizontal size={16} className="sm:w-[18px] sm:h-[18px]" />
+            <span className="text-[10px] sm:text-xs font-medium tracking-[0.08em] uppercase">
               Filter
             </span>
           </button>
@@ -464,9 +465,9 @@ export default function CollectionsPage() {
       </div>
 
       {/* ================================================================
-          PRODUCT GRID - FULL WIDTH, MODERN LAYOUT
+          PRODUCT GRID - Mobile Optimized
           ================================================================ */}
-      <main className="w-full px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
+      <main className="w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-12 lg:py-20">
         <div className="max-w-screen-2xl mx-auto">
           {/* Grid Container */}
           {loading ? (
@@ -475,8 +476,8 @@ export default function CollectionsPage() {
             <EmptyState onReset={handleReset} />
           ) : (
             <>
-              {/* Product Grid - Responsive Columns */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 mb-16 sm:mb-20">
+              {/* Product Grid - Optimized gaps for mobile */}
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 lg:gap-8 mb-10 sm:mb-16 lg:mb-20">
                 {products.map((product) => (
                   <ProductCardProduction
                     key={product.id}
@@ -488,28 +489,30 @@ export default function CollectionsPage() {
                 ))}
               </div>
 
-              {/* PAGINATION - Minimal Bottom Controls */}
+              {/* PAGINATION - Mobile Optimized */}
               {pagination.pages > 1 && (
                 <nav
                   aria-label="Pagination"
-                  className="flex items-center justify-center gap-1 sm:gap-2"
+                  className="flex items-center justify-center gap-1"
                 >
                   {/* Previous */}
                   <button
                     onClick={() => handlePageChange(pagination.page - 1)}
                     disabled={pagination.page === 1}
                     className="
-                      px-4 py-2 text-xs font-medium text-text-secondary
+                      px-2 sm:px-4 py-2 text-[10px] sm:text-xs font-medium text-text-secondary
                       disabled:opacity-30 disabled:cursor-not-allowed
                       hover:text-text-primary transition-colors duration-200
                       focus:outline-none focus-visible:ring-2 focus-visible:ring-primary
+                      min-h-[44px] flex items-center
                     "
                   >
-                    ← Previous
+                    <span className="hidden sm:inline">← Previous</span>
+                    <span className="sm:hidden">←</span>
                   </button>
 
                   {/* Page Numbers */}
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-0.5 sm:gap-1">
                     {[...Array(pagination.pages)].map((_, i) => {
                       const pageNum = i + 1;
                       if (
@@ -522,7 +525,7 @@ export default function CollectionsPage() {
                             key={pageNum}
                             onClick={() => handlePageChange(pageNum)}
                             className={`
-                              w-10 h-10 rounded-full text-xs font-medium
+                              w-9 h-9 sm:w-10 sm:h-10 rounded-full text-[10px] sm:text-xs font-medium
                               transition-all duration-200
                               focus:outline-none focus-visible:ring-2 focus-visible:ring-primary
                               ${pageNum === pagination.page
@@ -553,13 +556,15 @@ export default function CollectionsPage() {
                     onClick={() => handlePageChange(pagination.page + 1)}
                     disabled={pagination.page === pagination.pages}
                     className="
-                      px-4 py-2 text-xs font-medium text-text-secondary
+                      px-2 sm:px-4 py-2 text-[10px] sm:text-xs font-medium text-text-secondary
                       disabled:opacity-30 disabled:cursor-not-allowed
                       hover:text-text-primary transition-colors duration-200
                       focus:outline-none focus-visible:ring-2 focus-visible:ring-primary
+                      min-h-[44px] flex items-center
                     "
                   >
-                    Next →
+                    <span className="hidden sm:inline">Next →</span>
+                    <span className="sm:hidden">→</span>
                   </button>
                 </nav>
               )}
@@ -568,8 +573,8 @@ export default function CollectionsPage() {
         </div>
       </main>
 
-      {/* Bottom Spacing */}
-      <div className="h-16 sm:h-20" />
+      {/* Bottom Spacing - Account for potential mobile nav */}
+      <div className="h-8 sm:h-16 lg:h-20" />
     </div>
   );
 }

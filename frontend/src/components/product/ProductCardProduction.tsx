@@ -290,18 +290,18 @@ function ProductCard({
             />
           )}
 
-          {/* BADGE LAYER (top-left) */}
+          {/* BADGE LAYER (top-left) - Smaller on mobile */}
           {showBadges && (
-            <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
+            <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex flex-col gap-1.5 sm:gap-2 z-10">
               {/* New In Badge */}
               {product.isNew && (
                 <motion.span
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.1, duration: 0.3 }}
-                  className="product-badge-new"
+                  className="px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] tracking-[0.1em] sm:tracking-[0.15em] uppercase font-medium bg-primary-50 text-primary-700 rounded-full shadow-sm border border-primary-100"
                 >
-                  New In
+                  New
                 </motion.span>
               )}
 
@@ -311,9 +311,9 @@ function ProductCard({
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.1, duration: 0.3 }}
-                  className="product-badge-bestseller"
+                  className="px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] tracking-[0.1em] sm:tracking-[0.15em] uppercase font-medium bg-primary-500 text-white rounded-full shadow-sm opacity-90"
                 >
-                  Bestseller
+                  Best
                 </motion.span>
               )}
 
@@ -323,18 +323,18 @@ function ProductCard({
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.2, duration: 0.3 }}
-                  className="product-badge-sale"
+                  className="px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] tracking-[0.08em] sm:tracking-[0.1em] uppercase font-medium bg-error text-white rounded-full shadow-sm"
                 >
-                  {Math.round(discountPercent)}% Off
+                  {Math.round(discountPercent)}%
                 </motion.span>
               )}
             </div>
           )}
 
-          {/* WISHLIST BUTTON (top-right, floating) */}
+          {/* WISHLIST BUTTON (top-right, floating) - Larger touch target on mobile */}
           <motion.button
             onClick={handleWishlistToggle}
-            className="absolute top-3 right-3 z-10 w-10 h-10 rounded-full bg-background-white/90 backdrop-blur-sm flex items-center justify-center shadow-luxury transition-all duration-300 hover:shadow-luxury-hover hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="absolute top-2 right-2 sm:top-3 sm:right-3 z-10 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-background-white/90 backdrop-blur-sm flex items-center justify-center shadow-luxury transition-all duration-300 hover:shadow-luxury-hover hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50"
             whileTap={{ scale: 0.9 }}
             aria-label={isInWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
             type="button"
@@ -348,8 +348,8 @@ function ProductCard({
               transition={{ duration: 0.4, ease: 'easeOut' }}
             >
               <Heart
-                size={18}
-                className={`transition-all duration-300 ${
+                size={16}
+                className={`sm:w-[18px] sm:h-[18px] transition-all duration-300 ${
                   isInWishlist
                     ? 'fill-accent text-accent'
                     : 'text-text-muted group-hover:text-accent'
@@ -358,49 +358,85 @@ function ProductCard({
             </motion.div>
           </motion.button>
 
-          {/* QUICK ADD BUTTON (bottom, hover-reveal on desktop, always visible on mobile) */}
+          {/* QUICK ADD BUTTON - Always visible on mobile, hover-reveal on desktop */}
           {showQuickAdd && (
-            <AnimatePresence>
-              {isHovered && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  transition={{ duration: 0.25, ease: 'easeOut' }}
-                  className="absolute bottom-0 left-0 right-0 p-4 z-10"
+            <>
+              {/* Mobile: Always visible button */}
+              <div className="sm:hidden absolute bottom-0 left-0 right-0 p-2 z-10">
+                <button
+                  onClick={handleAddToCart}
+                  disabled={isAddingToCart}
+                  type="button"
+                  aria-label={`Add ${product.name} to bag`}
+                  className={`w-full py-3 text-[10px] tracking-[0.1em] uppercase font-semibold rounded-full transition-all duration-300 flex items-center justify-center gap-1.5 ${
+                    addedToCart
+                      ? 'bg-success text-white'
+                      : 'bg-text-primary/95 backdrop-blur-sm text-background-white active:scale-[0.98]'
+                  }`}
                 >
-                  <button
-                    onClick={handleAddToCart}
-                    disabled={isAddingToCart}
-                    type="button"
-                    aria-label={`Add ${product.name} to bag`}
-                    className={`w-full py-3.5 text-xs tracking-[0.15em] uppercase font-medium rounded-full transition-all duration-300 flex items-center justify-center gap-2 ${
-                      addedToCart
-                        ? 'bg-success text-text-primary'
-                        : 'bg-text-primary/95 backdrop-blur-sm text-background-white hover:bg-text-primary hover:shadow-luxury'
-                    }`}
+                  {addedToCart ? (
+                    <>
+                      <Check size={12} strokeWidth={3} />
+                      <span>Added</span>
+                    </>
+                  ) : isAddingToCart ? (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                      className="w-3.5 h-3.5 border-2 border-background-white/30 border-t-background-white rounded-full"
+                    />
+                  ) : (
+                    <>
+                      <ShoppingBag size={12} />
+                      <span>Add to Bag</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Desktop: Hover-reveal button */}
+              <AnimatePresence>
+                {isHovered && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.25, ease: 'easeOut' }}
+                    className="hidden sm:block absolute bottom-0 left-0 right-0 p-4 z-10"
                   >
-                    {addedToCart ? (
-                      <>
-                        <Check size={14} strokeWidth={3} />
-                        <span>Added to Bag</span>
-                      </>
-                    ) : isAddingToCart ? (
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                        className="w-4 h-4 border-2 border-background-white/30 border-t-background-white rounded-full"
-                      />
-                    ) : (
-                      <>
-                        <ShoppingBag size={14} />
-                        <span>Add to Bag</span>
-                      </>
-                    )}
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                    <button
+                      onClick={handleAddToCart}
+                      disabled={isAddingToCart}
+                      type="button"
+                      aria-label={`Add ${product.name} to bag`}
+                      className={`w-full py-3.5 text-xs tracking-[0.15em] uppercase font-medium rounded-full transition-all duration-300 flex items-center justify-center gap-2 ${
+                        addedToCart
+                          ? 'bg-success text-text-primary'
+                          : 'bg-text-primary/95 backdrop-blur-sm text-background-white hover:bg-text-primary hover:shadow-luxury'
+                      }`}
+                    >
+                      {addedToCart ? (
+                        <>
+                          <Check size={14} strokeWidth={3} />
+                          <span>Added to Bag</span>
+                        </>
+                      ) : isAddingToCart ? (
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                          className="w-4 h-4 border-2 border-background-white/30 border-t-background-white rounded-full"
+                        />
+                      ) : (
+                        <>
+                          <ShoppingBag size={14} />
+                          <span>Add to Bag</span>
+                        </>
+                      )}
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </>
           )}
 
           {/* SUBTLE OVERLAY GRADIENT (improves text legibility on bright images) */}
@@ -408,12 +444,12 @@ function ProductCard({
         </motion.div>
 
         {/* ====================================================================
-            PRODUCT INFO SECTION
+            PRODUCT INFO SECTION - Mobile Optimized
             ==================================================================== */}
-        <div className="pt-4 space-y-2">
-          {/* MATERIAL SWATCH (optional) */}
+        <div className="pt-3 sm:pt-4 space-y-1.5 sm:space-y-2">
+          {/* MATERIAL SWATCH (optional) - Hidden on very small mobile */}
           {product.material && materialColors[product.material] && (
-            <div className="flex items-center gap-1.5 mb-1">
+            <div className="hidden sm:flex items-center gap-1.5 mb-1">
               <span
                 className="w-3 h-3 rounded-full border border-border"
                 style={{ backgroundColor: materialColors[product.material] }}
@@ -426,43 +462,43 @@ function ProductCard({
             </div>
           )}
 
-          {/* PRODUCT NAME */}
-          <h3 className="font-serif text-base font-medium text-text-primary leading-snug line-clamp-2 group-hover:text-accent transition-colors duration-300">
+          {/* PRODUCT NAME - Better mobile readability */}
+          <h3 className="font-serif text-sm sm:text-base font-medium text-text-primary leading-snug line-clamp-2 group-hover:text-accent transition-colors duration-300">
             {product.name}
           </h3>
 
-          {/* STAR RATING (only if has reviews) */}
+          {/* STAR RATING (only if has reviews) - Compact on mobile */}
           {product.averageRating !== undefined && product.averageRating > 0 && (
-            <div className="flex items-center gap-1.5 pt-1">
+            <div className="flex items-center gap-1 sm:gap-1.5 pt-0.5 sm:pt-1">
               <div className="flex items-center gap-0.5">
-                <span className="text-accent text-sm" aria-hidden="true">★</span>
-                <span className="text-xs text-text-secondary font-medium">
+                <span className="text-accent text-xs sm:text-sm" aria-hidden="true">★</span>
+                <span className="text-[10px] sm:text-xs text-text-secondary font-medium">
                   {product.averageRating.toFixed(1)}
                 </span>
               </div>
               {product.reviewCount && product.reviewCount > 0 && (
-                <span className="text-xs text-text-muted">
-                  ({product.reviewCount} {product.reviewCount === 1 ? 'review' : 'reviews'})
+                <span className="text-[10px] sm:text-xs text-text-muted">
+                  ({product.reviewCount})
                 </span>
               )}
             </div>
           )}
 
-          {/* PRICING SECTION */}
-          <div className="flex items-baseline gap-2 pt-2">
+          {/* PRICING SECTION - Clear mobile hierarchy */}
+          <div className="flex flex-wrap items-baseline gap-1.5 sm:gap-2 pt-1 sm:pt-2">
             {/* Current Price */}
-            <span className="text-lg font-serif font-semibold text-text-primary">
+            <span className="text-base sm:text-lg font-serif font-semibold text-text-primary">
               {formatPrice(product.finalPrice)}
             </span>
 
             {/* Original Price + Savings (if discount exists) */}
             {hasDiscount && (
               <>
-                <span className="text-sm text-text-muted line-through">
+                <span className="text-xs sm:text-sm text-text-muted line-through">
                   {formatPrice(product.price)}
                 </span>
-                <span className="text-xs font-medium text-accent">
-                  Save {formatPrice(savingsAmount)}
+                <span className="text-[10px] sm:text-xs font-medium text-accent">
+                  {Math.round(discountPercent)}% off
                 </span>
               </>
             )}
