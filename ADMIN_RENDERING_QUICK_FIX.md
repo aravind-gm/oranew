@@ -1,4 +1,4 @@
-# 🎯 ADMIN RENDERING FIX — QUICK REFERENCE
+## 🎯 ADMIN RENDERING FIX — QUICK REFERENCE
 
 ## Problem
 ❌ Admin panel at `/admin` was rendering invisible (dark theme on light background)
