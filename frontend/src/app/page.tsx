@@ -177,7 +177,7 @@ export default function HomePage() {
       {/* ================================================================
           SECTION 1: Editorial Valentine Hero - Mobile Optimized
           ================================================================ */}
-      <section className="relative w-full min-h-[70vh] sm:min-h-[80vh] lg:min-h-[90vh] overflow-hidden">
+      <section className="relative w-full min-h-[70vh] sm:min-h-[80vh] lg:min-h-[90vh]">
         {/* Background Image */}
         <div className="absolute inset-0">
           <Image

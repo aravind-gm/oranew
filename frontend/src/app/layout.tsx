@@ -1,5 +1,6 @@
 import Footer from '@/components/Footer';
 import Header from '@/components/Header';
+import MobilePillNavWrapper from '@/components/MobilePillNavWrapper';
 import type { Metadata } from 'next';
 import { Cormorant_Garamond, Inter } from 'next/font/google';
 import './globals.css';
@@ -37,6 +38,7 @@ export default function RootLayout({
     <html lang="en" className="smooth-scroll">
       <body className={`${inter.variable} ${cormorant.variable} font-sans antialiased bg-background text-foreground`}>
         <Header />
+        <MobilePillNavWrapper />
         <main className="min-h-screen">
           {children}
         </main>

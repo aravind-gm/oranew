@@ -1,6 +1,5 @@
 'use client';
 
-import MobilePillNav from '@/components/MobilePillNav';
 import PillNav from '@/components/PillNav';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
@@ -55,7 +54,6 @@ export default function Header() {
   const cartCount = isClient ? items.length : 0;
 
   return (
-    <>
     <header className={`sticky top-0 z-50 transition-all duration-300 ${
       scrollDirection === 'down' ? '-translate-y-full' : 'translate-y-0'
     } ${
@@ -221,17 +219,5 @@ export default function Header() {
         {/* Mobile Navigation - Now using MobilePillNav component below header */}
       </nav>
     </header>
-
-    {/* Mobile Horizontal Pill Navigation - Only visible on mobile screens */}
-    <MobilePillNav 
-      items={[
-        { label: '💕 Valentine\'s', href: '/valentine-drinkware', icon: '💕' },
-        { label: 'Collections', href: '/collections' },
-        { label: 'Our Story', href: '/about' },
-        { label: 'Contact', href: '/contact' },
-        ...(isAdmin ? [{ label: 'Admin', href: '/admin' }] : [])
-      ]}
-    />
-    </>
   );
 }
