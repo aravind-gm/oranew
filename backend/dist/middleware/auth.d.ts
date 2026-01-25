@@ -1,7 +1,5 @@
 import { UserRole } from '@prisma/client';
-import type { ParamsDictionary } from 'express-serve-static-core';
 import { NextFunction, Request, Response } from 'express';
-import type { ParsedQs } from 'qs';
 declare global {
     namespace Express {
         interface Request {
@@ -13,15 +11,15 @@ declare global {
         }
     }
 }
-export interface AuthRequest<Params = ParamsDictionary, ResBody = any, ReqBody = any, ReqQuery = ParsedQs> extends Request<Params, ResBody, ReqBody, ReqQuery> {
+export interface AuthRequest extends Request {
     user?: {
         id: string;
         email: string;
         role: UserRole;
     };
-    params: Params;
-    body: ReqBody;
-    query: ReqQuery;
+    params: Record<string, any>;
+    body: Record<string, any>;
+    query: Record<string, any>;
     headers: Request['headers'];
     method: Request['method'];
     path: Request['path'];
