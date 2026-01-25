@@ -3,6 +3,18 @@ import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { AppError } from './errorHandler';
 
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: string;
+        email: string;
+        role: UserRole;
+      };
+    }
+  }
+}
+
 export interface AuthRequest extends Request {
   user?: {
     id: string;
