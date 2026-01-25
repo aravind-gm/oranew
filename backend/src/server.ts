@@ -30,11 +30,24 @@ const PORT = process.env.PORT || 8000;
 // ============================================
 
 // CORS - MUST be first before any other middleware
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'https://oranew.vercel.app',
+  'https://orashop.vercel.app',
+  'https://oranew-staging.vercel.app',
+];
+
+// Add FRONTEND_URL if set in env
+if (process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL)) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
+console.log('[CORS] 🔐 Allowed Origins:', allowedOrigins);
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL 
-      ? [process.env.FRONTEND_URL, 'http://localhost:3000', 'http://127.0.0.1:3000'] 
-      : ['http://localhost:3000', 'http://127.0.0.1:3000'],
+    origin: allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
