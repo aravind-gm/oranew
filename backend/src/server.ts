@@ -1,8 +1,22 @@
+/// <reference types="express" />
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express, { Application, NextFunction, Request, Response } from 'express';
 import path from 'path';
-import './types/express'; // Import type augmentations
+
+// Augment Express Request with custom user property
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: string;
+        email: string;
+        role: import('@prisma/client').UserRole;
+      };
+    }
+  }
+}
+
 import { isStorageConfigured, testStorageConnection } from './config/supabase';
 import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
