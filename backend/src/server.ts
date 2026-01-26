@@ -27,6 +27,12 @@ const app: Application = express();
 const PORT = process.env.PORT || 8000;
 
 // ============================================
+// TRUST PROXY - Important for production
+// ============================================
+// Set trust proxy to properly handle X-Forwarded-For headers from proxies like Render, AWS ELB, etc.
+app.set('trust proxy', 1);
+
+// ============================================
 // MIDDLEWARE
 // ============================================
 
