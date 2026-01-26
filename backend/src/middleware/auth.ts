@@ -1,19 +1,24 @@
-/// <reference path="../types/express.d.ts" />
 import { UserRole } from '@prisma/client';
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { AppError } from './errorHandler';
 
-export interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    role: UserRole;
-  };
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: string;
+        email: string;
+        role: UserRole;
+      };
+    }
+  }
 }
 
+export type AuthRequest = Request;
+
 export const protect = async (
-  req: AuthRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {
@@ -103,7 +108,7 @@ export const protect = async (
 };
 
 export const authorize = (...roles: UserRole[]) => {
-  return (req: AuthRequest, res: Response, next: NextFunction) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     // Ensure user is authenticated first
     if (!req.user) {
       console.error('[Auth Middleware] ❌ User not authenticated (no req.user)', {
