@@ -43,6 +43,7 @@ const allowedOrigins = [
   'https://oranew.vercel.app',
   'https://orashop.vercel.app',
   'https://oranew-staging.vercel.app',
+  'https://orashop.in',
 ];
 
 // Add FRONTEND_URL if set in env
