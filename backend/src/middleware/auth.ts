@@ -1,5 +1,6 @@
 import { UserRole } from '@prisma/client';
 import { NextFunction, Request, Response } from 'express';
+import { Express } from 'express-serve-static-core';
 import jwt from 'jsonwebtoken';
 import { AppError } from './errorHandler';
 
@@ -11,6 +12,7 @@ declare global {
         email: string;
         role: UserRole;
       };
+      files?: Express.Multer.File[] | { [fieldname: string]: Express.Multer.File[] };
     }
   }
 }
@@ -21,6 +23,7 @@ export interface AuthRequest extends Request {
     email: string;
     role: UserRole;
   };
+  files?: Express.Multer.File[] | { [fieldname: string]: Express.Multer.File[] };
 }
 
 export const protect = async (
