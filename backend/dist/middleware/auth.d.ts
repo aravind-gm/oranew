@@ -8,9 +8,7 @@ declare global {
                 email: string;
                 role: UserRole;
             };
-            files?: Express.Multer.File[] | {
-                [fieldname: string]: Express.Multer.File[];
-            };
+            files?: any;
         }
     }
 }
@@ -20,9 +18,7 @@ export interface AuthRequest extends Request {
         email: string;
         role: UserRole;
     };
-    files?: Express.Multer.File[] | {
-        [fieldname: string]: Express.Multer.File[];
-    };
+    files?: any;
 }
 export declare const protect: (req: AuthRequest, res: Response, next: NextFunction) => Promise<void>;
 export declare const authorize: (...roles: UserRole[]) => (req: AuthRequest, res: Response, next: NextFunction) => void;
