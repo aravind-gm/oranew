@@ -17,13 +17,6 @@ export interface AuthRequest extends Request {
         email: string;
         role: UserRole;
     };
-    params: Record<string, any>;
-    body: Record<string, any>;
-    query: Record<string, any>;
-    headers: Request['headers'];
-    method: Request['method'];
-    path: Request['path'];
-    files?: any;
 }
 export declare const protect: (req: AuthRequest, res: Response, next: NextFunction) => Promise<void>;
 export declare const authorize: (...roles: UserRole[]) => (req: AuthRequest, res: Response, next: NextFunction) => void;

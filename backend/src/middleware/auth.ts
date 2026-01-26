@@ -21,13 +21,6 @@ export interface AuthRequest extends Request {
     email: string;
     role: UserRole;
   };
-  params: Record<string, any>;
-  body: Record<string, any>;
-  query: Record<string, any>;
-  headers: Request['headers'];
-  method: Request['method'];
-  path: Request['path'];
-  files?: any;
 }
 
 export const protect = async (
