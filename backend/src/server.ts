@@ -2,6 +2,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import express, { Application, NextFunction, Request, Response } from 'express';
 import path from 'path';
+import './types/express'; // Import type augmentations
 import { isStorageConfigured, testStorageConnection } from './config/supabase';
 import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
