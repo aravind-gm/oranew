@@ -1,3 +1,4 @@
+/// <reference types="express" />
 import { UserRole } from '@prisma/client';
 
 declare global {
@@ -12,4 +13,3 @@ declare global {
   }
 }
 
-export {};
