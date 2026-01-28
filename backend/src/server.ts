@@ -114,6 +114,47 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // ============================================
+// KEEP-ALIVE ENDPOINT
+// ============================================
+// Purpose: Prevent Render from sleeping and keep database pool warm
+// 
+// How it works:
+// - Lightweight health check (no business logic)
+// - Can be called every 10-15 minutes by frontend
+// - Keeps server process active
+// - Maintains database pool connections
+// - Returns immediately if DB is healthy
+// - Logs warnings if DB is slow/failing
+// 
+// Why this helps:
+// - Render free tier pauses after 15 min of inactivity
+// - Cold starts cause new connection attempts
+// - Each connection attempt tests the pool
+// - Periodic pings prevent the sleep cycle
+
+app.get('/api/health', async (_req: Request, res: Response) => {
+  try {
+    // Quick check: Can we reach the database?
+    const { prisma } = await import('./config/database');
+    await prisma.$queryRaw`SELECT 1`;
+    
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      database: 'connected',
+    });
+  } catch (error) {
+    console.warn('[Keep-Alive] Database unreachable:', error instanceof Error ? error.message : String(error));
+    res.status(503).json({
+      status: 'degraded',
+      timestamp: new Date().toISOString(),
+      database: 'unreachable',
+      message: 'Database temporarily unavailable',
+    });
+  }
+});
+
+// ============================================
 // ROUTES
 // ============================================
 
@@ -143,6 +184,7 @@ app.get('/api', (_req: Request, res: Response) => {
       wishlist: '/api/wishlist',
       reviews: '/api/reviews',
       admin: '/api/admin',
+      health: '/api/health',
     },
   });
 });
@@ -234,8 +276,20 @@ app.use(notFound);
 app.use(errorHandler);
 
 // ============================================
-// START SERVER
+// START SERVER (RENDER-SAFE STARTUP)
 // ============================================
+// 
+// Important: This startup is LAZY
+// - Does NOT aggressively test database on boot
+// - Does NOT crash if DB is temporarily unavailable
+// - First request will test/establish connection
+// - Prevents "cold start" failures
+//
+// Why this helps on Render:
+// - Render kills processes that hang on startup
+// - Aggressive DB tests can timeout on wake-up
+// - Lazy connection allows requests to trigger reconnect
+// - Server stays alive even if DB is briefly unavailable
 
 app.listen(PORT, async () => {
   console.log(`
@@ -245,25 +299,32 @@ app.listen(PORT, async () => {
   ╠════════════════════════════════════════╣
   ║   Port: ${PORT.toString().padEnd(30)}║
   ║   Env:  ${(process.env.NODE_ENV || 'development').padEnd(30)}║
+  ║   Mode: LAZY (DB connects on demand)   ║
   ╚════════════════════════════════════════╝
   `);
   
-  // Test Supabase Storage connection at startup
+  // Test Supabase Storage connection at startup (optional, non-blocking)
   console.log('\n[Startup] 🔍 Checking Supabase Storage configuration...');
   
+  // Run storage check in background (don't block startup)
   if (isStorageConfigured()) {
     const storageTest = await testStorageConnection();
     if (storageTest.success) {
       console.log('[Startup] ✅ Supabase Storage: CONNECTED');
     } else {
-      console.error('[Startup] ❌ Supabase Storage ERROR:', storageTest.error);
-      console.log('[Startup] ⚠️  Image uploads will FAIL until this is fixed!');
+      console.error('[Startup] ⚠️  Supabase Storage: FAILED');
+      console.error('          Error:', storageTest.error);
+      console.log('[Startup] ⚠️  Image uploads may FAIL until this is fixed!');
     }
   } else {
     console.warn('[Startup] ⚠️  Supabase Storage: NOT CONFIGURED');
-    console.log('         → Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in backend/.env');
-    console.log('         → Get values from: Supabase Dashboard > Project Settings > API');
+    console.log('          Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in backend/.env');
   }
+
+  console.log('\n[Startup] ✅ Server ready');
+  console.log('[Startup] 📌 Database connection: LAZY (connects on first request)');
+  console.log('[Startup] 📌 Keep-alive endpoint: GET /api/health');
+  console.log('[Startup] 📌 Recovery strategy: Auto-reconnect on connection error\n');
 });
 
 export default app;
