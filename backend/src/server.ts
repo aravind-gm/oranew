@@ -152,8 +152,13 @@ app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Health check - API version (for monitoring)
+app.get('/api/health', (_req: Request, res: Response) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // Health check - detailed (for debugging)
-app.get('/health/detailed', async (_req: Request, res: Response) => {
+const detailedHealthCheck = async (_req: Request, res: Response) => {
   const health: {
     status: string;
     timestamp: string;
@@ -202,7 +207,10 @@ app.get('/health/detailed', async (_req: Request, res: Response) => {
   health.status = allGood ? 'healthy' : 'degraded';
 
   res.status(allGood ? 200 : 503).json(health);
-});
+};
+
+app.get('/health/detailed', detailedHealthCheck);
+app.get('/api/health/detailed', detailedHealthCheck);
 
 // API Routes
 app.use('/api/auth', authRoutes);

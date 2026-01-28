@@ -166,8 +166,12 @@ app.get('/api', (_req, res) => {
 app.get('/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+// Health check - API version (for monitoring)
+app.get('/api/health', (_req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 // Health check - detailed (for debugging)
-app.get('/health/detailed', async (_req, res) => {
+const detailedHealthCheck = async (_req, res) => {
     const health = {
         status: 'checking',
         timestamp: new Date().toISOString(),
@@ -207,7 +211,9 @@ app.get('/health/detailed', async (_req, res) => {
         health.environment.hasJwtSecret;
     health.status = allGood ? 'healthy' : 'degraded';
     res.status(allGood ? 200 : 503).json(health);
-});
+};
+app.get('/health/detailed', detailedHealthCheck);
+app.get('/api/health/detailed', detailedHealthCheck);
 // API Routes
 app.use('/api/auth', auth_routes_1.default);
 app.use('/api/products', product_routes_1.default);
