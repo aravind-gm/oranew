@@ -29,9 +29,6 @@ const prismaClientSingleton = () => {
     });
     // Graceful disconnect handler
     // If connection dies, don't crash - let error handlers catch it
-    client.$on('beforeExit', async () => {
-        console.warn('[Prisma] Connection pool closing (graceful shutdown)');
-    });
     return client;
 };
 const prisma = globalThis.prisma ?? prismaClientSingleton();
