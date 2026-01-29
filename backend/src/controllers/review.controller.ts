@@ -1,5 +1,6 @@
 import { NextFunction, Response } from 'express';
 import { prisma } from '../config/database';
+import { withRetry } from '../utils/retry';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 
@@ -11,18 +12,20 @@ export const getProductReviews = async (
   try {
     const { productId } = req.params;
 
-    const reviews = await prisma.review.findMany({
-      where: {
-        productId,
-        isApproved: true,
-      },
-      include: {
-        user: {
-          select: { fullName: true },
+    const reviews = await withRetry(() =>
+      prisma.review.findMany({
+        where: {
+          productId,
+          isApproved: true,
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        include: {
+          user: {
+            select: { fullName: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+    );
 
     res.json({ success: true, data: reviews });
   } catch (error) {
@@ -39,42 +42,50 @@ export const createReview = async (
     const { productId, rating, title, reviewText } = req.body;
 
     // Check if user already reviewed
-    const existingReview = await prisma.review.findFirst({
-      where: {
-        productId,
-        userId: req.user!.id,
-      },
-    });
+    const existingReview = await withRetry(() =>
+      prisma.review.findFirst({
+        where: {
+          productId,
+          userId: req.user!.id,
+        },
+      })
+    );
 
     if (existingReview) {
       throw new AppError('You have already reviewed this product', 400);
     }
 
-    const review = await prisma.review.create({
-      data: {
-        productId,
-        userId: req.user!.id,
-        rating,
-        title,
-        reviewText,
-      },
-    });
+    const review = await withRetry(() =>
+      prisma.review.create({
+        data: {
+          productId,
+          userId: req.user!.id,
+          rating,
+          title,
+          reviewText,
+        },
+      })
+    );
 
     // Update product rating
-    const reviews = await prisma.review.findMany({
-      where: { productId, isApproved: true },
-    });
+    const reviews = await withRetry(() =>
+      prisma.review.findMany({
+        where: { productId, isApproved: true },
+      })
+    );
 
     const avgRating =
       reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
 
-    await prisma.product.update({
-      where: { id: productId },
-      data: {
-        averageRating: avgRating,
-        reviewCount: reviews.length,
-      },
-    });
+    await withRetry(() =>
+      prisma.product.update({
+        where: { id: productId },
+        data: {
+          averageRating: avgRating,
+          reviewCount: reviews.length,
+        },
+      })
+    );
 
     res.status(201).json({ success: true, data: review });
   } catch (error) {
@@ -91,10 +102,12 @@ export const updateReview = async (
     const { id } = req.params;
     const { rating, title, reviewText } = req.body;
 
-    const review = await prisma.review.updateMany({
-      where: { id, userId: req.user!.id },
-      data: { rating, title, reviewText },
-    });
+    const review = await withRetry(() =>
+      prisma.review.updateMany({
+        where: { id, userId: req.user!.id },
+        data: { rating, title, reviewText },
+      })
+    );
 
     res.json({ success: true, data: review });
   } catch (error) {
@@ -110,9 +123,11 @@ export const deleteReview = async (
   try {
     const { id } = req.params;
 
-    await prisma.review.deleteMany({
-      where: { id, userId: req.user!.id },
-    });
+    await withRetry(() =>
+      prisma.review.deleteMany({
+        where: { id, userId: req.user!.id },
+      })
+    );
 
     res.json({ success: true, message: 'Review deleted successfully' });
   } catch (error) {

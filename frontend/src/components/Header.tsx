@@ -105,9 +105,9 @@ export default function Header() {
             <Link
               href="/search"
               className="text-text-primary hover:text-accent transition-colors p-2.5 sm:p-2 rounded-full hover:bg-primary/20 -mr-1 sm:mr-0"
-              title="Search"
+              aria-label="Search products"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </Link>
@@ -116,9 +116,9 @@ export default function Header() {
             <Link
               href="/wishlist"
               className="hidden xs:flex text-text-primary hover:text-accent transition-colors p-2.5 sm:p-2 rounded-full hover:bg-primary/20"
-              title="Wishlist"
+              aria-label="View wishlist"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
               </svg>
             </Link>
@@ -127,13 +127,13 @@ export default function Header() {
             <Link
               href="/cart"
               className="text-text-primary hover:text-accent transition-colors p-2.5 sm:p-2 rounded-full hover:bg-primary/20 relative"
-              title="Cart"
+              aria-label={`Shopping cart with ${cartCount} item${cartCount !== 1 ? 's' : ''}`}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
               {cartCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 w-5 h-5 bg-accent text-background-white rounded-full text-xs flex items-center justify-center font-semibold">
+                <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 w-5 h-5 bg-accent text-background-white rounded-full text-xs flex items-center justify-center font-semibold" aria-label={`${cartCount} items in cart`}>
                   {cartCount}
                 </span>
               )}
@@ -142,8 +142,8 @@ export default function Header() {
             {/* User Menu */}
             {isLoggedIn ? (
               <div className="relative group">
-                <button className="flex items-center gap-2 text-text-primary hover:text-accent font-medium transition-colors p-2 rounded-full hover:bg-primary/20">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button className="flex items-center gap-2 text-text-primary hover:text-accent font-medium transition-colors p-2 rounded-full hover:bg-primary/20" aria-label={`User account menu for ${user.firstName}`} aria-haspopup="menu">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                   <span className="hidden lg:inline text-sm">{user.firstName}</span>

@@ -2,11 +2,12 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getCategoryBySlug = exports.getCategories = void 0;
 const database_1 = require("../config/database");
+const retry_1 = require("../utils/retry");
 const errorHandler_1 = require("../middleware/errorHandler");
 const helpers_1 = require("../utils/helpers");
 const getCategories = async (req, res, next) => {
     try {
-        const categories = await database_1.prisma.category.findMany({
+        const categories = await (0, retry_1.withRetry)(() => database_1.prisma.category.findMany({
             where: { isActive: true, parentId: null },
             include: {
                 children: {
@@ -15,7 +16,7 @@ const getCategories = async (req, res, next) => {
                 },
             },
             orderBy: { sortOrder: 'asc' },
-        });
+        }));
         res.json({ success: true, data: categories });
     }
     catch (error) {
@@ -26,7 +27,7 @@ exports.getCategories = getCategories;
 const getCategoryBySlug = async (req, res, next) => {
     try {
         const { slug } = req.params;
-        const category = await database_1.prisma.category.findUnique({
+        const category = await (0, retry_1.withRetry)(() => database_1.prisma.category.findUnique({
             where: { slug },
             include: {
                 children: { where: { isActive: true } },
@@ -38,7 +39,7 @@ const getCategoryBySlug = async (req, res, next) => {
                     take: 12,
                 },
             },
-        });
+        }));
         if (!category) {
             throw new errorHandler_1.AppError('Category not found', 404);
         }
@@ -52,7 +53,7 @@ exports.getCategoryBySlug = getCategoryBySlug;
 const createCategory = async (req, res, next) => {
     try {
         const { name, description, parentId, imageUrl } = req.body;
-        const category = await database_1.prisma.category.create({
+        const category = await (0, retry_1.withRetry)(() => database_1.prisma.category.create({
             data: {
                 name,
                 slug: (0, helpers_1.slugify)(name),
@@ -60,7 +61,7 @@ const createCategory = async (req, res, next) => {
                 parentId,
                 imageUrl,
             },
-        });
+        }));
         res.status(201).json({ success: true, data: category });
     }
     catch (error) {
@@ -75,10 +76,10 @@ const updateCategory = async (req, res, next) => {
         if (updateData.name) {
             updateData.slug = (0, helpers_1.slugify)(updateData.name);
         }
-        const category = await database_1.prisma.category.update({
+        const category = await (0, retry_1.withRetry)(() => database_1.prisma.category.update({
             where: { id },
             data: updateData,
-        });
+        }));
         res.json({ success: true, data: category });
     }
     catch (error) {
@@ -89,7 +90,7 @@ exports.updateCategory = updateCategory;
 const deleteCategory = async (req, res, next) => {
     try {
         const { id } = req.params;
-        await database_1.prisma.category.delete({ where: { id } });
+        await (0, retry_1.withRetry)(() => database_1.prisma.category.delete({ where: { id } }));
         res.json({ success: true, message: 'Category deleted successfully' });
     }
     catch (error) {

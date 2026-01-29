@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.processRefund = exports.requestReturn = exports.cancelOrder = exports.getOrderById = exports.getOrders = exports.checkout = void 0;
 const library_1 = require("@prisma/client/runtime/library");
 const database_1 = require("../config/database");
+const retry_1 = require("../utils/retry");
 const email_service_1 = require("../services/email.service");
 const helpers_1 = require("../utils/helpers");
 const inventory_1 = require("../utils/inventory");
@@ -24,11 +25,11 @@ exports.checkout = (0, helpers_1.asyncHandler)(async (req, res) => {
             throw new helpers_1.AppError('Shipping address is incomplete', 400);
         }
         // Fetch full user info for address
-        const fullUser = await database_1.prisma.user.findUnique({
+        const fullUser = await (0, retry_1.withRetry)(() => database_1.prisma.user.findUnique({
             where: { id: req.user.id },
-        });
+        }));
         // Create new address for user
-        const newAddress = await database_1.prisma.address.create({
+        const newAddress = await (0, retry_1.withRetry)(() => database_1.prisma.address.create({
             data: {
                 userId: req.user.id,
                 fullName: fullUser?.fullName || 'Customer',
@@ -40,7 +41,7 @@ exports.checkout = (0, helpers_1.asyncHandler)(async (req, res) => {
                 phone: fullUser?.phone || '',
                 isDefault: false,
             },
-        });
+        }));
         finalShippingAddrId = newAddress.id;
         finalBillingAddrId = newAddress.id; // Use same address for billing
     }
@@ -54,10 +55,10 @@ exports.checkout = (0, helpers_1.asyncHandler)(async (req, res) => {
         const itemsInput = items;
         const productIds = itemsInput.map(item => item.productId);
         console.log('[Checkout] Fetching products:', { count: productIds.length });
-        const products = await database_1.prisma.product.findMany({
+        const products = await (0, retry_1.withRetry)(() => database_1.prisma.product.findMany({
             where: { id: { in: productIds } },
             include: { images: true },
-        });
+        }));
         if (products.length !== productIds.length) {
             const missingIds = productIds.filter(id => !products.find(p => p.id === id));
             console.error('[Checkout] Some products not found:', { missingIds });
@@ -77,7 +78,7 @@ exports.checkout = (0, helpers_1.asyncHandler)(async (req, res) => {
     else {
         // Use server-side cart
         console.log('[Checkout] Using server-side cart for user:', req.user.id);
-        cartItems = await database_1.prisma.cartItem.findMany({
+        cartItems = await (0, retry_1.withRetry)(() => database_1.prisma.cartItem.findMany({
             where: { userId: req.user.id },
             include: {
                 product: {
@@ -86,24 +87,24 @@ exports.checkout = (0, helpers_1.asyncHandler)(async (req, res) => {
                     },
                 },
             },
-        });
+        }));
     }
     if (cartItems.length === 0) {
         throw new helpers_1.AppError('Cart is empty', 400);
     }
     // Verify addresses belong to user
-    const shippingAddr = await database_1.prisma.address.findFirst({
+    const shippingAddr = await (0, retry_1.withRetry)(() => database_1.prisma.address.findFirst({
         where: {
             id: finalShippingAddrId,
             userId: req.user.id,
         },
-    });
-    const billingAddr = await database_1.prisma.address.findFirst({
+    }));
+    const billingAddr = await (0, retry_1.withRetry)(() => database_1.prisma.address.findFirst({
         where: {
             id: finalBillingAddrId,
             userId: req.user.id,
         },
-    });
+    }));
     if (!shippingAddr || !billingAddr) {
         throw new helpers_1.AppError('Invalid addresses', 400);
     }
@@ -117,9 +118,9 @@ exports.checkout = (0, helpers_1.asyncHandler)(async (req, res) => {
     let appliedCouponCode = null;
     if (couponCode) {
         try {
-            const coupon = await database_1.prisma.coupon.findUnique({
+            const coupon = await (0, retry_1.withRetry)(() => database_1.prisma.coupon.findUnique({
                 where: { code: couponCode.toUpperCase() },
-            });
+            }));
             if (coupon) {
                 // Validate coupon
                 const now = new Date();
@@ -158,7 +159,7 @@ exports.checkout = (0, helpers_1.asyncHandler)(async (req, res) => {
     const shippingFee = subtotal - discountAmount >= 1000 ? 0 : 50;
     const totalAmount = subtotal - discountAmount + gstAmount + shippingFee;
     // Create order
-    const order = await database_1.prisma.order.create({
+    const order = await (0, retry_1.withRetry)(() => database_1.prisma.order.create({
         data: {
             orderNumber: (0, helpers_1.generateOrderNumber)(),
             userId: req.user.id,
@@ -189,7 +190,7 @@ exports.checkout = (0, helpers_1.asyncHandler)(async (req, res) => {
             shippingAddress: true,
             user: { select: { fullName: true, email: true } },
         },
-    });
+    }));
     // Lock inventory for this order (holds for 15 minutes)
     const inventoryItems = cartItems.map((item) => ({
         productId: item.productId,
@@ -238,19 +239,19 @@ exports.checkout = (0, helpers_1.asyncHandler)(async (req, res) => {
     });
 });
 exports.getOrders = (0, helpers_1.asyncHandler)(async (req, res) => {
-    const orders = await database_1.prisma.order.findMany({
+    const orders = await (0, retry_1.withRetry)(() => database_1.prisma.order.findMany({
         where: { userId: req.user.id },
         include: {
             items: true,
             payments: true,
         },
         orderBy: { createdAt: 'desc' },
-    });
+    }));
     res.json({ success: true, data: orders });
 });
 exports.getOrderById = (0, helpers_1.asyncHandler)(async (req, res) => {
     const { id } = req.params;
-    const order = await database_1.prisma.order.findFirst({
+    const order = await (0, retry_1.withRetry)(() => database_1.prisma.order.findFirst({
         where: {
             id,
             userId: req.user.id,
@@ -265,7 +266,7 @@ exports.getOrderById = (0, helpers_1.asyncHandler)(async (req, res) => {
             billingAddress: true,
             payments: true,
         },
-    });
+    }));
     if (!order) {
         throw new helpers_1.AppError('Order not found', 404);
     }
@@ -274,12 +275,12 @@ exports.getOrderById = (0, helpers_1.asyncHandler)(async (req, res) => {
 exports.cancelOrder = (0, helpers_1.asyncHandler)(async (req, res) => {
     const { id } = req.params;
     const { reason } = req.body;
-    const order = await database_1.prisma.order.findFirst({
+    const order = await (0, retry_1.withRetry)(() => database_1.prisma.order.findFirst({
         where: {
             id,
             userId: req.user.id,
         },
-    });
+    }));
     if (!order) {
         throw new helpers_1.AppError('Order not found', 404);
     }
@@ -294,30 +295,30 @@ exports.cancelOrder = (0, helpers_1.asyncHandler)(async (req, res) => {
     if (order.status === 'PENDING') {
         await (0, inventory_1.releaseInventoryLocks)(id);
     }
-    const updatedOrder = await database_1.prisma.order.update({
+    const updatedOrder = await (0, retry_1.withRetry)(() => database_1.prisma.order.update({
         where: { id },
         data: {
             status: 'CANCELLED',
             cancelledAt: new Date(),
             cancelReason: reason,
         },
-    });
+    }));
     res.json({ success: true, data: updatedOrder });
 });
 exports.requestReturn = (0, helpers_1.asyncHandler)(async (req, res) => {
     const { id } = req.params;
     const { reason, description } = req.body;
-    const order = await database_1.prisma.order.findFirst({
+    const order = await (0, retry_1.withRetry)(() => database_1.prisma.order.findFirst({
         where: {
             id,
             userId: req.user.id,
             status: 'DELIVERED',
         },
-    });
+    }));
     if (!order) {
         throw new helpers_1.AppError('Order not found or cannot be returned', 404);
     }
-    const returnRequest = await database_1.prisma.return.create({
+    const returnRequest = await (0, retry_1.withRetry)(() => database_1.prisma.return.create({
         data: {
             orderId: id,
             userId: req.user.id,
@@ -325,7 +326,7 @@ exports.requestReturn = (0, helpers_1.asyncHandler)(async (req, res) => {
             description,
             status: 'REQUESTED',
         },
-    });
+    }));
     res.status(201).json({ success: true, data: returnRequest });
 });
 /**
@@ -337,17 +338,17 @@ exports.processRefund = (0, helpers_1.asyncHandler)(async (req, res) => {
     if (!returnId || !refundAmount) {
         throw new helpers_1.AppError('returnId and refundAmount are required', 400);
     }
-    const returnRequest = await database_1.prisma.return.findUnique({
+    const returnRequest = await (0, retry_1.withRetry)(() => database_1.prisma.return.findUnique({
         where: { id: returnId },
         include: { order: true },
-    });
+    }));
     if (!returnRequest) {
         throw new helpers_1.AppError('Return request not found', 404);
     }
     const order = returnRequest.order;
     // Call refund API (would integrate with Razorpay in production)
     // For now, mark as refunded and restock
-    await database_1.prisma.$transaction(async (tx) => {
+    await (0, retry_1.withRetry)(() => database_1.prisma.$transaction(async (tx) => {
         // Update return status
         await tx.return.update({
             where: { id: returnId },
@@ -375,7 +376,7 @@ exports.processRefund = (0, helpers_1.asyncHandler)(async (req, res) => {
         });
         // Restock inventory
         await (0, inventory_1.restockInventory)(order.id);
-    });
+    }));
     res.json({ success: true, message: 'Refund processed and inventory restocked' });
 });
 //# sourceMappingURL=order.controller.js.map

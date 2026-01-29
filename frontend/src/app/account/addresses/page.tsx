@@ -98,58 +98,63 @@ export default function AddressesPage() {
             <h2 className="text-lg font-bold mb-4">Add New Address</h2>
             <form onSubmit={handleAddAddress} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Street</label>
+                <label htmlFor="street" className="block text-xs sm:text-sm font-medium text-text-secondary uppercase tracking-wide mb-2">Street</label>
                 <input
+                  id="street"
                   type="text"
                   value={form.street}
                   onChange={(e) => setForm({ ...form, street: e.target.value })}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-4 py-3.5 sm:py-3 text-base sm:text-sm border border-border rounded-lg bg-background-white text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors min-h-[52px]"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                  <label htmlFor="city" className="block text-xs sm:text-sm font-medium text-text-secondary uppercase tracking-wide mb-2">City</label>
                   <input
+                    id="city"
                     type="text"
                     value={form.city}
                     onChange={(e) => setForm({ ...form, city: e.target.value })}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-4 py-3.5 sm:py-3 text-base sm:text-sm border border-border rounded-lg bg-background-white text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors min-h-[52px]"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                  <label htmlFor="state" className="block text-xs sm:text-sm font-medium text-text-secondary uppercase tracking-wide mb-2">State</label>
                   <input
+                    id="state"
                     type="text"
                     value={form.state}
                     onChange={(e) => setForm({ ...form, state: e.target.value })}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-4 py-3.5 sm:py-3 text-base sm:text-sm border border-border rounded-lg bg-background-white text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors min-h-[52px]"
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="zipCode" className="block text-xs sm:text-sm font-medium text-text-secondary uppercase tracking-wide mb-2">
                     Zip Code
                   </label>
                   <input
+                    id="zipCode"
                     type="text"
                     value={form.zipCode}
                     onChange={(e) => setForm({ ...form, zipCode: e.target.value })}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-4 py-3.5 sm:py-3 text-base sm:text-sm border border-border rounded-lg bg-background-white text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors min-h-[52px]"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1">City</label>
-                  <input
-                    type="text"
-                    value={form.city}
-                    onChange={(e) => setForm({ ...form, city: e.target.value })}
-                    className="w-full px-4 py-2 border border-neutral-300 rounded-lg"
-                  />
+                  <label htmlFor="country" className="block text-xs sm:text-sm font-medium text-text-secondary uppercase tracking-wide mb-2">Country</label>
+                  <select
+                    id="country"
+                    value="India"
+                    className="w-full px-4 py-3.5 sm:py-3 text-base sm:text-sm border border-border rounded-lg bg-background-white text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors min-h-[52px]"
+                  >
+                    <option value="India">India</option>
+                  </select>
                 </div>
               </div>
               <div className="flex gap-2">

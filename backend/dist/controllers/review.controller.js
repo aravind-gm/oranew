@@ -2,11 +2,12 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteReview = exports.updateReview = exports.createReview = exports.getProductReviews = void 0;
 const database_1 = require("../config/database");
+const retry_1 = require("../utils/retry");
 const errorHandler_1 = require("../middleware/errorHandler");
 const getProductReviews = async (req, res, next) => {
     try {
         const { productId } = req.params;
-        const reviews = await database_1.prisma.review.findMany({
+        const reviews = await (0, retry_1.withRetry)(() => database_1.prisma.review.findMany({
             where: {
                 productId,
                 isApproved: true,
@@ -17,7 +18,7 @@ const getProductReviews = async (req, res, next) => {
                 },
             },
             orderBy: { createdAt: 'desc' },
-        });
+        }));
         res.json({ success: true, data: reviews });
     }
     catch (error) {
@@ -29,16 +30,16 @@ const createReview = async (req, res, next) => {
     try {
         const { productId, rating, title, reviewText } = req.body;
         // Check if user already reviewed
-        const existingReview = await database_1.prisma.review.findFirst({
+        const existingReview = await (0, retry_1.withRetry)(() => database_1.prisma.review.findFirst({
             where: {
                 productId,
                 userId: req.user.id,
             },
-        });
+        }));
         if (existingReview) {
             throw new errorHandler_1.AppError('You have already reviewed this product', 400);
         }
-        const review = await database_1.prisma.review.create({
+        const review = await (0, retry_1.withRetry)(() => database_1.prisma.review.create({
             data: {
                 productId,
                 userId: req.user.id,
@@ -46,19 +47,19 @@ const createReview = async (req, res, next) => {
                 title,
                 reviewText,
             },
-        });
+        }));
         // Update product rating
-        const reviews = await database_1.prisma.review.findMany({
+        const reviews = await (0, retry_1.withRetry)(() => database_1.prisma.review.findMany({
             where: { productId, isApproved: true },
-        });
+        }));
         const avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
-        await database_1.prisma.product.update({
+        await (0, retry_1.withRetry)(() => database_1.prisma.product.update({
             where: { id: productId },
             data: {
                 averageRating: avgRating,
                 reviewCount: reviews.length,
             },
-        });
+        }));
         res.status(201).json({ success: true, data: review });
     }
     catch (error) {
@@ -70,10 +71,10 @@ const updateReview = async (req, res, next) => {
     try {
         const { id } = req.params;
         const { rating, title, reviewText } = req.body;
-        const review = await database_1.prisma.review.updateMany({
+        const review = await (0, retry_1.withRetry)(() => database_1.prisma.review.updateMany({
             where: { id, userId: req.user.id },
             data: { rating, title, reviewText },
-        });
+        }));
         res.json({ success: true, data: review });
     }
     catch (error) {
@@ -84,9 +85,9 @@ exports.updateReview = updateReview;
 const deleteReview = async (req, res, next) => {
     try {
         const { id } = req.params;
-        await database_1.prisma.review.deleteMany({
+        await (0, retry_1.withRetry)(() => database_1.prisma.review.deleteMany({
             where: { id, userId: req.user.id },
-        });
+        }));
         res.json({ success: true, message: 'Review deleted successfully' });
     }
     catch (error) {

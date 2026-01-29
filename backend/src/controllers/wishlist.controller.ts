@@ -1,5 +1,6 @@
 import { NextFunction, Response } from 'express';
 import { prisma } from '../config/database';
+import { withRetry } from '../utils/retry';
 import { AuthRequest } from '../middleware/auth';
 
 export const getWishlist = async (
@@ -8,16 +9,18 @@ export const getWishlist = async (
   next: NextFunction
 ) => {
   try {
-    const wishlist = await prisma.wishlist.findMany({
-      where: { userId: req.user!.id },
-      include: {
-        product: {
-          include: {
-            images: { where: { isPrimary: true }, take: 1 },
+    const wishlist = await withRetry(() =>
+      prisma.wishlist.findMany({
+        where: { userId: req.user!.id },
+        include: {
+          product: {
+            include: {
+              images: { where: { isPrimary: true }, take: 1 },
+            },
           },
         },
-      },
-    });
+      })
+    );
 
     res.json({ success: true, data: wishlist });
   } catch (error) {
@@ -33,19 +36,21 @@ export const addToWishlist = async (
   try {
     const { productId } = req.body;
 
-    const wishlistItem = await prisma.wishlist.create({
-      data: {
-        userId: req.user!.id,
-        productId,
-      },
-      include: {
-        product: {
-          include: {
-            images: { where: { isPrimary: true }, take: 1 },
+    const wishlistItem = await withRetry(() =>
+      prisma.wishlist.create({
+        data: {
+          userId: req.user!.id,
+          productId,
+        },
+        include: {
+          product: {
+            include: {
+              images: { where: { isPrimary: true }, take: 1 },
+            },
           },
         },
-      },
-    });
+      })
+    );
 
     res.status(201).json({ success: true, data: wishlistItem });
   } catch (error) {
@@ -61,9 +66,11 @@ export const removeFromWishlist = async (
   try {
     const { id } = req.params;
 
-    await prisma.wishlist.deleteMany({
-      where: { id, userId: req.user!.id },
-    });
+    await withRetry(() =>
+      prisma.wishlist.deleteMany({
+        where: { id, userId: req.user!.id },
+      })
+    );
 
     res.json({ success: true, message: 'Item removed from wishlist' });
   } catch (error) {

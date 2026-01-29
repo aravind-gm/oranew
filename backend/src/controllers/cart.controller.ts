@@ -1,5 +1,6 @@
 import { NextFunction, Response } from 'express';
 import { prisma } from '../config/database';
+import { withRetry } from '../utils/retry';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 
@@ -9,16 +10,18 @@ export const getCart = async (
   next: NextFunction
 ) => {
   try {
-    const cartItems = await prisma.cartItem.findMany({
-      where: { userId: req.user!.id },
-      include: {
-        product: {
-          include: {
-            images: { where: { isPrimary: true }, take: 1 },
+    const cartItems = await withRetry(() =>
+      prisma.cartItem.findMany({
+        where: { userId: req.user!.id },
+        include: {
+          product: {
+            include: {
+              images: { where: { isPrimary: true }, take: 1 },
+            },
           },
         },
-      },
-    });
+      })
+    );
 
     res.json({ success: true, data: cartItems });
   } catch (error) {
@@ -35,9 +38,11 @@ export const addToCart = async (
     const { productId, quantity = 1 } = req.body;
 
     // Check if product exists and is active
-    const product = await prisma.product.findUnique({
-      where: { id: productId },
-    });
+    const product = await withRetry(() =>
+      prisma.product.findUnique({
+        where: { id: productId },
+      })
+    );
 
     if (!product || !product.isActive) {
       throw new AppError('Product not found', 404);
@@ -48,46 +53,52 @@ export const addToCart = async (
     }
 
     // Check if item already in cart
-    const existingItem = await prisma.cartItem.findUnique({
-      where: {
-        userId_productId: {
-          userId: req.user!.id,
-          productId,
+    const existingItem = await withRetry(() =>
+      prisma.cartItem.findUnique({
+        where: {
+          userId_productId: {
+            userId: req.user!.id,
+            productId,
+          },
         },
-      },
-    });
+      })
+    );
 
     let cartItem;
 
     if (existingItem) {
       // Update quantity
-      cartItem = await prisma.cartItem.update({
-        where: { id: existingItem.id },
-        data: { quantity: existingItem.quantity + quantity },
-        include: {
-          product: {
-            include: {
-              images: { where: { isPrimary: true }, take: 1 },
+      cartItem = await withRetry(() =>
+        prisma.cartItem.update({
+          where: { id: existingItem.id },
+          data: { quantity: existingItem.quantity + quantity },
+          include: {
+            product: {
+              include: {
+                images: { where: { isPrimary: true }, take: 1 },
+              },
             },
           },
-        },
-      });
+        })
+      );
     } else {
       // Create new cart item
-      cartItem = await prisma.cartItem.create({
-        data: {
-          userId: req.user!.id,
-          productId,
-          quantity,
-        },
-        include: {
-          product: {
-            include: {
-              images: { where: { isPrimary: true }, take: 1 },
+      cartItem = await withRetry(() =>
+        prisma.cartItem.create({
+          data: {
+            userId: req.user!.id,
+            productId,
+            quantity,
+          },
+          include: {
+            product: {
+              include: {
+                images: { where: { isPrimary: true }, take: 1 },
+              },
             },
           },
-        },
-      });
+        })
+      );
     }
 
     res.status(201).json({ success: true, data: cartItem });
@@ -105,25 +116,29 @@ export const updateCartItem = async (
     const { id } = req.params;
     const { quantity } = req.body;
 
-    const cartItem = await prisma.cartItem.findFirst({
-      where: { id, userId: req.user!.id },
-    });
+    const cartItem = await withRetry(() =>
+      prisma.cartItem.findFirst({
+        where: { id, userId: req.user!.id },
+      })
+    );
 
     if (!cartItem) {
       throw new AppError('Cart item not found', 404);
     }
 
-    const updatedItem = await prisma.cartItem.update({
-      where: { id },
-      data: { quantity },
-      include: {
-        product: {
-          include: {
-            images: { where: { isPrimary: true }, take: 1 },
+    const updatedItem = await withRetry(() =>
+      prisma.cartItem.update({
+        where: { id },
+        data: { quantity },
+        include: {
+          product: {
+            include: {
+              images: { where: { isPrimary: true }, take: 1 },
+            },
           },
         },
-      },
-    });
+      })
+    );
 
     res.json({ success: true, data: updatedItem });
   } catch (error) {
@@ -139,9 +154,11 @@ export const removeFromCart = async (
   try {
     const { id } = req.params;
 
-    await prisma.cartItem.deleteMany({
-      where: { id, userId: req.user!.id },
-    });
+    await withRetry(() =>
+      prisma.cartItem.deleteMany({
+        where: { id, userId: req.user!.id },
+      })
+    );
 
     res.json({ success: true, message: 'Item removed from cart' });
   } catch (error) {
@@ -155,9 +172,11 @@ export const clearCart = async (
   next: NextFunction
 ) => {
   try {
-    await prisma.cartItem.deleteMany({
-      where: { userId: req.user!.id },
-    });
+    await withRetry(() =>
+      prisma.cartItem.deleteMany({
+        where: { userId: req.user!.id },
+      })
+    );
 
     res.json({ success: true, message: 'Cart cleared' });
   } catch (error) {

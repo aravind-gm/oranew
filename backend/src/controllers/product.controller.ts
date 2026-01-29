@@ -1,5 +1,6 @@
 import { NextFunction, Response } from 'express';
 import { prisma } from '../config/database';
+import { withRetry } from '../utils/retry';
 import { getSignedUrl } from '../config/supabase';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';

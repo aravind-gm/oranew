@@ -2,12 +2,13 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteAddress = exports.updateAddress = exports.createAddress = exports.getAddresses = void 0;
 const database_1 = require("../config/database");
+const retry_1 = require("../utils/retry");
 const getAddresses = async (req, res, next) => {
     try {
-        const addresses = await database_1.prisma.address.findMany({
+        const addresses = await (0, retry_1.withRetry)(() => database_1.prisma.address.findMany({
             where: { userId: req.user.id },
             orderBy: { isDefault: 'desc' },
-        });
+        }));
         res.json({ success: true, data: addresses });
     }
     catch (error) {
@@ -20,12 +21,12 @@ const createAddress = async (req, res, next) => {
         const { fullName, phone, addressLine1, addressLine2, city, state, pincode, country, isDefault, addressType, } = req.body;
         // If this is default, unset other defaults
         if (isDefault) {
-            await database_1.prisma.address.updateMany({
+            await (0, retry_1.withRetry)(() => database_1.prisma.address.updateMany({
                 where: { userId: req.user.id },
                 data: { isDefault: false },
-            });
+            }));
         }
-        const address = await database_1.prisma.address.create({
+        const address = await (0, retry_1.withRetry)(() => database_1.prisma.address.create({
             data: {
                 userId: req.user.id,
                 fullName,
@@ -39,7 +40,7 @@ const createAddress = async (req, res, next) => {
                 isDefault,
                 addressType,
             },
-        });
+        }));
         res.status(201).json({ success: true, data: address });
     }
     catch (error) {
@@ -53,15 +54,15 @@ const updateAddress = async (req, res, next) => {
         const updateData = req.body;
         // If setting as default, unset other defaults
         if (updateData.isDefault) {
-            await database_1.prisma.address.updateMany({
+            await (0, retry_1.withRetry)(() => database_1.prisma.address.updateMany({
                 where: { userId: req.user.id },
                 data: { isDefault: false },
-            });
+            }));
         }
-        const address = await database_1.prisma.address.updateMany({
+        const address = await (0, retry_1.withRetry)(() => database_1.prisma.address.updateMany({
             where: { id, userId: req.user.id },
             data: updateData,
-        });
+        }));
         res.json({ success: true, data: address });
     }
     catch (error) {
@@ -72,9 +73,9 @@ exports.updateAddress = updateAddress;
 const deleteAddress = async (req, res, next) => {
     try {
         const { id } = req.params;
-        await database_1.prisma.address.deleteMany({
+        await (0, retry_1.withRetry)(() => database_1.prisma.address.deleteMany({
             where: { id, userId: req.user.id },
-        });
+        }));
         res.json({ success: true, message: 'Address deleted successfully' });
     }
     catch (error) {

@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { prisma } from '../config/database';
+import { withRetry } from '../utils/retry';
 import { AuthRequest } from '../middleware/auth';
 import { AppError, asyncHandler } from '../utils/helpers';
 
@@ -29,9 +30,11 @@ export const validateCoupon = asyncHandler(async (req: AuthRequest, res: Respons
   console.log('[Coupon.validate] Code:', code, 'Amount:', orderAmount);
 
   // Find coupon
-  const coupon = await prisma.coupon.findUnique({
-    where: { code: code.toUpperCase() },
-  });
+  const coupon = await withRetry(() =>
+    prisma.coupon.findUnique({
+      where: { code: code.toUpperCase() },
+    })
+  );
 
   if (!coupon) {
     throw new AppError('Coupon code not found', 404);
@@ -120,18 +123,22 @@ export const redeemCoupon = asyncHandler(async (req: AuthRequest, res: Response)
   console.log('[Coupon.redeem] Code:', code, 'OrderId:', orderId);
 
   // Find coupon
-  const coupon = await prisma.coupon.findUnique({
-    where: { code: code.toUpperCase() },
-  });
+  const coupon = await withRetry(() =>
+    prisma.coupon.findUnique({
+      where: { code: code.toUpperCase() },
+    })
+  );
 
   if (!coupon) {
     throw new AppError('Coupon code not found', 404);
   }
 
   // Find order
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-  });
+  const order = await withRetry(() =>
+    prisma.order.findUnique({
+      where: { id: orderId },
+    })
+  );
 
   if (!order) {
     throw new AppError('Order not found', 404);
@@ -142,12 +149,14 @@ export const redeemCoupon = asyncHandler(async (req: AuthRequest, res: Response)
   }
 
   // Increment usage count
-  const updatedCoupon = await prisma.coupon.update({
-    where: { id: coupon.id },
-    data: {
-      usageCount: coupon.usageCount + 1,
-    },
-  });
+  const updatedCoupon = await withRetry(() =>
+    prisma.coupon.update({
+      where: { id: coupon.id },
+      data: {
+        usageCount: coupon.usageCount + 1,
+      },
+    })
+  );
 
   console.log('[Coupon.redeem] ✓ Coupon redeemed. New usage count:', updatedCoupon.usageCount);
 
@@ -174,22 +183,24 @@ export const getCoupon = asyncHandler(async (req: any, res: Response) => {
     throw new AppError('Coupon code is required', 400);
   }
 
-  const coupon = await prisma.coupon.findUnique({
-    where: { code: code.toUpperCase() },
-    select: {
-      code: true,
-      description: true,
-      discountType: true,
-      discountValue: true,
-      minOrderAmount: true,
-      maxDiscount: true,
-      usageLimit: true,
-      usageCount: true,
-      validFrom: true,
-      validUntil: true,
-      isActive: true,
-    },
-  });
+  const coupon = await withRetry(() =>
+    prisma.coupon.findUnique({
+      where: { code: code.toUpperCase() },
+      select: {
+        code: true,
+        description: true,
+        discountType: true,
+        discountValue: true,
+        minOrderAmount: true,
+        maxDiscount: true,
+        usageLimit: true,
+        usageCount: true,
+        validFrom: true,
+        validUntil: true,
+        isActive: true,
+      },
+    })
+  );
 
   if (!coupon) {
     throw new AppError('Coupon code not found', 404);

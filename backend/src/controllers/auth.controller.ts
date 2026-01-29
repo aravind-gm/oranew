@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { NextFunction, Request, Response } from 'express';
 import { prisma } from '../config/database';
+import { withRetry } from '../utils/retry';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { getPasswordResetEmailTemplate, getWelcomeEmailTemplate, sendEmail } from '../utils/email';
@@ -27,7 +28,9 @@ export const register = async (
     }
 
     // Check if user exists
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    const existingUser = await withRetry(() =>
+      prisma.user.findUnique({ where: { email } })
+    );
     if (existingUser) {
       throw new AppError('Email already registered', 400);
     }
@@ -36,22 +39,24 @@ export const register = async (
     const passwordHash = await hashPassword(password);
 
     // Create user
-    const user = await prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        fullName,
-        phone,
-      },
-      select: {
-        id: true,
-        email: true,
-        fullName: true,
-        phone: true,
-        role: true,
-        createdAt: true,
-      },
-    });
+    const user = await withRetry(() =>
+      prisma.user.create({
+        data: {
+          email,
+          passwordHash,
+          fullName,
+          phone,
+        },
+        select: {
+          id: true,
+          email: true,
+          fullName: true,
+          phone: true,
+          role: true,
+          createdAt: true,
+        },
+      })
+    );
 
     // Generate token
     const token = generateToken({
@@ -100,7 +105,9 @@ export const login = async (
     }
 
     // Find user
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await withRetry(() =>
+      prisma.user.findUnique({ where: { email } })
+    );
     if (!user) {
       throw new AppError('Invalid credentials', 401);
     }
@@ -145,18 +152,20 @@ export const getMe = async (
   next: NextFunction
 ) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user!.id },
-      select: {
-        id: true,
-        email: true,
-        fullName: true,
-        phone: true,
-        role: true,
-        isVerified: true,
-        createdAt: true,
-      },
-    });
+    const user = await withRetry(() =>
+      prisma.user.findUnique({
+        where: { id: req.user!.id },
+        select: {
+          id: true,
+          email: true,
+          fullName: true,
+          phone: true,
+          role: true,
+          isVerified: true,
+          createdAt: true,
+        },
+      })
+    );
 
     if (!user) {
       throw new AppError('User not found', 404);
@@ -182,20 +191,22 @@ export const updateProfile = async (
   try {
     const { fullName, phone } = req.body;
 
-    const user = await prisma.user.update({
-      where: { id: req.user!.id },
-      data: {
-        ...(fullName && { fullName }),
-        ...(phone && { phone }),
-      },
-      select: {
-        id: true,
-        email: true,
-        fullName: true,
-        phone: true,
-        role: true,
-      },
-    });
+    const user = await withRetry(() =>
+      prisma.user.update({
+        where: { id: req.user!.id },
+        data: {
+          ...(fullName && { fullName }),
+          ...(phone && { phone }),
+        },
+        select: {
+          id: true,
+          email: true,
+          fullName: true,
+          phone: true,
+          role: true,
+        },
+      })
+    );
 
     res.json({
       success: true,
@@ -221,7 +232,9 @@ export const forgotPassword = async (
       throw new AppError('Email is required', 400);
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await withRetry(() =>
+      prisma.user.findUnique({ where: { email } })
+    );
     if (!user) {
       // Don't reveal if user exists for security
       return res.json({
@@ -238,18 +251,22 @@ export const forgotPassword = async (
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
     // Delete any existing reset tokens for this user
-    await prisma.passwordReset.deleteMany({
-      where: { userId: user.id },
-    });
+    await withRetry(() =>
+      prisma.passwordReset.deleteMany({
+        where: { userId: user.id },
+      })
+    );
 
     // Create password reset record
-    await prisma.passwordReset.create({
-      data: {
-        userId: user.id,
-        token: resetTokenHash,
-        expiresAt,
-      },
-    });
+    await withRetry(() =>
+      prisma.passwordReset.create({
+        data: {
+          userId: user.id,
+          token: resetTokenHash,
+          expiresAt,
+        },
+      })
+    );
 
     // Send reset email
     const resetUrl = `${process.env.FRONTEND_URL}/auth/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
@@ -298,7 +315,9 @@ export const resetPassword = async (
     }
 
     // Find user
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await withRetry(() =>
+      prisma.user.findUnique({ where: { email } })
+    );
     if (!user) {
       throw new AppError('Invalid reset request', 400);
     }
@@ -307,13 +326,15 @@ export const resetPassword = async (
     const resetTokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
     // Find valid reset token
-    const passwordReset = await prisma.passwordReset.findFirst({
-      where: {
-        userId: user.id,
-        token: resetTokenHash,
-        expiresAt: { gt: new Date() }, // Not expired
-      },
-    });
+    const passwordReset = await withRetry(() =>
+      prisma.passwordReset.findFirst({
+        where: {
+          userId: user.id,
+          token: resetTokenHash,
+          expiresAt: { gt: new Date() }, // Not expired
+        },
+      })
+    );
 
     if (!passwordReset) {
       throw new AppError('Invalid or expired reset token', 400);
@@ -323,15 +344,17 @@ export const resetPassword = async (
     const passwordHash = await hashPassword(newPassword);
 
     // Update user password and delete reset token
-    await prisma.$transaction([
-      prisma.user.update({
-        where: { id: user.id },
-        data: { passwordHash },
-      }),
-      prisma.passwordReset.delete({
-        where: { id: passwordReset.id },
-      }),
-    ]);
+    await withRetry(() =>
+      prisma.$transaction([
+        prisma.user.update({
+          where: { id: user.id },
+          data: { passwordHash },
+        }),
+        prisma.passwordReset.delete({
+          where: { id: passwordReset.id },
+        }),
+      ])
+    );
 
     res.json({
       success: true,
@@ -370,9 +393,11 @@ export const changePassword = async (
     }
 
     // Get user with password
-    const user = await prisma.user.findUnique({
-      where: { id: req.user!.id },
-    });
+    const user = await withRetry(() =>
+      prisma.user.findUnique({
+        where: { id: req.user!.id },
+      })
+    );
 
     if (!user) {
       throw new AppError('User not found', 404);
@@ -388,10 +413,12 @@ export const changePassword = async (
     const passwordHash = await hashPassword(newPassword);
 
     // Update password
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { passwordHash },
-    });
+    await withRetry(() =>
+      prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash },
+      })
+    );
 
     res.json({
       success: true,

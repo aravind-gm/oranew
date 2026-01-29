@@ -5,18 +5,20 @@ import { PrismaClient } from '@prisma/client';
 // ============================================
 // Why this matters:
 // 1. Single instance prevents connection pool exhaustion
-// 2. Global singleton survives Render sleep/wake cycles
+// 2. Global singleton survives Render/Vercel sleep/wake cycles
 // 3. Lazy initialization prevents aggressive connection attempts
 // 4. Compatible with hot reload (dev) and production
+// 5. Handles connection events for graceful recovery
 //
 // How it works:
 // - First call creates PrismaClient
 // - Subsequent calls reuse same instance
 // - Never creates new clients per request
+// - Listens for connection events to detect failures
 // ============================================
 
 const prismaClientSingleton = () => {
-  return new PrismaClient({
+  const client = new PrismaClient({
     // Logging strategy:
     // - Production: Only errors (minimize noise)
     // - Development: Include warnings and queries (debugging)
@@ -24,6 +26,14 @@ const prismaClientSingleton = () => {
       ? ['query', 'error', 'warn'] 
       : ['error', 'warn'],
   });
+
+  // Graceful disconnect handler
+  // If connection dies, don't crash - let error handlers catch it
+  client.$on('beforeExit' as never, async () => {
+    console.warn('[Prisma] Connection pool closing (graceful shutdown)');
+  });
+
+  return client;
 };
 
 declare global {
@@ -33,6 +43,7 @@ declare global {
 const prisma = globalThis.prisma ?? prismaClientSingleton();
 
 // Production: Reuse the same instance across all requests
+// Development: Also keep it global to prevent hot-reload issues
 if (process.env.NODE_ENV !== 'production') {
   globalThis.prisma = prisma;
 }

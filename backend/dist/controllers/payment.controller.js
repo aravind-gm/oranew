@@ -8,6 +8,7 @@ const library_1 = require("@prisma/client/runtime/library");
 const crypto_1 = __importDefault(require("crypto"));
 const razorpay_1 = __importDefault(require("razorpay"));
 const database_1 = require("../config/database");
+const retry_1 = require("../utils/retry");
 const email_1 = require("../utils/email");
 const helpers_1 = require("../utils/helpers");
 // ============================================
@@ -57,14 +58,14 @@ exports.createPayment = (0, helpers_1.asyncHandler)(async (req, res) => {
     // ────────────────────────────────────────────
     // FETCH ORDER & VERIFY OWNERSHIP
     // ────────────────────────────────────────────
-    const order = await database_1.prisma.order.findUnique({
+    const order = await (0, retry_1.withRetry)(() => database_1.prisma.order.findUnique({
         where: { id: orderId },
         include: {
             user: true,
             items: { include: { product: true } },
             payments: true,
         },
-    });
+    }));
     if (!order) {
         throw new helpers_1.AppError('Order not found', 404);
     }
@@ -118,7 +119,7 @@ exports.createPayment = (0, helpers_1.asyncHandler)(async (req, res) => {
     // ────────────────────────────────────────────
     // SAVE PAYMENT RECORD
     // ────────────────────────────────────────────
-    const payment = await database_1.prisma.payment.create({
+    const payment = await (0, retry_1.withRetry)(() => database_1.prisma.payment.create({
         data: {
             orderId: order.id,
             paymentGateway: 'RAZORPAY',
@@ -131,7 +132,7 @@ exports.createPayment = (0, helpers_1.asyncHandler)(async (req, res) => {
                 createdAt: new Date().toISOString(),
             },
         },
-    });
+    }));
     console.log('[Payment.create] Payment record created:', payment.id);
     // ────────────────────────────────────────────
     // RETURN RESPONSE
@@ -196,14 +197,14 @@ exports.verifyPayment = (0, helpers_1.asyncHandler)(async (req, res) => {
     // ────────────────────────────────────────────
     // FETCH ORDER & VERIFY OWNERSHIP
     // ────────────────────────────────────────────
-    const order = await database_1.prisma.order.findUnique({
+    const order = await (0, retry_1.withRetry)(() => database_1.prisma.order.findUnique({
         where: { id: orderId },
         include: {
             user: true,
             items: true,
             payments: true,
         },
-    });
+    }));
     if (!order) {
         throw new helpers_1.AppError('Order not found', 404);
     }
@@ -267,7 +268,7 @@ exports.verifyPayment = (0, helpers_1.asyncHandler)(async (req, res) => {
     // CRITICAL: Only mark as VERIFIED, NOT CONFIRMED
     // Webhook is the source of truth for CONFIRMED status
     console.log('[Payment.verify] Marking payment as VERIFIED (waiting for webhook confirmation)');
-    const updatedPayment = await database_1.prisma.payment.update({
+    const updatedPayment = await (0, retry_1.withRetry)(() => database_1.prisma.payment.update({
         where: { id: payment.id },
         data: {
             status: 'VERIFIED',
@@ -278,7 +279,7 @@ exports.verifyPayment = (0, helpers_1.asyncHandler)(async (req, res) => {
                 verifiedBy: 'frontend',
             },
         },
-    });
+    }));
     // Return early - do NOT update order status yet
     // Webhook will update order.status to CONFIRMED
     console.log('[Payment.verify] ✓ Payment marked as VERIFIED');

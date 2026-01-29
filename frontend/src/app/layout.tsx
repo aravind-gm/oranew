@@ -18,12 +18,24 @@ const cormorant = Cormorant_Garamond({
   display: 'swap',
 });
 
+// Get base URL from environment or use localhost as fallback
+const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:3000';
+
 export const metadata: Metadata = {
+  metadataBase: new URL(baseUrl),
   title: 'ORA Jewellery | Premium Artificial Fashion Jewellery',
   description: 'own. radiate. adorn. - Discover our exquisite collection of artificial fashion jewellery. Chains, necklaces, bracelets, rings, earrings and more.',
   keywords: 'jewellery, fashion jewellery, artificial jewellery, necklaces, earrings, bracelets, rings, ORA',
   openGraph: {
     title: 'ORA Jewellery',
+    description: 'own. radiate. adorn.',
+    images: ['/oralogo.png'],
+    type: 'website',
+    locale: 'en_US',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'ORA Jewellery | Premium Artificial Fashion Jewellery',
     description: 'own. radiate. adorn.',
     images: ['/oralogo.png'],
   },

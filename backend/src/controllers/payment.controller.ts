@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { Request, Response } from 'express';
 import Razorpay from 'razorpay';
 import { prisma } from '../config/database';
+import { withRetry } from '../utils/retry';
 import { getOrderConfirmationTemplate, getRefundProcessedTemplate, sendEmail } from '../utils/email';
 import { AppError, asyncHandler } from '../utils/helpers';
 
@@ -61,14 +62,16 @@ export const createPayment = asyncHandler(async (req: any, res: Response) => {
   // ────────────────────────────────────────────
   // FETCH ORDER & VERIFY OWNERSHIP
   // ────────────────────────────────────────────
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    include: {
-      user: true,
-      items: { include: { product: true } },
-      payments: true,
-    },
-  });
+  const order = await withRetry(() =>
+    prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        user: true,
+        items: { include: { product: true } },
+        payments: true,
+      },
+    })
+  );
 
   if (!order) {
     throw new AppError('Order not found', 404);
@@ -133,20 +136,22 @@ export const createPayment = asyncHandler(async (req: any, res: Response) => {
   // ────────────────────────────────────────────
   // SAVE PAYMENT RECORD
   // ────────────────────────────────────────────
-  const payment = await prisma.payment.create({
-    data: {
-      orderId: order.id,
-      paymentGateway: 'RAZORPAY',
-      transactionId: razorpayOrder.id,
-      amount: order.totalAmount,
-      currency: 'INR',
-      status: 'PENDING',
-      gatewayResponse: {
-        razorpayOrderId: razorpayOrder.id,
-        createdAt: new Date().toISOString(),
+  const payment = await withRetry(() =>
+    prisma.payment.create({
+      data: {
+        orderId: order.id,
+        paymentGateway: 'RAZORPAY',
+        transactionId: razorpayOrder.id,
+        amount: order.totalAmount,
+        currency: 'INR',
+        status: 'PENDING',
+        gatewayResponse: {
+          razorpayOrderId: razorpayOrder.id,
+          createdAt: new Date().toISOString(),
+        },
       },
-    },
-  });
+    })
+  );
 
   console.log('[Payment.create] Payment record created:', payment.id);
 
@@ -221,14 +226,16 @@ export const verifyPayment = asyncHandler(async (req: any, res: Response) => {
   // ────────────────────────────────────────────
   // FETCH ORDER & VERIFY OWNERSHIP
   // ────────────────────────────────────────────
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    include: {
-      user: true,
-      items: true,
-      payments: true,
-    },
-  });
+  const order = await withRetry(() =>
+    prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        user: true,
+        items: true,
+        payments: true,
+      },
+    })
+  );
 
   if (!order) {
     throw new AppError('Order not found', 404);
@@ -307,18 +314,20 @@ export const verifyPayment = asyncHandler(async (req: any, res: Response) => {
   // Webhook is the source of truth for CONFIRMED status
   console.log('[Payment.verify] Marking payment as VERIFIED (waiting for webhook confirmation)');
 
-  const updatedPayment = await prisma.payment.update({
-    where: { id: payment.id },
-    data: {
-      status: 'VERIFIED',
-      gatewayResponse: {
-        ...(typeof payment.gatewayResponse === 'object' && payment.gatewayResponse ? payment.gatewayResponse : {}),
-        razorpayPaymentId: razorpay_payment_id,
-        verifiedAt: new Date().toISOString(),
-        verifiedBy: 'frontend',
+  const updatedPayment = await withRetry(() =>
+    prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        status: 'VERIFIED',
+        gatewayResponse: {
+          ...(typeof payment.gatewayResponse === 'object' && payment.gatewayResponse ? payment.gatewayResponse : {}),
+          razorpayPaymentId: razorpay_payment_id,
+          verifiedAt: new Date().toISOString(),
+          verifiedBy: 'frontend',
+        },
       },
-    },
-  });
+    })
+  );
 
   // Return early - do NOT update order status yet
   // Webhook will update order.status to CONFIRMED

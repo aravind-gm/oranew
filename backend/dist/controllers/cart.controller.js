@@ -2,10 +2,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.clearCart = exports.removeFromCart = exports.updateCartItem = exports.addToCart = exports.getCart = void 0;
 const database_1 = require("../config/database");
+const retry_1 = require("../utils/retry");
 const errorHandler_1 = require("../middleware/errorHandler");
 const getCart = async (req, res, next) => {
     try {
-        const cartItems = await database_1.prisma.cartItem.findMany({
+        const cartItems = await (0, retry_1.withRetry)(() => database_1.prisma.cartItem.findMany({
             where: { userId: req.user.id },
             include: {
                 product: {
@@ -14,7 +15,7 @@ const getCart = async (req, res, next) => {
                     },
                 },
             },
-        });
+        }));
         res.json({ success: true, data: cartItems });
     }
     catch (error) {
@@ -26,9 +27,9 @@ const addToCart = async (req, res, next) => {
     try {
         const { productId, quantity = 1 } = req.body;
         // Check if product exists and is active
-        const product = await database_1.prisma.product.findUnique({
+        const product = await (0, retry_1.withRetry)(() => database_1.prisma.product.findUnique({
             where: { id: productId },
-        });
+        }));
         if (!product || !product.isActive) {
             throw new errorHandler_1.AppError('Product not found', 404);
         }
@@ -36,18 +37,18 @@ const addToCart = async (req, res, next) => {
             throw new errorHandler_1.AppError('Insufficient stock', 400);
         }
         // Check if item already in cart
-        const existingItem = await database_1.prisma.cartItem.findUnique({
+        const existingItem = await (0, retry_1.withRetry)(() => database_1.prisma.cartItem.findUnique({
             where: {
                 userId_productId: {
                     userId: req.user.id,
                     productId,
                 },
             },
-        });
+        }));
         let cartItem;
         if (existingItem) {
             // Update quantity
-            cartItem = await database_1.prisma.cartItem.update({
+            cartItem = await (0, retry_1.withRetry)(() => database_1.prisma.cartItem.update({
                 where: { id: existingItem.id },
                 data: { quantity: existingItem.quantity + quantity },
                 include: {
@@ -57,11 +58,11 @@ const addToCart = async (req, res, next) => {
                         },
                     },
                 },
-            });
+            }));
         }
         else {
             // Create new cart item
-            cartItem = await database_1.prisma.cartItem.create({
+            cartItem = await (0, retry_1.withRetry)(() => database_1.prisma.cartItem.create({
                 data: {
                     userId: req.user.id,
                     productId,
@@ -74,7 +75,7 @@ const addToCart = async (req, res, next) => {
                         },
                     },
                 },
-            });
+            }));
         }
         res.status(201).json({ success: true, data: cartItem });
     }
@@ -87,13 +88,13 @@ const updateCartItem = async (req, res, next) => {
     try {
         const { id } = req.params;
         const { quantity } = req.body;
-        const cartItem = await database_1.prisma.cartItem.findFirst({
+        const cartItem = await (0, retry_1.withRetry)(() => database_1.prisma.cartItem.findFirst({
             where: { id, userId: req.user.id },
-        });
+        }));
         if (!cartItem) {
             throw new errorHandler_1.AppError('Cart item not found', 404);
         }
-        const updatedItem = await database_1.prisma.cartItem.update({
+        const updatedItem = await (0, retry_1.withRetry)(() => database_1.prisma.cartItem.update({
             where: { id },
             data: { quantity },
             include: {
@@ -103,7 +104,7 @@ const updateCartItem = async (req, res, next) => {
                     },
                 },
             },
-        });
+        }));
         res.json({ success: true, data: updatedItem });
     }
     catch (error) {
@@ -114,9 +115,9 @@ exports.updateCartItem = updateCartItem;
 const removeFromCart = async (req, res, next) => {
     try {
         const { id } = req.params;
-        await database_1.prisma.cartItem.deleteMany({
+        await (0, retry_1.withRetry)(() => database_1.prisma.cartItem.deleteMany({
             where: { id, userId: req.user.id },
-        });
+        }));
         res.json({ success: true, message: 'Item removed from cart' });
     }
     catch (error) {
@@ -126,9 +127,9 @@ const removeFromCart = async (req, res, next) => {
 exports.removeFromCart = removeFromCart;
 const clearCart = async (req, res, next) => {
     try {
-        await database_1.prisma.cartItem.deleteMany({
+        await (0, retry_1.withRetry)(() => database_1.prisma.cartItem.deleteMany({
             where: { userId: req.user.id },
-        });
+        }));
         res.json({ success: true, message: 'Cart cleared' });
     }
     catch (error) {

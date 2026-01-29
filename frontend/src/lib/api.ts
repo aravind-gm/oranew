@@ -1,9 +1,12 @@
 /**
  * Vercel Serverless Backend API Client
- * Updated for serverless architecture
+ * Updated for serverless architecture with production-grade error handling
  * 
- * Communicates with /api/* endpoints on Vercel
- * All requests include JWT token in Authorization header
+ * Features:
+ * - Automatic 503 retry with exponential backoff
+ * - Graceful handling of database connection failures
+ * - JWT token management via authStore
+ * - Request/response interceptors for cross-cutting concerns
  */
 
 import { useAuthStore } from '@/store/authStore';
@@ -18,7 +21,10 @@ const api = axios.create({
   timeout: 30000, // 30 second timeout for serverless functions
 });
 
-// Request interceptor - Add auth token from localStorage
+// ============================================
+// REQUEST INTERCEPTOR
+// ============================================
+// Add JWT token from localStorage/authStore
 api.interceptors.request.use(
   (config) => {
     // Only access localStorage in browser environment
@@ -42,11 +48,49 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor - Handle errors gracefully
+// ============================================
+// RESPONSE INTERCEPTOR - WITH 503 AUTO-RETRY
+// ============================================
+// Handle errors gracefully:
+// - 503: Retry after delay (database temporarily unavailable)
+// - 401: Clear auth and redirect to login
+// - Other: Pass through to caller
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError) => {
-    // Handle 401 Unauthorized
+  async (error: AxiosError) => {
+    const config = error.config;
+    const originalRequest = config as any;
+
+    // ============================================
+    // 503 Service Unavailable - RETRY LOGIC
+    // ============================================
+    // Backend database is temporarily down
+    // Retry silently after exponential backoff
+    if (
+      error.response?.status === 503 &&
+      originalRequest._retryCount < 3
+    ) {
+      originalRequest._retryCount = (originalRequest._retryCount || 0) + 1;
+
+      // Exponential backoff: 2s, 4s, 8s
+      const delayMs = 2000 * Math.pow(2, originalRequest._retryCount - 1);
+
+      console.warn(
+        `[API 503] Service unavailable. Retry ${originalRequest._retryCount}/3 after ${delayMs}ms`,
+        error.response?.data?.message || 'Database temporarily unavailable'
+      );
+
+      // Wait before retrying
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+
+      // Retry the request
+      return api.request(config);
+    }
+
+    // ============================================
+    // 401 UNAUTHORIZED
+    // ============================================
+    // Session expired or token invalid
     if (typeof window !== 'undefined' && error.response?.status === 401) {
       const authStore = useAuthStore.getState();
       localStorage.removeItem('ora_token');
@@ -56,7 +100,7 @@ api.interceptors.response.use(
         window.location.href = '/auth/login?error=unauthorized';
       }
     }
-    
+
     return Promise.reject(error);
   }
 );

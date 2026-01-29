@@ -2,9 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.removeFromWishlist = exports.addToWishlist = exports.getWishlist = void 0;
 const database_1 = require("../config/database");
+const retry_1 = require("../utils/retry");
 const getWishlist = async (req, res, next) => {
     try {
-        const wishlist = await database_1.prisma.wishlist.findMany({
+        const wishlist = await (0, retry_1.withRetry)(() => database_1.prisma.wishlist.findMany({
             where: { userId: req.user.id },
             include: {
                 product: {
@@ -13,7 +14,7 @@ const getWishlist = async (req, res, next) => {
                     },
                 },
             },
-        });
+        }));
         res.json({ success: true, data: wishlist });
     }
     catch (error) {
@@ -24,7 +25,7 @@ exports.getWishlist = getWishlist;
 const addToWishlist = async (req, res, next) => {
     try {
         const { productId } = req.body;
-        const wishlistItem = await database_1.prisma.wishlist.create({
+        const wishlistItem = await (0, retry_1.withRetry)(() => database_1.prisma.wishlist.create({
             data: {
                 userId: req.user.id,
                 productId,
@@ -36,7 +37,7 @@ const addToWishlist = async (req, res, next) => {
                     },
                 },
             },
-        });
+        }));
         res.status(201).json({ success: true, data: wishlistItem });
     }
     catch (error) {
@@ -47,9 +48,9 @@ exports.addToWishlist = addToWishlist;
 const removeFromWishlist = async (req, res, next) => {
     try {
         const { id } = req.params;
-        await database_1.prisma.wishlist.deleteMany({
+        await (0, retry_1.withRetry)(() => database_1.prisma.wishlist.deleteMany({
             where: { id, userId: req.user.id },
-        });
+        }));
         res.json({ success: true, message: 'Item removed from wishlist' });
     }
     catch (error) {

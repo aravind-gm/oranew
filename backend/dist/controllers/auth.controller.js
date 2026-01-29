@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteAccount = exports.changePassword = exports.resetPassword = exports.forgotPassword = exports.updateProfile = exports.getMe = exports.login = exports.register = void 0;
 const crypto_1 = __importDefault(require("crypto"));
 const database_1 = require("../config/database");
+const retry_1 = require("../utils/retry");
 const errorHandler_1 = require("../middleware/errorHandler");
 const email_1 = require("../utils/email");
 const jwt_1 = require("../utils/jwt");
@@ -23,14 +24,14 @@ const register = async (req, res, next) => {
             throw new errorHandler_1.AppError('Please provide all required fields (email, password, fullName)', 400);
         }
         // Check if user exists
-        const existingUser = await database_1.prisma.user.findUnique({ where: { email } });
+        const existingUser = await (0, retry_1.withRetry)(() => database_1.prisma.user.findUnique({ where: { email } }));
         if (existingUser) {
             throw new errorHandler_1.AppError('Email already registered', 400);
         }
         // Hash password
         const passwordHash = await (0, password_1.hashPassword)(password);
         // Create user
-        const user = await database_1.prisma.user.create({
+        const user = await (0, retry_1.withRetry)(() => database_1.prisma.user.create({
             data: {
                 email,
                 passwordHash,
@@ -45,7 +46,7 @@ const register = async (req, res, next) => {
                 role: true,
                 createdAt: true,
             },
-        });
+        }));
         // Generate token
         const token = (0, jwt_1.generateToken)({
             id: user.id,
@@ -87,7 +88,7 @@ const login = async (req, res, next) => {
             throw new errorHandler_1.AppError('Please provide email and password', 400);
         }
         // Find user
-        const user = await database_1.prisma.user.findUnique({ where: { email } });
+        const user = await (0, retry_1.withRetry)(() => database_1.prisma.user.findUnique({ where: { email } }));
         if (!user) {
             throw new errorHandler_1.AppError('Invalid credentials', 401);
         }
@@ -126,7 +127,7 @@ exports.login = login;
 // @access  Private
 const getMe = async (req, res, next) => {
     try {
-        const user = await database_1.prisma.user.findUnique({
+        const user = await (0, retry_1.withRetry)(() => database_1.prisma.user.findUnique({
             where: { id: req.user.id },
             select: {
                 id: true,
@@ -137,7 +138,7 @@ const getMe = async (req, res, next) => {
                 isVerified: true,
                 createdAt: true,
             },
-        });
+        }));
         if (!user) {
             throw new errorHandler_1.AppError('User not found', 404);
         }
@@ -157,7 +158,7 @@ exports.getMe = getMe;
 const updateProfile = async (req, res, next) => {
     try {
         const { fullName, phone } = req.body;
-        const user = await database_1.prisma.user.update({
+        const user = await (0, retry_1.withRetry)(() => database_1.prisma.user.update({
             where: { id: req.user.id },
             data: {
                 ...(fullName && { fullName }),
@@ -170,7 +171,7 @@ const updateProfile = async (req, res, next) => {
                 phone: true,
                 role: true,
             },
-        });
+        }));
         res.json({
             success: true,
             data: user,
@@ -190,7 +191,7 @@ const forgotPassword = async (req, res, next) => {
         if (!email) {
             throw new errorHandler_1.AppError('Email is required', 400);
         }
-        const user = await database_1.prisma.user.findUnique({ where: { email } });
+        const user = await (0, retry_1.withRetry)(() => database_1.prisma.user.findUnique({ where: { email } }));
         if (!user) {
             // Don't reveal if user exists for security
             return res.json({
@@ -204,17 +205,17 @@ const forgotPassword = async (req, res, next) => {
         // Token expires in 1 hour
         const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
         // Delete any existing reset tokens for this user
-        await database_1.prisma.passwordReset.deleteMany({
+        await (0, retry_1.withRetry)(() => database_1.prisma.passwordReset.deleteMany({
             where: { userId: user.id },
-        });
+        }));
         // Create password reset record
-        await database_1.prisma.passwordReset.create({
+        await (0, retry_1.withRetry)(() => database_1.prisma.passwordReset.create({
             data: {
                 userId: user.id,
                 token: resetTokenHash,
                 expiresAt,
             },
-        });
+        }));
         // Send reset email
         const resetUrl = `${process.env.FRONTEND_URL}/auth/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
         try {
@@ -254,27 +255,27 @@ const resetPassword = async (req, res, next) => {
             throw new errorHandler_1.AppError('Password must be at least 6 characters', 400);
         }
         // Find user
-        const user = await database_1.prisma.user.findUnique({ where: { email } });
+        const user = await (0, retry_1.withRetry)(() => database_1.prisma.user.findUnique({ where: { email } }));
         if (!user) {
             throw new errorHandler_1.AppError('Invalid reset request', 400);
         }
         // Hash the token to compare
         const resetTokenHash = crypto_1.default.createHash('sha256').update(token).digest('hex');
         // Find valid reset token
-        const passwordReset = await database_1.prisma.passwordReset.findFirst({
+        const passwordReset = await (0, retry_1.withRetry)(() => database_1.prisma.passwordReset.findFirst({
             where: {
                 userId: user.id,
                 token: resetTokenHash,
                 expiresAt: { gt: new Date() }, // Not expired
             },
-        });
+        }));
         if (!passwordReset) {
             throw new errorHandler_1.AppError('Invalid or expired reset token', 400);
         }
         // Hash new password
         const passwordHash = await (0, password_1.hashPassword)(newPassword);
         // Update user password and delete reset token
-        await database_1.prisma.$transaction([
+        await (0, retry_1.withRetry)(() => database_1.prisma.$transaction([
             database_1.prisma.user.update({
                 where: { id: user.id },
                 data: { passwordHash },
@@ -282,7 +283,7 @@ const resetPassword = async (req, res, next) => {
             database_1.prisma.passwordReset.delete({
                 where: { id: passwordReset.id },
             }),
-        ]);
+        ]));
         res.json({
             success: true,
             message: 'Password reset successful. You can now login with your new password.',
@@ -312,9 +313,9 @@ const changePassword = async (req, res, next) => {
             throw new errorHandler_1.AppError('New password must be different from current password', 400);
         }
         // Get user with password
-        const user = await database_1.prisma.user.findUnique({
+        const user = await (0, retry_1.withRetry)(() => database_1.prisma.user.findUnique({
             where: { id: req.user.id },
-        });
+        }));
         if (!user) {
             throw new errorHandler_1.AppError('User not found', 404);
         }
@@ -326,10 +327,10 @@ const changePassword = async (req, res, next) => {
         // Hash new password
         const passwordHash = await (0, password_1.hashPassword)(newPassword);
         // Update password
-        await database_1.prisma.user.update({
+        await (0, retry_1.withRetry)(() => database_1.prisma.user.update({
             where: { id: user.id },
             data: { passwordHash },
-        });
+        }));
         res.json({
             success: true,
             message: 'Password changed successfully',

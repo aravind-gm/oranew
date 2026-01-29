@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.listCoupons = exports.getCoupon = exports.redeemCoupon = exports.validateCoupon = void 0;
 const database_1 = require("../config/database");
+const retry_1 = require("../utils/retry");
 const helpers_1 = require("../utils/helpers");
 /**
  * POST /api/coupons/:code/validate
@@ -24,9 +25,9 @@ exports.validateCoupon = (0, helpers_1.asyncHandler)(async (req, res) => {
     }
     console.log('[Coupon.validate] Code:', code, 'Amount:', orderAmount);
     // Find coupon
-    const coupon = await database_1.prisma.coupon.findUnique({
+    const coupon = await (0, retry_1.withRetry)(() => database_1.prisma.coupon.findUnique({
         where: { code: code.toUpperCase() },
-    });
+    }));
     if (!coupon) {
         throw new helpers_1.AppError('Coupon code not found', 404);
     }
@@ -96,16 +97,16 @@ exports.redeemCoupon = (0, helpers_1.asyncHandler)(async (req, res) => {
     }
     console.log('[Coupon.redeem] Code:', code, 'OrderId:', orderId);
     // Find coupon
-    const coupon = await database_1.prisma.coupon.findUnique({
+    const coupon = await (0, retry_1.withRetry)(() => database_1.prisma.coupon.findUnique({
         where: { code: code.toUpperCase() },
-    });
+    }));
     if (!coupon) {
         throw new helpers_1.AppError('Coupon code not found', 404);
     }
     // Find order
-    const order = await database_1.prisma.order.findUnique({
+    const order = await (0, retry_1.withRetry)(() => database_1.prisma.order.findUnique({
         where: { id: orderId },
-    });
+    }));
     if (!order) {
         throw new helpers_1.AppError('Order not found', 404);
     }
@@ -113,12 +114,12 @@ exports.redeemCoupon = (0, helpers_1.asyncHandler)(async (req, res) => {
         throw new helpers_1.AppError('Unauthorized - order belongs to another user', 403);
     }
     // Increment usage count
-    const updatedCoupon = await database_1.prisma.coupon.update({
+    const updatedCoupon = await (0, retry_1.withRetry)(() => database_1.prisma.coupon.update({
         where: { id: coupon.id },
         data: {
             usageCount: coupon.usageCount + 1,
         },
-    });
+    }));
     console.log('[Coupon.redeem] ✓ Coupon redeemed. New usage count:', updatedCoupon.usageCount);
     res.json({
         success: true,
@@ -140,7 +141,7 @@ exports.getCoupon = (0, helpers_1.asyncHandler)(async (req, res) => {
     if (!code) {
         throw new helpers_1.AppError('Coupon code is required', 400);
     }
-    const coupon = await database_1.prisma.coupon.findUnique({
+    const coupon = await (0, retry_1.withRetry)(() => database_1.prisma.coupon.findUnique({
         where: { code: code.toUpperCase() },
         select: {
             code: true,
@@ -155,7 +156,7 @@ exports.getCoupon = (0, helpers_1.asyncHandler)(async (req, res) => {
             validUntil: true,
             isActive: true,
         },
-    });
+    }));
     if (!coupon) {
         throw new helpers_1.AppError('Coupon code not found', 404);
     }

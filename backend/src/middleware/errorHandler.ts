@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
+import { isPrismaInitError, toDatabaseErrorResponse } from '../utils/dbErrors';
 
 export interface ApiError extends Error {
   statusCode?: number;
@@ -56,6 +57,20 @@ export const errorHandler = (
   res: Response,
   _next: NextFunction
 ) => {
+  // CRITICAL: Handle Prisma initialization errors with 503 response
+  // This allows frontend to retry without crashing
+  if (isPrismaInitError(err)) {
+    const { statusCode, body } = toDatabaseErrorResponse(err);
+    console.warn('[ERROR] 🔴 Database Connection Error (Returning 503 Retry):', {
+      timestamp: new Date().toISOString(),
+      endpoint: req.path,
+      method: req.method,
+      message: err.message,
+      retryable: body.retryable,
+    });
+    return res.status(statusCode).json(body);
+  }
+
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Internal Server Error';
   const { category, isColdStart, isPoolExhaustion, isNetworkDrop } = categorizeError(err);

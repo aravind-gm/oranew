@@ -8,5 +8,7 @@ declare global {
 declare const prisma: PrismaClient<{
     log: ("error" | "query" | "warn")[];
 }, never, import("@prisma/client/runtime/library").DefaultArgs>;
+export declare const checkDatabaseHealth: () => Promise<boolean>;
+export declare const ensureDatabaseConnected: () => Promise<boolean>;
 export { prisma };
 //# sourceMappingURL=database.d.ts.map
