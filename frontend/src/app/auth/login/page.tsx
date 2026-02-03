@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Mail, Lock, Loader2, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { rebuildToken } from '@/lib/force-rebuild';
 
 type LoginStep = 'password-login' | 'admin-login';
 
