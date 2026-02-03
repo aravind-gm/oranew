@@ -82,7 +82,7 @@ export const createReview = async (
         where: { id: productId },
         data: {
           averageRating: avgRating,
-          reviewCount: reviews.length,
+          reviewCount: (reviews as any).length,
         },
       })
     );

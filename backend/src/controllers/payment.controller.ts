@@ -105,14 +105,14 @@ export const createPayment = asyncHandler(async (req: any, res: Response) => {
       paymentId: activePayment.id,
       razorpayOrderId: activePayment.transactionId,
       razorpayKeyId: process.env.RAZORPAY_KEY_ID,
-      amount: Math.round(Number(order.totalAmount) * 100),
+      amount: Math.round(Number((order as any).totalAmount) * 100),
       currency: 'INR',
       key: process.env.RAZORPAY_KEY_ID,
-      orderId: order.orderNumber,
+      orderId: (order as any).orderNumber,
       customer: {
-        name: order.user.fullName,
-        email: order.user.email,
-        phone: order.user.phone,
+        name: (order as any).user.fullName,
+        email: (order as any).user.email,
+        phone: (order as any).user.phone,
       },
     });
   }
@@ -121,13 +121,13 @@ export const createPayment = asyncHandler(async (req: any, res: Response) => {
   // CREATE RAZORPAY ORDER
   // ────────────────────────────────────────────
   const razorpayOrder = await getRazorpay().orders.create({
-    amount: Math.round(Number(order.totalAmount) * 100), // Convert to paise
+    amount: Math.round(Number((order as any).totalAmount) * 100), // Convert to paise
     currency: 'INR',
-    receipt: order.orderNumber,
+    receipt: (order as any).orderNumber,
     notes: {
-      orderId: order.id,
-      orderNumber: order.orderNumber,
-      customerEmail: order.user.email,
+      orderId: (order as any).id,
+      orderNumber: (order as any).orderNumber,
+      customerEmail: (order as any).user.email,
     },
   });
 
@@ -139,10 +139,10 @@ export const createPayment = asyncHandler(async (req: any, res: Response) => {
   const payment = await withRetry(() =>
     prisma.payment.create({
       data: {
-        orderId: order.id,
+        orderId: (order as any).id,
         paymentGateway: 'RAZORPAY',
         transactionId: razorpayOrder.id,
-        amount: order.totalAmount,
+        amount: (order as any).totalAmount,
         currency: 'INR',
         status: 'PENDING',
         gatewayResponse: {
@@ -153,24 +153,24 @@ export const createPayment = asyncHandler(async (req: any, res: Response) => {
     })
   );
 
-  console.log('[Payment.create] Payment record created:', payment.id);
+  console.log('[Payment.create] Payment record created:', (payment as any).id);
 
   // ────────────────────────────────────────────
   // RETURN RESPONSE
   // ────────────────────────────────────────────
   res.json({
     success: true,
-    paymentId: payment.id,
+    paymentId: (payment as any).id,
     razorpayOrderId: razorpayOrder.id,
     razorpayKeyId: process.env.RAZORPAY_KEY_ID,
     amount: razorpayOrder.amount,
     currency: razorpayOrder.currency,
     key: process.env.RAZORPAY_KEY_ID,
-    orderId: order.orderNumber,
+    orderId: (order as any).orderNumber,
     customer: {
-      name: order.user.fullName,
-      email: order.user.email,
-      phone: order.user.phone,
+      name: (order as any).user.fullName,
+      email: (order as any).user.email,
+      phone: (order as any).user.phone,
     },
   });
 });
@@ -235,25 +235,25 @@ export const verifyPayment = asyncHandler(async (req: any, res: Response) => {
         payments: true,
       },
     })
-  );
+  ) as any;
 
   if (!order) {
     throw new AppError('Order not found', 404);
   }
 
-  if (order.userId !== userId) {
+  if ((order as any).userId !== userId) {
     throw new AppError('Unauthorized - order belongs to another user', 403);
   }
 
   console.log('[Payment.verify] ✓ Order found and verified:', {
-    orderNumber: order.orderNumber,
-    totalAmount: order.totalAmount,
+    orderNumber: (order as any).orderNumber,
+    totalAmount: (order as any).totalAmount,
   });
 
   // ────────────────────────────────────────────
   // FIND PAYMENT RECORD
   // ────────────────────────────────────────────
-  const payment = order.payments?.[0];
+  const payment = (order as any).payments?.[0];
 
   if (!payment) {
     throw new AppError('Payment record not found', 404);
@@ -273,7 +273,7 @@ export const verifyPayment = asyncHandler(async (req: any, res: Response) => {
     return res.json({
       success: true,
       message: 'Payment already confirmed',
-      orderStatus: order.status,
+      orderStatus: (order as any).status,
     });
   }
 
@@ -327,7 +327,7 @@ export const verifyPayment = asyncHandler(async (req: any, res: Response) => {
         },
       },
     })
-  );
+  ) as any;
 
   // Return early - do NOT update order status yet
   // Webhook will update order.status to CONFIRMED
@@ -339,8 +339,8 @@ export const verifyPayment = asyncHandler(async (req: any, res: Response) => {
   res.json({
     success: true,
     message: 'Signature verified. Awaiting webhook confirmation.',
-    orderStatus: order.status,
-    paymentStatus: updatedPayment.status,
+    orderStatus: (order as any).status,
+    paymentStatus: (updatedPayment as any).status,
   });
 });
 
@@ -566,22 +566,22 @@ export const getPaymentStatus = asyncHandler(async (req: any, res: Response) => 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: { payments: true },
-  });
+  }) as any;
 
   if (!order) {
     throw new AppError('Order not found', 404);
   }
 
-  if (order.userId !== userId) {
+  if ((order as any).userId !== userId) {
     throw new AppError('Unauthorized', 403);
   }
 
-  const payment = order.payments?.[0];
+  const payment = (order as any).payments?.[0];
 
   res.json({
     success: true,
-    orderStatus: order.status,
-    paymentStatus: order.paymentStatus,
+    orderStatus: (order as any).status,
+    paymentStatus: (order as any).paymentStatus,
     paymentDetails: payment ? {
       id: payment.id,
       status: payment.status,

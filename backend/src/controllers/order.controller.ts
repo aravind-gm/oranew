@@ -264,22 +264,22 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
   // Send order placed email (fire and forget - don't block response)
   try {
     const emailData = {
-      orderNumber: order.orderNumber,
-      customerName: order.user.fullName,
-      customerEmail: order.user.email,
-      items: order.items.map(item => ({
+      orderNumber: (order as any).orderNumber,
+      customerName: (order as any).user.fullName,
+      customerEmail: (order as any).user.email,
+      items: (order as any).items.map((item: any) => ({
         productName: item.productName,
         quantity: item.quantity,
         unitPrice: Number(item.unitPrice),
       })),
-      totalAmount: Number(order.totalAmount),
+      totalAmount: Number((order as any).totalAmount),
       shippingAddress: {
-        fullName: order.shippingAddress.fullName,
-        addressLine1: order.shippingAddress.addressLine1,
-        addressLine2: order.shippingAddress.addressLine2 || undefined,
-        city: order.shippingAddress.city,
-        state: order.shippingAddress.state,
-        pincode: order.shippingAddress.pincode,
+        fullName: (order as any).shippingAddress.fullName,
+        addressLine1: (order as any).shippingAddress.addressLine1,
+        addressLine2: (order as any).shippingAddress.addressLine2 || undefined,
+        city: (order as any).shippingAddress.city,
+        state: (order as any).shippingAddress.state,
+        pincode: (order as any).shippingAddress.pincode,
       },
     };
     
