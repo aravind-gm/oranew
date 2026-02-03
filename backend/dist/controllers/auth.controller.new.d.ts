@@ -10,4 +10,4 @@ export declare const changePassword: (req: AuthRequest, res: Response, next: Nex
 export declare const deleteAccount: (req: AuthRequest, res: Response, next: NextFunction) => Promise<Response<any, Record<string, any>>>;
 export declare const adminLogin: (req: Request, res: Response, next: NextFunction) => Promise<Response<any, Record<string, any>>>;
 export declare const cleanupExpiredTokens: () => Promise<any>;
-//# sourceMappingURL=auth.controller.d.ts.map
+//# sourceMappingURL=auth.controller.new.d.ts.map

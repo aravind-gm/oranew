@@ -79,7 +79,7 @@ export const register = async (
     });
 
     // Generate JWT token
-    const token = generateToken({ userId: user.id });
+    const token = generateToken({ id: user.id, email: user.email, role: user.role });
 
     console.log(`[Auth] ✅ User registered successfully: ${user.email}`);
 
@@ -137,7 +137,7 @@ export const login = async (
     }
 
     // Generate JWT token
-    const token = generateToken({ userId: user.id });
+    const token = generateToken({ id: user.id, email: user.email, role: user.role });
 
     const userResponse = {
       id: user.id,
@@ -308,12 +308,12 @@ export const getMe = async (
   next: NextFunction
 ) => {
   try {
-    if (!req.user?.userId) {
+    if (!req.user?.id) {
       throw new AppError('Not authenticated', 401);
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: req.user.userId },
+      where: { id: req.user.id },
       select: {
         id: true,
         email: true,
@@ -349,7 +349,7 @@ export const updateProfile = async (
   next: NextFunction
 ) => {
   try {
-    if (!req.user?.userId) {
+    if (!req.user?.id) {
       throw new AppError('Not authenticated', 401);
     }
 
@@ -367,7 +367,7 @@ export const updateProfile = async (
     }
 
     const updatedUser = await prisma.user.update({
-      where: { id: req.user.userId },
+      where: { id: req.user.id },
       data: updateData,
       select: {
         id: true,
@@ -401,7 +401,7 @@ export const changePassword = async (
   next: NextFunction
 ) => {
   try {
-    if (!req.user?.userId) {
+    if (!req.user?.id) {
       throw new AppError('Not authenticated', 401);
     }
 
@@ -430,7 +430,7 @@ export const changePassword = async (
 
     // Get user with current password
     const user = await prisma.user.findUnique({
-      where: { id: req.user.userId },
+      where: { id: req.user.id },
       select: { id: true, email: true, passwordHash: true },
     });
 
@@ -479,7 +479,7 @@ export const deleteAccount = async (
   next: NextFunction
 ) => {
   try {
-    if (!req.user?.userId) {
+    if (!req.user?.id) {
       throw new AppError('Not authenticated', 401);
     }
 
@@ -494,7 +494,7 @@ export const deleteAccount = async (
 
     // Get user with password
     const user = await prisma.user.findUnique({
-      where: { id: req.user.userId },
+      where: { id: req.user.id },
       select: { id: true, email: true, passwordHash: true },
     });
 
@@ -574,7 +574,7 @@ export const adminLogin = async (
     }
 
     // Generate JWT token
-    const token = generateToken({ userId: user.id, role: user.role });
+    const token = generateToken({ id: user.id, email: user.email, role: user.role });
 
     const userResponse = {
       id: user.id,
