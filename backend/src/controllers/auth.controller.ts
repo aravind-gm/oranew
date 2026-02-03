@@ -110,86 +110,78 @@ export const login = async (
     console.log('[Auth] 📥 POST /auth/login:', { supabaseId, email });
 
     if (!supabaseId || !email) {
+      console.error('[Auth] ❌ Missing payload:', { supabaseId, email });
       return res.status(400).json({
         success: false,
         error: 'supabaseId and email required',
       });
     }
 
-    // Try email lookup first (most reliable since column might not exist yet)
-    let user = await withRetry(() =>
-      prisma.user.findUnique({
+    try {
+      // Find or create user
+      let user = await prisma.user.findUnique({
         where: { email },
-        select: {
-          id: true,
-          email: true,
-          fullName: true,
-          role: true,
-          isVerified: true,
-          createdAt: true,
-        },
-      })
-    );
+      });
 
-    if (user) {
-      // Update existing user
-      console.log('[Auth] 🔄 Updating user:', { id: user.id });
-      user = await withRetry(() =>
-        prisma.user.update({
+      if (user) {
+        console.log('[Auth] 🔄 Found user, updating:', { id: user.id, email });
+        // Update existing user with supabaseId
+        user = await prisma.user.update({
           where: { id: user.id },
           data: {
             supabaseId,
             fullName: fullName || user.fullName,
             isVerified: true,
           },
-          select: {
-            id: true,
-            email: true,
-            fullName: true,
-            role: true,
-            isVerified: true,
-            createdAt: true,
-          },
-        })
-      );
-    } else {
-      // Create new user
-      console.log('[Auth] ✨ Creating user:', { email });
-      user = await withRetry(() =>
-        prisma.user.create({
+        });
+      } else {
+        console.log('[Auth] ✨ Creating new user:', { email });
+        // Create new user
+        user = await prisma.user.create({
           data: {
             supabaseId,
             email,
-            fullName: fullName || '',
+            fullName: fullName || 'User',
             isVerified: true,
             role: 'CUSTOMER' as const,
           },
-          select: {
-            id: true,
-            email: true,
-            fullName: true,
-            role: true,
-            isVerified: true,
-            createdAt: true,
+        });
+      }
+
+      console.log('[Auth] ✅ User ready:', { id: user.id, email: user.email });
+
+      // Generate JWT
+      const token = generateToken({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+      });
+
+      console.log('[Auth] 🔐 Token generated');
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          user: {
+            id: user.id,
+            email: user.email,
+            fullName: user.fullName,
+            role: user.role,
           },
-        })
-      );
+          token,
+        },
+      });
+    } catch (dbError) {
+      console.error('[Auth] 💥 Database error:', {
+        message: dbError instanceof Error ? dbError.message : String(dbError),
+        code: (dbError as any)?.code,
+      });
+      throw dbError;
     }
-
-    const token = generateToken({
-      id: user.id,
-      email: user.email,
-      role: user.role,
-    });
-
-    console.log('[Auth] ✅ Login success:', { id: user.id });
-
-    return res.status(200).json({
-      success: true,
-      data: { user, token },
-    });
   } catch (error) {
-    console.error('[Auth] ❌ Login error:', error instanceof Error ? error.message : String(error));
+    console.error('[Auth] ❌ Login failed:', {
+      message: error instanceof Error ? error.message : String(error),
+    });
     next(error);
   }
 };
