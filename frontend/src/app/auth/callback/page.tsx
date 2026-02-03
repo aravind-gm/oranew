@@ -1,117 +1,54 @@
 'use client';
 
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { useAuthStore } from '@/store/authStore';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+
+// ============================================
+// PASSWORD RESET CALLBACK PAGE
+// ============================================
+// Handles password reset tokens from email links
+// Format: /auth/callback?token=xxx&type=password-reset
 
 export default function AuthCallbackPage() {
   const router = useRouter();
-  const { setToken, setUser } = useAuthStore();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     const handleCallback = async () => {
-      // Verify Supabase is configured
-      if (!isSupabaseConfigured) {
-        setError('Authentication service is not configured');
-        setTimeout(() => {
-          router.push('/auth/login');
-        }, 3000);
-        return;
-      }
-
       try {
-        console.log('[Auth Callback] 🔗 Processing magic link callback');
-        console.log('[Auth Callback] URL:', window.location.href.substring(0, 50) + '...');
-        
-        // MANDATORY: Exchange code for session FIRST (before any getSession check)
-        // This is the only way to convert a magic link token into a valid session
-        // However, if exchangeCodeForSession fails (e.g., code verifier missing), 
-        // Supabase may have already set the session in the background
-        let session = null;
-        let exchangeError = null;
-        let sessionError = null;
+        const token = searchParams.get('token');
+        const type = searchParams.get('type');
 
-        try {
-          const exchangeResult = await supabase.auth.exchangeCodeForSession(
-            new URLSearchParams(window.location.search).get('code') || ''
-          );
-          exchangeError = exchangeResult.error;
-          
-          // Try to get session regardless of exchange result
-          const sessionResult = await supabase.auth.getSession();
-          sessionError = sessionResult.error;
-          session = sessionResult.data?.session;
-        } catch (err: any) {
-          // Suppress Supabase refresh token errors - we use JWT instead
-          if (err?.message?.includes('refresh') || err?.message?.includes('Refresh Token')) {
-            console.warn('[Auth Callback] Suppressing Supabase refresh token error:', err.message);
-            // Continue without Supabase session - use our JWT auth instead
-          } else {
-            throw err;
-          }
-        }
-        
-        if (exchangeError) {
-          console.warn('[Auth Callback] Exchange error:', exchangeError.message);
-          // If we don't have a session after exchange failure, it's a real error
-          if (!session) {
-            throw new Error('Your login link has expired. Please request a new one.');
-          }
-          // If we have a session despite exchange error, continue with it
-          console.log('[Auth Callback] ⚠️ Exchange had error but session exists, continuing...');
-        }
+        console.log('[Auth Callback] Processing token:', { type, tokenExists: !!token });
 
-        console.log('[Auth Callback] ✅ Code exchanged successfully');
-        
-        console.log('[Auth Callback] Session state:', { 
-          hasSession: !!session, 
-          userEmail: session?.user?.email 
-        });
-
-        if (sessionError && !session) {
-          console.error('[Auth Callback] Session retrieval error:', sessionError.message);
-          throw sessionError;
-        }
-
-        if (session?.user) {
-          const user = session.user;
+        // Check if this is a password reset token
+        if (type === 'password-reset' && token) {
+          console.log('[Auth Callback] ✅ Valid password reset token detected');
           
-          console.log('[Auth Callback] ✅ Authenticated user:', user.email);
+          // Redirect to reset password page with token
+          router.push(`/auth/reset-password?token=${encodeURIComponent(token)}`);
+        } else if (!token) {
+          console.error('[Auth Callback] ❌ No token provided');
+          setError('Invalid or expired link. Please request a new password reset.');
           
-          // Store in auth store
-          setToken(session.access_token);
-          setUser({
-            id: user.id,
-            email: user.email || '',
-            fullName: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-            phone: user.user_metadata?.phone,
-            role: user.user_metadata?.role || 'customer',
-          });
-
-          console.log('[Auth Callback] ✅ Auth store synchronized');
-          
-          // Check if user is new (first time completing profile)
-          const isNewUser = !user.user_metadata?.profile_completed;
-          const redirectPath = isNewUser ? '/account/complete-profile' : '/account';
-          
-          console.log(`[Auth Callback] Redirecting to ${redirectPath}`);
-          
-          // Redirect with appropriate destination
+          // Redirect to login after 3 seconds
           setTimeout(() => {
-            router.push(redirectPath);
-          }, 500);
+            router.push('/auth/login');
+          }, 3000);
         } else {
-          // Session should exist after successful code exchange
-          console.error('[Auth Callback] ❌ No session after code exchange');
-          throw new Error('Your login link has expired. Please request a new one.');
+          console.error('[Auth Callback] ❌ Unknown callback type:', type);
+          setError('Invalid callback type.');
+          
+          // Redirect to login after 3 seconds
+          setTimeout(() => {
+            router.push('/auth/login');
+          }, 3000);
         }
       } catch (err: any) {
         console.error('[Auth Callback Error]', err);
-        const errorMessage = err?.message || 'Your login link has expired. Please request a new one.';
-        setError(errorMessage);
+        setError(err?.message || 'An error occurred. Please try again.');
         
         // Redirect to login after 3 seconds
         setTimeout(() => {
@@ -122,9 +59,8 @@ export default function AuthCallbackPage() {
       }
     };
 
-    // Process callback immediately
     handleCallback();
-  }, [router, setToken, setUser]);
+  }, [router, searchParams]);
 
   if (loading) {
     return (
