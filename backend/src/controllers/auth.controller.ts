@@ -70,9 +70,9 @@ export const getOrCreateUser = async (
       // Send welcome email
       try {
         await sendEmail({
-          to: user.email,
+          to: (user as any).email,
           subject: 'Welcome to ORA Jewellery',
-          html: getWelcomeEmailTemplate(user.fullName),
+          html: getWelcomeEmailTemplate((user as any).fullName),
         });
       } catch (emailError) {
         console.error('[Auth] Email error:', emailError);

@@ -64,10 +64,10 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
           isDefault: false,
         },
       })
-    );
+    ) as any;
 
-    finalShippingAddrId = newAddress.id;
-    finalBillingAddrId = newAddress.id; // Use same address for billing
+    finalShippingAddrId = (newAddress as any).id;
+    finalBillingAddrId = (newAddress as any).id; // Use same address for billing
   }
 
   if (!finalShippingAddrId || !finalBillingAddrId) {
@@ -89,7 +89,7 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
         where: { id: { in: productIds } },
         include: { images: true },
       })
-    ) as any[];
+    ) as any;
 
     if ((products as any).length !== productIds.length) {
       const missingIds = productIds.filter(id => !products.find(p => p.id === id));
@@ -167,29 +167,29 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
         prisma.coupon.findUnique({
           where: { code: couponCode.toUpperCase() },
         })
-      );
+      ) as any;
 
       if (coupon) {
         // Validate coupon
         const now = new Date();
         const isValid =
-          coupon.isActive &&
-          coupon.validFrom <= now &&
-          coupon.validUntil >= now &&
-          (!coupon.usageLimit || coupon.usageCount < coupon.usageLimit) &&
-          (!coupon.minOrderAmount || subtotal >= coupon.minOrderAmount.toNumber());
+          (coupon as any).isActive &&
+          (coupon as any).validFrom <= now &&
+          (coupon as any).validUntil >= now &&
+          (!(coupon as any).usageLimit || (coupon as any).usageCount < (coupon as any).usageLimit) &&
+          (!(coupon as any).minOrderAmount || subtotal >= (coupon as any).minOrderAmount.toNumber());
 
         if (isValid) {
           // Calculate discount
-          if (coupon.discountType === 'PERCENTAGE') {
-            discountAmount = (subtotal * coupon.discountValue.toNumber()) / 100;
+          if ((coupon as any).discountType === 'PERCENTAGE') {
+            discountAmount = (subtotal * (coupon as any).discountValue.toNumber()) / 100;
           } else {
-            discountAmount = coupon.discountValue.toNumber();
+            discountAmount = (coupon as any).discountValue.toNumber();
           }
 
           // Apply max discount limit
-          if (coupon.maxDiscount && discountAmount > coupon.maxDiscount.toNumber()) {
-            discountAmount = coupon.maxDiscount.toNumber();
+          if ((coupon as any).maxDiscount && discountAmount > (coupon as any).maxDiscount.toNumber()) {
+            discountAmount = (coupon as any).maxDiscount.toNumber();
           }
 
           // Cannot exceed subtotal
@@ -197,8 +197,8 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
             discountAmount = subtotal;
           }
 
-          appliedCouponCode = coupon.code;
-          console.log('[Checkout] ✓ Coupon applied:', { code: coupon.code, discount: discountAmount });
+          appliedCouponCode = (coupon as any).code;
+          console.log('[Checkout] ✓ Coupon applied:', { code: (coupon as any).code, discount: discountAmount });
         }
       }
     } catch (error) {
@@ -254,10 +254,10 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
   }));
 
   try {
-    await lockInventory(order.id, inventoryItems);
+    await lockInventory((order as any).id, inventoryItems);
   } catch (error) {
     // If inventory lock fails, delete the order
-    await prisma.order.delete({ where: { id: order.id } });
+    await prisma.order.delete({ where: { id: (order as any).id } });
     throw error;
   }
 
@@ -355,23 +355,23 @@ export const cancelOrder = asyncHandler(async (req: AuthRequest, res: Response) 
         userId: req.user!.id,
       },
     })
-  );
+  ) as any;
 
   if (!order) {
     throw new AppError('Order not found', 404);
   }
 
-  if (['SHIPPED', 'DELIVERED'].includes(order.status)) {
+  if (['SHIPPED', 'DELIVERED'].includes((order as any).status)) {
     throw new AppError('Cannot cancel order at this stage', 400);
   }
 
   // If order is CONFIRMED (payment taken), cannot cancel without refund
-  if (order.status === 'CONFIRMED') {
+  if ((order as any).status === 'CONFIRMED') {
     throw new AppError('Order is confirmed. Please request a return/refund instead.', 400);
   }
 
   // For PENDING orders: release inventory locks
-  if (order.status === 'PENDING') {
+  if ((order as any).status === 'PENDING') {
     await releaseInventoryLocks(id);
   }
 
@@ -384,9 +384,9 @@ export const cancelOrder = asyncHandler(async (req: AuthRequest, res: Response) 
         cancelReason: reason,
       },
     })
-  );
+  ) as any;
 
-  res.json({ success: true, data: updatedOrder });
+  res.json({ success: true, data: (updatedOrder as any) });
 });
 
 export const requestReturn = asyncHandler(async (req: AuthRequest, res: Response) => {
@@ -444,7 +444,7 @@ export const processRefund = asyncHandler(async (req: any, res: Response) => {
     throw new AppError('Return request not found', 404);
   }
 
-  const order = returnRequest.order;
+  const order = (returnRequest as any).order;
 
   // Call refund API (would integrate with Razorpay in production)
   // For now, mark as refunded and restock

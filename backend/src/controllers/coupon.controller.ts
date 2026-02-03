@@ -138,35 +138,35 @@ export const redeemCoupon = asyncHandler(async (req: AuthRequest, res: Response)
     prisma.order.findUnique({
       where: { id: orderId },
     })
-  );
+  ) as any;
 
   if (!order) {
     throw new AppError('Order not found', 404);
   }
 
-  if (order.userId !== userId) {
+  if ((order as any).userId !== userId) {
     throw new AppError('Unauthorized - order belongs to another user', 403);
   }
 
   // Increment usage count
   const updatedCoupon = await withRetry(() =>
     prisma.coupon.update({
-      where: { id: coupon.id },
+      where: { id: (coupon as any).id },
       data: {
-        usageCount: coupon.usageCount + 1,
+        usageCount: (coupon as any).usageCount + 1,
       },
     })
-  );
+  ) as any;
 
-  console.log('[Coupon.redeem] ✓ Coupon redeemed. New usage count:', updatedCoupon.usageCount);
+  console.log('[Coupon.redeem] ✓ Coupon redeemed. New usage count:', (updatedCoupon as any).usageCount);
 
   res.json({
     success: true,
     message: 'Coupon redeemed successfully',
     data: {
-      couponCode: coupon.code,
-      usageCount: updatedCoupon.usageCount,
-      usageLimit: coupon.usageLimit,
+      couponCode: (coupon as any).code,
+      usageCount: (updatedCoupon as any).usageCount,
+      usageLimit: (coupon as any).usageLimit,
     },
   });
 });
