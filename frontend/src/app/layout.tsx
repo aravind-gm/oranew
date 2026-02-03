@@ -21,7 +21,7 @@ const cormorant = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: 'ORA Jewellery | Premium Artificial Fashion Jewellery',
+  title: 'ORA Jewellery - REBUILDING | Premium Artificial Fashion Jewellery',
   description: 'own. radiate. adorn. - Discover our exquisite collection of artificial fashion jewellery. Chains, necklaces, bracelets, rings, earrings and more.',
   keywords: 'jewellery, fashion jewellery, artificial jewellery, necklaces, earrings, bracelets, rings, ORA',
   icons: {
