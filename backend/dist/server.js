@@ -54,6 +54,7 @@ const user_routes_1 = __importDefault(require("./routes/user.routes"));
 const wishlist_routes_1 = __importDefault(require("./routes/wishlist.routes"));
 const health_routes_1 = __importDefault(require("./routes/health.routes"));
 const supabase_1 = require("./config/supabase");
+const migrations_1 = require("./config/migrations");
 const errorHandler_1 = require("./middleware/errorHandler");
 const notFound_1 = require("./middleware/notFound");
 const database_1 = require("./config/database");
@@ -285,6 +286,15 @@ app.listen(PORT, async () => {
   ║   Mode: AUTO-WARMUP on cold start      ║
   ╚════════════════════════════════════════╝
   `);
+    // Apply any pending migrations before warming up
+    console.log('\n[Startup] 📦 Applying pending database migrations...');
+    const migrationsApplied = await (0, migrations_1.runPendingMigrations)();
+    if (migrationsApplied) {
+        console.log('[Startup] ✅ Migrations: COMPLETE');
+    }
+    else {
+        console.log('[Startup] ⚠️  Migrations: SKIPPED (will retry on first request)');
+    }
     // Warmup database connection on startup
     // This is especially important for Render free-tier
     // DB might also be waking up from sleep

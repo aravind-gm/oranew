@@ -19,6 +19,7 @@ import wishlistRoutes from './routes/wishlist.routes';
 import healthRoutes from './routes/health.routes';
 
 import { isStorageConfigured, testStorageConnection } from './config/supabase';
+import { runPendingMigrations } from './config/migrations';
 import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
 import { warmupDatabase } from './config/database';
@@ -288,6 +289,16 @@ app.listen(PORT, async () => {
   ║   Mode: AUTO-WARMUP on cold start      ║
   ╚════════════════════════════════════════╝
   `);
+  
+  // Apply any pending migrations before warming up
+  console.log('\n[Startup] 📦 Applying pending database migrations...');
+  const migrationsApplied = await runPendingMigrations();
+  
+  if (migrationsApplied) {
+    console.log('[Startup] ✅ Migrations: COMPLETE');
+  } else {
+    console.log('[Startup] ⚠️  Migrations: SKIPPED (will retry on first request)');
+  }
   
   // Warmup database connection on startup
   // This is especially important for Render free-tier
