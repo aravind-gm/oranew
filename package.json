@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "Premium fashion jewellery e-commerce platform - own. radiate. adorn.",
-  "build_trigger": "2026-02-03T15:55:00Z-force-latest-commit-no-migration",
+  "build_trigger": "2026-02-03T16:00:00Z-vercel-otp-fix-rebuild",
   "scripts": {
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "dev:frontend": "cd frontend && npm run dev",
