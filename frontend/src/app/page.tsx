@@ -665,4 +665,4 @@ export default function HomePage() {
       </section>
     </main>
   );
-}
+}/* Vercel rebuild trigger - Tue Feb  3 01:58:11 PM IST 2026 */
