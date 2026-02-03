@@ -13,7 +13,7 @@ import { AppError, asyncHandler } from '../utils/helpers';
 export const validateCoupon = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { code } = req.params;
   const { orderAmount } = req.body;
-  const userId = req.user?.id;
+  const userId = (req.user as any)?.id;
 
   if (!code) {
     throw new AppError('Coupon code is required', 400);

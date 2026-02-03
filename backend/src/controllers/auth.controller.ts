@@ -83,12 +83,12 @@ export const getOrCreateUser = async (
       success: true,
       data: {
         user: {
-          id: user.id,
-          email: user.email,
-          fullName: user.fullName,
-          phone: user.phone,
-          role: user.role,
-          isVerified: user.isVerified,
+          id: (user as any).id,
+          email: (user as any).email,
+          fullName: (user as any).fullName,
+          phone: (user as any).phone,
+          role: (user as any).role,
+          isVerified: (user as any).isVerified,
         },
       },
     });
@@ -148,21 +148,21 @@ export const otpLogin = async (
         prisma.user.findUnique({
           where: { supabaseId },
         })
-      );
+      ) as any;
 
       if (user) {
-        console.log('[Auth] 🔄 Found by supabaseId, updating:', { id: user.id });
+        console.log('[Auth] 🔄 Found by supabaseId, updating:', { id: (user as any).id });
         // Update existing user
         user = await withRetry(() =>
           prisma.user.update({
-            where: { id: user.id },
+            where: { id: (user as any).id },
             data: {
               email,
-              fullName: fullName || user.fullName,
+              fullName: fullName || (user as any).fullName,
               isVerified: true,
             },
           })
-        );
+        ) as any;
       } else {
         // ============================================
         // STEP 2: Try to find user by email
@@ -171,21 +171,21 @@ export const otpLogin = async (
           prisma.user.findUnique({
             where: { email },
           })
-        );
+        ) as any;
 
         if (user) {
-          console.log('[Auth] 🔄 Found by email, updating:', { id: user.id });
+          console.log('[Auth] 🔄 Found by email, updating:', { id: (user as any).id });
           // Link supabaseId to existing user
           user = await withRetry(() =>
             prisma.user.update({
-              where: { id: user.id },
+              where: { id: (user as any).id },
               data: {
                 supabaseId,
-                fullName: fullName || user.fullName,
+                fullName: fullName || (user as any).fullName,
                 isVerified: true,
               },
             })
-          );
+          ) as any;
         } else {
           // ============================================
           // STEP 3: Create new user with supabaseId
@@ -201,7 +201,7 @@ export const otpLogin = async (
                 role: 'CUSTOMER' as const,
               },
             })
-          );
+          ) as any;
         }
       }
 
@@ -209,21 +209,21 @@ export const otpLogin = async (
       // Generate JWT token for backend
       // ============================================
       const token = generateToken({
-        id: user.id,
-        email: user.email,
-        role: user.role,
+        id: (user as any).id,
+        email: (user as any).email,
+        role: (user as any).role,
       });
 
-      console.log('[Auth] ✅ OTP login success:', { id: user.id });
+      console.log('[Auth] ✅ OTP login success:', { id: (user as any).id });
 
       return res.status(200).json({
         success: true,
         data: {
           user: {
-            id: user.id,
-            email: user.email,
-            fullName: user.fullName,
-            role: user.role,
+            id: (user as any).id,
+            email: (user as any).email,
+            fullName: (user as any).fullName,
+            role: (user as any).role,
           },
           token,
         },
@@ -290,7 +290,7 @@ export const adminLogin = async (
         prisma.user.findUnique({
           where: { email },
         })
-      );
+      ) as any;
 
       if (!admin) {
         console.log('[Auth] ❌ Admin not found:', { email });
@@ -304,7 +304,7 @@ export const adminLogin = async (
       // ============================================
       // Check admin role
       // ============================================
-      if (admin.role !== 'ADMIN' && admin.role !== 'STAFF') {
+      if ((admin as any).role !== 'ADMIN' && (admin as any).role !== 'STAFF') {
         console.log('[Auth] ❌ User is not admin:', { email, role: admin.role });
         return res.status(403).json({
           success: false,
@@ -340,21 +340,21 @@ export const adminLogin = async (
       // Generate JWT token
       // ============================================
       const token = generateToken({
-        id: admin.id,
-        email: admin.email,
-        role: admin.role,
+        id: (admin as any).id,
+        email: (admin as any).email,
+        role: (admin as any).role,
       });
 
-      console.log('[Auth] ✅ Admin login success:', { id: admin.id, email });
+      console.log('[Auth] ✅ Admin login success:', { id: (admin as any).id, email });
 
       return res.status(200).json({
         success: true,
         data: {
           user: {
-            id: admin.id,
-            email: admin.email,
-            fullName: admin.fullName,
-            role: admin.role,
+            id: (admin as any).id,
+            email: (admin as any).email,
+            fullName: (admin as any).fullName,
+            role: (admin as any).role,
           },
           token,
         },
