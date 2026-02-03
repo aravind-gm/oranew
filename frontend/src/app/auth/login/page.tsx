@@ -186,7 +186,7 @@ export default function LoginPage() {
       let backendData = null;
       let lastError = null;
       let retryCount = 0;
-      const MAX_RETRIES = 3;
+      const MAX_RETRIES = 3; // Force Vercel redeploy
 
       for (retryCount = 0; retryCount < MAX_RETRIES; retryCount++) {
         try {
