@@ -120,32 +120,68 @@ export const login = async (
 
     console.log('[Auth] 📧 OTP Login - Creating/updating user:', { supabaseId, email });
 
-    // Create or update user in database
-    const user = await withRetry(() =>
-      prisma.user.upsert({
-        where: { email }, // Use email as unique identifier
-        update: {
-          supabaseId, // Update Supabase ID if changed
-          fullName: fullName || undefined,
-          isVerified: true, // Mark as verified since they used OTP
-        },
-        create: {
-          supabaseId,
-          email,
-          fullName: fullName || '',
-          isVerified: true,
-          role: 'CUSTOMER' as const,
-        },
-        select: {
-          id: true,
-          email: true,
-          fullName: true,
-          role: true,
-          isVerified: true,
-          createdAt: true,
-        },
-      })
-    );
+    // FIX: Try to find existing user by supabaseId first (more reliable)
+    // Then fall back to email if not found
+    let existingUser = null;
+    try {
+      existingUser = await prisma.user.findUnique({
+        where: { supabaseId },
+      });
+    } catch (err) {
+      console.warn('[Auth] ⚠️ Could not query by supabaseId, falling back to email:', err instanceof Error ? err.message : String(err));
+    }
+
+    let user;
+
+    if (existingUser) {
+      // Update existing user
+      console.log('[Auth] 🔄 Updating existing user:', { supabaseId, userId: existingUser.id });
+      user = await withRetry(() =>
+        prisma.user.update({
+          where: { supabaseId },
+          data: {
+            fullName: fullName || existingUser.fullName,
+            isVerified: true,
+          },
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            role: true,
+            isVerified: true,
+            createdAt: true,
+          },
+        })
+      );
+    } else {
+      // Create new user (or upsert by email if exists)
+      console.log('[Auth] ✨ Creating new user:', { supabaseId, email });
+      user = await withRetry(() =>
+        prisma.user.upsert({
+          where: { email },
+          update: {
+            supabaseId, // Link supabaseId to existing email-based account
+            fullName: fullName || undefined,
+            isVerified: true,
+          },
+          create: {
+            supabaseId,
+            email,
+            fullName: fullName || '',
+            isVerified: true,
+            role: 'CUSTOMER' as const,
+          },
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            role: true,
+            isVerified: true,
+            createdAt: true,
+          },
+        })
+      );
+    }
 
     console.log('[Auth] ✅ User created/updated:', { userId: user.id, email: user.email });
 
@@ -167,7 +203,10 @@ export const login = async (
       },
     });
   } catch (error) {
-    console.error('[Auth] ❌ OTP login error:', error);
+    console.error('[Auth] ❌ OTP login error:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     next(error);
   }
 };
