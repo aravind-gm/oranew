@@ -37,12 +37,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const cors_1 = __importDefault(require("cors"));
-const dotenv_1 = __importDefault(require("dotenv"));
 const express_1 = __importDefault(require("express"));
 const path_1 = __importDefault(require("path"));
-const supabase_1 = require("./config/supabase");
-const errorHandler_1 = require("./middleware/errorHandler");
-const notFound_1 = require("./middleware/notFound");
 // Routes
 const admin_routes_1 = __importDefault(require("./routes/admin.routes"));
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
@@ -56,7 +52,11 @@ const review_routes_1 = __importDefault(require("./routes/review.routes"));
 const upload_routes_1 = __importDefault(require("./routes/upload.routes"));
 const user_routes_1 = __importDefault(require("./routes/user.routes"));
 const wishlist_routes_1 = __importDefault(require("./routes/wishlist.routes"));
-dotenv_1.default.config();
+const health_routes_1 = __importDefault(require("./routes/health.routes"));
+const supabase_1 = require("./config/supabase");
+const errorHandler_1 = require("./middleware/errorHandler");
+const notFound_1 = require("./middleware/notFound");
+const database_1 = require("./config/database");
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 8000;
 // ============================================
@@ -149,26 +149,16 @@ if (process.env.NODE_ENV === 'development') {
 // - Cold starts cause new connection attempts
 // - Each connection attempt tests the pool
 // - Periodic pings prevent the sleep cycle
-app.get('/api/health', async (_req, res) => {
-    try {
-        // Quick check: Can we reach the database?
-        const { prisma } = await Promise.resolve().then(() => __importStar(require('./config/database')));
-        await prisma.$queryRaw `SELECT 1`;
-        res.json({
-            status: 'ok',
-            timestamp: new Date().toISOString(),
-            database: 'connected',
-        });
-    }
-    catch (error) {
-        console.warn('[Keep-Alive] Database unreachable:', error instanceof Error ? error.message : String(error));
-        res.status(503).json({
-            status: 'degraded',
-            timestamp: new Date().toISOString(),
-            database: 'unreachable',
-            message: 'Database temporarily unavailable',
-        });
-    }
+// ============================================
+// LIGHTWEIGHT HEALTH CHECK - NO DATABASE TOUCH
+// ============================================
+// Used by Render to detect cold starts and route traffic
+// MUST respond instantly without touching database
+app.get('/api/health', (_req, res) => {
+    res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+    });
 });
 // ============================================
 // ROUTES
@@ -204,10 +194,6 @@ app.get('/api', (_req, res) => {
 });
 // Health check - basic
 app.get('/health', (_req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-// Health check - API version (for monitoring)
-app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 // Health check - detailed (for debugging)
@@ -255,6 +241,7 @@ const detailedHealthCheck = async (_req, res) => {
 app.get('/health/detailed', detailedHealthCheck);
 app.get('/api/health/detailed', detailedHealthCheck);
 // API Routes
+app.use('/api/health', health_routes_1.default);
 app.use('/api/auth', auth_routes_1.default);
 app.use('/api/products', product_routes_1.default);
 app.use('/api/categories', category_routes_1.default);
@@ -276,17 +263,17 @@ app.use(errorHandler_1.errorHandler);
 // START SERVER (RENDER-SAFE STARTUP)
 // ============================================
 // 
-// Important: This startup is LAZY
-// - Does NOT aggressively test database on boot
-// - Does NOT crash if DB is temporarily unavailable
-// - First request will test/establish connection
-// - Prevents "cold start" failures
+// Important: This startup is SMART
+// - Warmup database connection on boot (Render cold start)
+// - But doesn't crash if DB is slow
+// - Returns proper 503 if DB unavailable
+// - Allows graceful recovery on connection failure
 //
 // Why this helps on Render:
-// - Render kills processes that hang on startup
-// - Aggressive DB tests can timeout on wake-up
-// - Lazy connection allows requests to trigger reconnect
-// - Server stays alive even if DB is briefly unavailable
+// - Cold start: server boots, DB might be waking too
+// - Warmup: polls DB with exponential backoff
+// - Timeout: gives up after 30s, still starts server
+// - First request will reinitialize connection
 app.listen(PORT, async () => {
     console.log(`
   ╔════════════════════════════════════════╗
@@ -295,11 +282,23 @@ app.listen(PORT, async () => {
   ╠════════════════════════════════════════╣
   ║   Port: ${PORT.toString().padEnd(30)}║
   ║   Env:  ${(process.env.NODE_ENV || 'development').padEnd(30)}║
-  ║   Mode: LAZY (DB connects on demand)   ║
+  ║   Mode: AUTO-WARMUP on cold start      ║
   ╚════════════════════════════════════════╝
   `);
+    // Warmup database connection on startup
+    // This is especially important for Render free-tier
+    // DB might also be waking up from sleep
+    console.log('\n[Startup] 🔥 Warming up database connection...');
+    const dbWarmed = await (0, database_1.warmupDatabase)(30000); // Wait max 30 seconds
+    if (dbWarmed) {
+        console.log('[Startup] ✅ Database: READY');
+    }
+    else {
+        console.warn('[Startup] ⚠️  Database: NOT READY (will retry on first request)');
+        console.log('[Startup] 📌 Possible causes: DB restarting, network delay, connection pool exhausted');
+    }
     // Test Supabase Storage connection at startup (optional, non-blocking)
-    console.log('\n[Startup] 🔍 Checking Supabase Storage configuration...');
+    console.log('[Startup] 🔍 Checking Supabase Storage configuration...');
     // Run storage check in background (don't block startup)
     if ((0, supabase_1.isStorageConfigured)()) {
         const storageTest = await (0, supabase_1.testStorageConnection)();
@@ -316,10 +315,10 @@ app.listen(PORT, async () => {
         console.warn('[Startup] ⚠️  Supabase Storage: NOT CONFIGURED');
         console.log('          Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in backend/.env');
     }
-    console.log('\n[Startup] ✅ Server ready');
-    console.log('[Startup] 📌 Database connection: LAZY (connects on first request)');
-    console.log('[Startup] 📌 Keep-alive endpoint: GET /api/health');
-    console.log('[Startup] 📌 Recovery strategy: Auto-reconnect on connection error\n');
+    console.log('\n[Startup] ✅ Server ready for requests');
+    console.log('[Startup] 📌 Health check: GET /api/health');
+    console.log('[Startup] 📌 Detailed health: GET /api/health/detailed (requires auth)');
+    console.log('[Startup] 📌 Auto-recovery: Enabled (reconnect on connection error)\n');
 });
 exports.default = app;
 //# sourceMappingURL=server.js.map

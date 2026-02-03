@@ -50,41 +50,7 @@ export declare function restoreInventory(items: Array<{
  * @param orderId - Order ID
  * @returns Array of InventoryLock records
  */
-export declare function getLockedInventory(orderId: string): Promise<({
-    product: {
-        name: string;
-        id: string;
-        slug: string;
-        sku: string;
-        description: string | null;
-        shortDescription: string | null;
-        price: import("@prisma/client/runtime/library").Decimal;
-        discountPercent: import("@prisma/client/runtime/library").Decimal;
-        finalPrice: import("@prisma/client/runtime/library").Decimal;
-        categoryId: string;
-        material: string | null;
-        careInstructions: string | null;
-        weight: string | null;
-        dimensions: string | null;
-        stockQuantity: number;
-        lowStockThreshold: number;
-        isActive: boolean;
-        isFeatured: boolean;
-        metaTitle: string | null;
-        metaDescription: string | null;
-        averageRating: import("@prisma/client/runtime/library").Decimal;
-        reviewCount: number;
-        createdAt: Date;
-        updatedAt: Date;
-    };
-} & {
-    id: string;
-    createdAt: Date;
-    quantity: number;
-    expiresAt: Date;
-    productId: string;
-    orderId: string | null;
-})[]>;
+export declare function getLockedInventory(orderId: string): Promise<any>;
 /**
  * Cleanup expired inventory locks
  * Should be called by a cron job every 5 minutes
@@ -96,24 +62,14 @@ export declare function cleanupExpiredLocks(): Promise<number>;
  * Returns products with low stock
  * @param threshold - Stock threshold (default 10)
  */
-export declare function getLowStockProducts(threshold?: number): Promise<{
-    name: string;
-    id: string;
-    slug: string;
-    price: import("@prisma/client/runtime/library").Decimal;
-    stockQuantity: number;
-}[]>;
+export declare function getLowStockProducts(threshold?: number): Promise<any>;
 /**
  * Get inventory status for a single product
  */
 export declare function getProductInventoryStatus(productId: string): Promise<{
-    product: {
-        name: string;
-        id: string;
-        stockQuantity: number;
-    };
+    product: any;
     available: number;
-    locked: number;
-    total: number;
+    locked: any;
+    total: any;
 }>;
 //# sourceMappingURL=inventory.d.ts.map

@@ -210,7 +210,7 @@ exports.checkout = (0, helpers_1.asyncHandler)(async (req, res) => {
             orderNumber: order.orderNumber,
             customerName: order.user.fullName,
             customerEmail: order.user.email,
-            items: order.items.map(item => ({
+            items: order.items.map((item) => ({
                 productName: item.productName,
                 quantity: item.quantity,
                 unitPrice: Number(item.unitPrice),
