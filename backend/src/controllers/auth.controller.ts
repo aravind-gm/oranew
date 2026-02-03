@@ -4,126 +4,78 @@ import { prisma } from '../config/database';
 import { withRetry } from '../utils/retry';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
-import { getPasswordResetEmailTemplate, getWelcomeEmailTemplate, sendEmail } from '../utils/email';
+import { getWelcomeEmailTemplate, sendEmail } from '../utils/email';
 import { generateToken } from '../utils/jwt';
-import { comparePassword, hashPassword } from '../utils/password';
 
-// @desc    Register new user
-// @route   POST /api/auth/register
-// @access  Public
-export const register = async (
-  req: Request,
+// @desc    Get or create user from Supabase Auth
+// @route   POST /api/auth/me
+// @access  Private (Requires Supabase JWT)
+export const getOrCreateUser = async (
+  req: AuthRequest,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const { email, password, fullName, phone } = req.body;
-
-    console.log('Registration request:', { email, fullName, hasPassword: !!password, phone });
-
-    // Validation
-    if (!email || !password || !fullName) {
-      console.log('Validation failed:', { email: !!email, password: !!password, fullName: !!fullName });
-      throw new AppError('Please provide all required fields (email, password, fullName)', 400);
+    if (!req.user) {
+      throw new AppError('Not authenticated', 401);
     }
 
-    // Check if user exists
-    const existingUser = await withRetry(() =>
-      prisma.user.findUnique({ where: { email } })
-    );
-    if (existingUser) {
-      throw new AppError('Email already registered', 400);
-    }
+    console.log('[Auth] 🔐 Getting/creating user:', req.user.email);
 
-    // Hash password
-    const passwordHash = await hashPassword(password);
-
-    // Create user
-    const user = await withRetry(() =>
-      prisma.user.create({
-        data: {
-          email,
-          passwordHash,
-          fullName,
-          phone,
-        },
+    // Try to find existing user
+    let user = await withRetry(() =>
+      prisma.user.findUnique({ 
+        where: { email: req.user!.email },
         select: {
           id: true,
           email: true,
           fullName: true,
           phone: true,
           role: true,
+          isVerified: true,
           createdAt: true,
-        },
+          updatedAt: true,
+          supabaseId: true,
+        }
       })
     );
 
-    // Generate token
-    const token = generateToken({
-      id: user.id,
-      email: user.email,
-      role: user.role,
-    });
-
-    // Send welcome email
-    try {
-      await sendEmail({
-        to: user.email,
-        subject: 'Welcome to ORA Jewellery',
-        html: getWelcomeEmailTemplate(user.fullName),
-      });
-    } catch (emailError) {
-      console.error('Failed to send welcome email:', emailError);
-    }
-
-    res.status(201).json({
-      success: true,
-      data: {
-        user,
-        token,
-      },
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Login user
-// @route   POST /api/auth/login
-// @access  Public
-export const login = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { email, password } = req.body;
-
-    // Validation
-    if (!email || !password) {
-      throw new AppError('Please provide email and password', 400);
-    }
-
-    // Find user
-    const user = await withRetry(() =>
-      prisma.user.findUnique({ where: { email } })
-    );
+    // If user doesn't exist, create one
     if (!user) {
-      throw new AppError('Invalid credentials', 401);
-    }
+      console.log('[Auth] 👤 Creating new user from Supabase auth:', req.user.email);
+      
+      user = await withRetry(() =>
+        prisma.user.create({
+          data: {
+            email: req.user!.email,
+            fullName: req.user!.email.split('@')[0], // Placeholder
+            isVerified: true, // Supabase verified the identity
+          },
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            phone: true,
+            role: true,
+            isVerified: true,
+            createdAt: true,
+            updatedAt: true,
+            supabaseId: true,
+          },
+        })
+      );
 
-    // Check password
-    const isPasswordValid = await comparePassword(password, user.passwordHash);
-    if (!isPasswordValid) {
-      throw new AppError('Invalid credentials', 401);
+      // Send welcome email
+      try {
+        await sendEmail({
+          to: user.email,
+          subject: 'Welcome to ORA Jewellery',
+          html: getWelcomeEmailTemplate(user.fullName),
+        });
+      } catch (emailError) {
+        console.error('[Auth] Email error:', emailError);
+      }
     }
-
-    // Generate token
-    const token = generateToken({
-      id: user.id,
-      email: user.email,
-      role: user.role,
-    });
 
     res.json({
       success: true,
@@ -134,13 +86,104 @@ export const login = async (
           fullName: user.fullName,
           phone: user.phone,
           role: user.role,
+          isVerified: user.isVerified,
         },
-        token,
       },
     });
   } catch (error) {
     next(error);
   }
+};
+
+// @desc    Login user (DEPRECATED - Use Supabase OTP instead)
+// @desc    OTP Login - Create/get user and return JWT
+// @route   POST /api/auth/login
+// @access  Public
+export const login = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { supabaseId, email, fullName } = req.body;
+
+    console.log('[Auth] 📥 POST /auth/login received:', { supabaseId, email, fullName });
+
+    // ✅ HARD validation (only required fields)
+    if (!supabaseId || !email) {
+      console.error('[Auth] ❌ Missing required fields:', { supabaseId, email });
+      return res.status(400).json({
+        success: false,
+        error: 'supabaseId and email are required',
+      });
+    }
+
+    console.log('[Auth] 📧 OTP Login - Creating/updating user:', { supabaseId, email });
+
+    // Create or update user in database
+    const user = await withRetry(() =>
+      prisma.user.upsert({
+        where: { email }, // Use email as unique identifier
+        update: {
+          supabaseId, // Update Supabase ID if changed
+          fullName: fullName || undefined,
+          isVerified: true, // Mark as verified since they used OTP
+        },
+        create: {
+          supabaseId,
+          email,
+          fullName: fullName || '',
+          isVerified: true,
+          role: 'CUSTOMER' as const,
+        },
+        select: {
+          id: true,
+          email: true,
+          fullName: true,
+          role: true,
+          isVerified: true,
+          createdAt: true,
+        },
+      })
+    );
+
+    console.log('[Auth] ✅ User created/updated:', { userId: user.id, email: user.email });
+
+    // Generate JWT token
+    const token = generateToken({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    });
+
+    console.log('[Auth] 🔐 JWT generated for user:', user.id);
+
+    // ✅ Return success response with token
+    return res.status(200).json({
+      success: true,
+      data: {
+        user,
+        token,
+      },
+    });
+  } catch (error) {
+    console.error('[Auth] ❌ OTP login error:', error);
+    next(error);
+  }
+};
+
+// @desc    Register new user (DEPRECATED - Use Supabase OTP instead)
+// @route   POST /api/auth/register
+// @access  Public
+export const register = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  res.status(410).json({
+    success: false,
+    error: 'Password-based registration is deprecated. Use Supabase OTP authentication instead.',
+  });
 };
 
 // @desc    Get current user
@@ -225,70 +268,10 @@ export const forgotPassword = async (
   res: Response,
   next: NextFunction
 ) => {
-  try {
-    const { email } = req.body;
-
-    if (!email) {
-      throw new AppError('Email is required', 400);
-    }
-
-    const user = await withRetry(() =>
-      prisma.user.findUnique({ where: { email } })
-    );
-    if (!user) {
-      // Don't reveal if user exists for security
-      return res.json({
-        success: true,
-        message: 'If the email exists, a reset link has been sent',
-      });
-    }
-
-    // Generate reset token (crypto random)
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
-    
-    // Token expires in 1 hour
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
-
-    // Delete any existing reset tokens for this user
-    await withRetry(() =>
-      prisma.passwordReset.deleteMany({
-        where: { userId: user.id },
-      })
-    );
-
-    // Create password reset record
-    await withRetry(() =>
-      prisma.passwordReset.create({
-        data: {
-          userId: user.id,
-          token: resetTokenHash,
-          expiresAt,
-        },
-      })
-    );
-
-    // Send reset email
-    const resetUrl = `${process.env.FRONTEND_URL}/auth/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
-    
-    try {
-      await sendEmail({
-        to: user.email,
-        subject: 'Reset Your ORA Password',
-        html: getPasswordResetEmailTemplate(user.fullName, resetUrl),
-      });
-    } catch (emailError) {
-      console.error('Failed to send password reset email:', emailError);
-      throw new AppError('Failed to send reset email. Please try again.', 500);
-    }
-
-    res.json({
-      success: true,
-      message: 'Password reset instructions sent to email',
-    });
-  } catch (error) {
-    next(error);
-  }
+  res.status(410).json({
+    success: false,
+    error: 'Password-based authentication is deprecated. Use Supabase OTP login instead.',
+  });
 };
 
 // @desc    Reset password
@@ -299,70 +282,10 @@ export const resetPassword = async (
   res: Response,
   next: NextFunction
 ) => {
-  try {
-    const { token, email, newPassword, confirmPassword } = req.body;
-
-    if (!token || !email || !newPassword) {
-      throw new AppError('Missing required fields', 400);
-    }
-
-    if (newPassword !== confirmPassword) {
-      throw new AppError('Passwords do not match', 400);
-    }
-
-    if (newPassword.length < 6) {
-      throw new AppError('Password must be at least 6 characters', 400);
-    }
-
-    // Find user
-    const user = await withRetry(() =>
-      prisma.user.findUnique({ where: { email } })
-    );
-    if (!user) {
-      throw new AppError('Invalid reset request', 400);
-    }
-
-    // Hash the token to compare
-    const resetTokenHash = crypto.createHash('sha256').update(token).digest('hex');
-
-    // Find valid reset token
-    const passwordReset = await withRetry(() =>
-      prisma.passwordReset.findFirst({
-        where: {
-          userId: user.id,
-          token: resetTokenHash,
-          expiresAt: { gt: new Date() }, // Not expired
-        },
-      })
-    );
-
-    if (!passwordReset) {
-      throw new AppError('Invalid or expired reset token', 400);
-    }
-
-    // Hash new password
-    const passwordHash = await hashPassword(newPassword);
-
-    // Update user password and delete reset token
-    await withRetry(() =>
-      prisma.$transaction([
-        prisma.user.update({
-          where: { id: user.id },
-          data: { passwordHash },
-        }),
-        prisma.passwordReset.delete({
-          where: { id: passwordReset.id },
-        }),
-      ])
-    );
-
-    res.json({
-      success: true,
-      message: 'Password reset successful. You can now login with your new password.',
-    });
-  } catch (error) {
-    next(error);
-  }
+  res.status(410).json({
+    success: false,
+    error: 'Password-based authentication is deprecated. Use Supabase OTP login instead.',
+  });
 };
 
 // @desc    Change password (for logged-in users)
@@ -373,60 +296,10 @@ export const changePassword = async (
   res: Response,
   next: NextFunction
 ) => {
-  try {
-    const { currentPassword, newPassword, confirmPassword } = req.body;
-
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      throw new AppError('Please provide current password, new password, and confirm password', 400);
-    }
-
-    if (newPassword !== confirmPassword) {
-      throw new AppError('New passwords do not match', 400);
-    }
-
-    if (newPassword.length < 6) {
-      throw new AppError('New password must be at least 6 characters', 400);
-    }
-
-    if (currentPassword === newPassword) {
-      throw new AppError('New password must be different from current password', 400);
-    }
-
-    // Get user with password
-    const user = await withRetry(() =>
-      prisma.user.findUnique({
-        where: { id: req.user!.id },
-      })
-    );
-
-    if (!user) {
-      throw new AppError('User not found', 404);
-    }
-
-    // Verify current password
-    const isPasswordValid = await comparePassword(currentPassword, user.passwordHash);
-    if (!isPasswordValid) {
-      throw new AppError('Current password is incorrect', 401);
-    }
-
-    // Hash new password
-    const passwordHash = await hashPassword(newPassword);
-
-    // Update password
-    await withRetry(() =>
-      prisma.user.update({
-        where: { id: user.id },
-        data: { passwordHash },
-      })
-    );
-
-    res.json({
-      success: true,
-      message: 'Password changed successfully',
-    });
-  } catch (error) {
-    next(error);
-  }
+  res.status(410).json({
+    success: false,
+    error: 'Password-based authentication is deprecated. Use Supabase OTP login instead.',
+  });
 };
 // @desc    Delete user account
 // @route   DELETE /api/auth/account
@@ -483,12 +356,7 @@ export const deleteAccount = async (
       where: { userId },
     });
 
-    // 4. Delete password reset tokens
-    await prisma.passwordReset.deleteMany({
-      where: { userId },
-    });
-
-    // 5. Delete reviews
+    // 4. Delete reviews
     await prisma.review.deleteMany({
       where: { userId },
     });

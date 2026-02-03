@@ -1,218 +1,523 @@
 'use client';
 
-import api from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
+import api from '@/lib/api';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { Mail, Lock, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 
-function LoginForm() {
+type LoginStep = 'email-input' | 'otp-input' | 'admin-input';
+
+export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const redirect = searchParams.get('redirect') || '/account';
-  const { setToken, setUser } = useAuthStore();
+  const { setToken, setUser, user, token, isHydrated } = useAuthStore();
+
+  // Step tracking
+  const [step, setStep] = useState<LoginStep>('email-input');
+  
+  // Form state
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  
+  // UI state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [message, setMessage] = useState('');
+  const [otpTimer, setOtpTimer] = useState(0);
+  const [showAdminForm, setShowAdminForm] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // 🔒 REDIRECT IF ALREADY LOGGED IN
+  useEffect(() => {
+    if (!isHydrated) return;
+
+    if (user && token) {
+      console.log('[Login] ✅ User already authenticated, redirecting to /account');
+      router.replace('/account');
+    }
+  }, [isHydrated, user, token, router]);
+
+  // 🔐 ADMIN SHORTCUT (DEV ONLY)
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+        e.preventDefault();
+        setShowAdminForm(!showAdminForm);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showAdminForm]);
+
+  // OTP TIMER
+  useEffect(() => {
+    if (otpTimer <= 0) return;
+    
+    const interval = setInterval(() => {
+      setOtpTimer((prev) => prev - 1);
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [otpTimer]);
+
+  // 📧 SEND OTP
+  const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!email.trim()) {
+      setError('Please enter your email');
+      return;
+    }
+
     setLoading(true);
     setError('');
+    setMessage('');
 
     try {
-      const response = await api.post('/auth/login', { email, password });
-      if (response.data.success) {
-        const { user, token } = response.data.data;
-        setToken(token);
-        setUser(user);
-        router.push(redirect);
+      console.log('[Login] 📧 Sending OTP to:', email);
+      
+      // Request OTP from Supabase
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: true,
+        },
+      });
+
+      if (otpError) {
+        console.error('[Login] ❌ OTP error:', otpError.message);
+        
+        if (otpError.message?.includes('rate limit')) {
+          setError('Too many requests. Please wait a few minutes before trying again.');
+        } else if (otpError.message?.includes('invalid')) {
+          setError('Invalid email address. Please check and try again.');
+        } else {
+          setError(otpError.message || 'Failed to send OTP');
+        }
+        return;
       }
+
+      console.log('[Login] ✅ OTP sent to:', email);
+      setMessage(`OTP sent to ${email}. Check your inbox!`);
+      setStep('otp-input');
+      setOtpTimer(300); // 5 minutes
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'Login failed. Please try again.');
+      console.error('[Login] ❌ OTP send error:', err);
+      setError(err.message || 'Failed to send OTP');
     } finally {
       setLoading(false);
     }
   };
 
+  // ✅ VERIFY OTP
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!otp.trim() || otp.length < 8) {
+      setError('Please enter a valid 8-digit OTP');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setMessage('');
+
+    try {
+      console.log('[Login] ✅ Verifying OTP for:', email);
+
+      // Verify OTP
+      const { data, error: verifyError } = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: 'email',
+      });
+
+      if (verifyError || !data.session) {
+        console.error('[Login] ❌ OTP verification failed:', verifyError?.message);
+        setError('Invalid OTP. Please check and try again.');
+        return;
+      }
+
+      console.log('[Login] ✅ OTP verified:', { userId: data.user?.id });
+
+      // Get Supabase user
+      const supabaseUser = data.user;
+      if (!supabaseUser) {
+        throw new Error('No user returned from Supabase');
+      }
+
+      // Call backend to get/create user and JWT
+      console.log('[Login] 📤 Sending to backend:', { supabaseId: supabaseUser.id, email: supabaseUser.email, fullName: supabaseUser.user_metadata?.full_name });
+      
+      const { data: backendData } = await api.post('/auth/login', {
+        supabaseId: supabaseUser.id,
+        email: supabaseUser.email,
+        fullName: supabaseUser.user_metadata?.full_name || '',
+      });
+
+      console.log('[Login] 📥 Backend response:', backendData);
+
+      if (!backendData?.success) {
+        throw new Error('Backend login failed');
+      }
+
+      const { user: backendUser, token: jwtToken } = backendData.data;
+
+      console.log('[Login] ✅ Backend login successful:', { userId: backendUser.id });
+
+      // Store in AuthStore
+      setToken(jwtToken);
+      setUser({
+        id: backendUser.id,
+        email: backendUser.email,
+        fullName: backendUser.fullName,
+        role: backendUser.role || 'user',
+      });
+
+      setMessage('Login successful! Redirecting...');
+      
+      // Let the redirect guard handle it
+      setTimeout(() => {
+        router.push('/account');
+      }, 500);
+    } catch (err: any) {
+      console.error('[Login] ❌ Verification error:', err);
+      
+      // Log backend response error details
+      if (err.response?.data) {
+        console.error('[Login] 📥 Backend error response:', err.response.data);
+      }
+      if (err.response?.status === 400) {
+        console.error('[Login] ❌ Backend validation error (400):', {
+          status: err.response.status,
+          data: err.response.data,
+        });
+      }
+      
+      setError(err.message || 'Login failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 🔑 ADMIN PASSWORD LOGIN (DEV ONLY)
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (process.env.NODE_ENV === 'production') {
+      setError('Admin login not available in production');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      console.log('[Login] 🔐 Admin login attempt for:', adminEmail);
+
+      // Supabase password login
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: adminEmail,
+        password: adminPassword,
+      });
+
+      if (signInError || !data.session) {
+        console.error('[Login] ❌ Admin signin failed:', signInError?.message);
+        setError(signInError?.message || 'Invalid credentials');
+        return;
+      }
+
+      const supabaseUser = data.user;
+
+      // Call backend to get/create admin user
+      const { data: backendData } = await api.post('/auth/login', {
+        supabaseId: supabaseUser.id,
+        email: supabaseUser.email,
+        fullName: supabaseUser.user_metadata?.full_name || 'Admin',
+      });
+
+      if (!backendData?.success || backendData.data.user.role !== 'ADMIN') {
+        throw new Error('Admin access required');
+      }
+
+      const { user: backendUser, token: jwtToken } = backendData.data;
+
+      console.log('[Login] ✅ Admin login successful:', { userId: backendUser.id });
+
+      // Store in AuthStore
+      setToken(jwtToken);
+      setUser({
+        id: backendUser.id,
+        email: backendUser.email,
+        fullName: backendUser.fullName,
+        role: 'ADMIN',
+      });
+
+      setMessage('Admin login successful! Redirecting...');
+      
+      setTimeout(() => {
+        router.push('/admin');
+      }, 500);
+    } catch (err: any) {
+      console.error('[Login] ❌ Admin error:', err);
+      setError(err.message || 'Admin login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // RESET FORM
+  const resetForm = () => {
+    setStep('email-input');
+    setEmail('');
+    setOtp('');
+    setError('');
+    setMessage('');
+    setOtpTimer(0);
+  };
+
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background flex flex-col lg:flex-row">
       {/* Left Side - Form */}
-      <div className="flex-1 flex items-center justify-center px-4 py-8 sm:p-8">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 sm:p-8 bg-white lg:bg-transparent">
         <div className="w-full max-w-md">
           {/* Logo */}
-          <Link href="/" className="inline-block mb-6 sm:mb-8">
-            <span className="text-2xl sm:text-3xl font-serif font-bold text-text-primary">ORA</span>
+          <Link href="/" className="inline-block mb-8 lg:mb-12">
+            <span className="text-3xl font-serif font-bold text-accent tracking-wide">ORA</span>
           </Link>
 
-          <h1 className="text-2xl sm:text-3xl font-serif font-light text-text-primary mb-1 sm:mb-2">Welcome Back</h1>
-          <p className="text-sm sm:text-base text-text-muted mb-6 sm:mb-8">Sign in to continue your jewellery journey</p>
-
-          {error && (
-            <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-error/10 border border-error/30 rounded-xl">
-              <p className="text-error text-sm flex items-center gap-2">
-                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {error}
-              </p>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">Email Address</label>
-              <div className="relative">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="input-luxury pl-11"
-                  placeholder="you@example.com"
-                />
-                <svg className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">Password</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="input-luxury pl-11 pr-11"
-                  placeholder="••••••••"
-                />
-                <svg className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary"
-                >
-                  {showPassword ? (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 text-sm">
-              <label className="flex items-center gap-2 cursor-pointer min-h-[44px] sm:min-h-0">
-                <input type="checkbox" className="w-5 h-5 sm:w-4 sm:h-4 rounded border-border text-accent focus:ring-primary" />
-                <span className="text-text-muted">Remember me</span>
-              </label>
-              <Link href="/auth/forgot-password" className="text-accent hover:underline py-2 sm:py-0">
-                Forgot password?
-              </Link>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary w-full py-4 text-base disabled:opacity-50 disabled:cursor-not-allowed min-h-[52px]"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Signing in...
-                </span>
-              ) : (
-                'Sign In'
-              )}
-            </button>
-          </form>
-
-          <div className="mt-8 text-center">
-            <p className="text-text-muted text-sm">
-              Don&apos;t have an account?{' '}
-              <Link href="/auth/register" className="text-accent font-medium hover:underline">
-                Create Account
-              </Link>
+          {/* Heading */}
+          <div className="mb-8">
+            <h1 className="text-3xl sm:text-4xl font-serif font-medium text-text-primary mb-3">
+              {showAdminForm ? 'Admin Login' : 'Welcome Back'}
+            </h1>
+            <p className="text-text-muted">
+              {showAdminForm 
+                ? 'Enter your admin credentials' 
+                : step === 'email-input' 
+                  ? 'Enter your email to receive a login code'
+                  : `Enter the 6-digit code sent to ${email}`
+              }
             </p>
           </div>
 
-          {/* Divider */}
-          <div className="relative my-8">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border"></div>
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 animate-in fade-in">
+              <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+              <p className="text-red-600 text-sm">{error}</p>
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-4 text-text-muted">Or continue with</span>
-            </div>
-          </div>
+          )}
 
-          {/* Social Login */}
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            <button className="flex items-center justify-center gap-2 px-4 py-3.5 sm:py-3 border border-border rounded-xl hover:bg-primary/10 transition-colors min-h-[48px]">
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              </svg>
-              <span className="text-sm font-medium text-text-primary">Google</span>
-            </button>
-            <button className="flex items-center justify-center gap-2 px-4 py-3.5 sm:py-3 border border-border rounded-xl hover:bg-primary/10 transition-colors min-h-[48px]">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-              </svg>
-              <span className="text-sm font-medium text-text-primary">Facebook</span>
-            </button>
-          </div>
+          {/* Success Message */}
+          {message && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-100 rounded-xl flex items-start gap-3 animate-in fade-in">
+              <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+              <p className="text-green-600 text-sm">{message}</p>
+            </div>
+          )}
+
+          {/* ADMIN FORM */}
+          {showAdminForm ? (
+            <form onSubmit={handleAdminLogin} className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={adminEmail}
+                  onChange={(e) => setAdminEmail(e.target.value)}
+                  placeholder="admin@orashop.in"
+                  className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition"
+                  disabled={loading}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-2">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition"
+                  disabled={loading}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-accent hover:bg-accent/90 disabled:bg-gray-300 text-white font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Logging in...
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-5 h-5" />
+                    Login as Admin
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAdminForm(false);
+                  setAdminEmail('');
+                  setAdminPassword('');
+                  setError('');
+                }}
+                className="w-full text-text-muted hover:text-text-primary font-medium py-2 transition"
+              >
+                Back to User Login
+              </button>
+            </form>
+          ) : (
+            <>
+              {/* EMAIL INPUT STEP */}
+              {step === 'email-input' && (
+                <form onSubmit={handleSendOtp} className="space-y-5">
+                  <div>
+                    <label className="block text-sm font-medium text-text-primary mb-2">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition"
+                      disabled={loading}
+                      autoFocus
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-accent hover:bg-accent/90 disabled:bg-gray-300 text-white font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="w-5 h-5" />
+                        Send Login Code
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
+
+              {/* OTP INPUT STEP */}
+              {step === 'otp-input' && (
+                <form onSubmit={handleVerifyOtp} className="space-y-5">
+                  <div>
+                    <label className="block text-sm font-medium text-text-primary mb-2">
+                      Login Code
+                    </label>
+                    <input
+                      type="text"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                      placeholder="00000000"
+                      maxLength={8}
+                      className="w-full px-4 py-3 text-center text-2xl tracking-widest border border-border rounded-xl focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition font-mono"
+                      disabled={loading}
+                      autoFocus
+                    />
+                    <p className="text-xs text-text-muted mt-2">
+                      {otpTimer > 0 
+                        ? `Code expires in ${Math.floor(otpTimer / 60)}:${(otpTimer % 60).toString().padStart(2, '0')}`
+                        : 'Code expired. Request a new one.'
+                      }
+                    </p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading || otp.length < 8}
+                    className="w-full bg-accent hover:bg-accent/90 disabled:bg-gray-300 text-white font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Verifying...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-5 h-5" />
+                        Verify Code
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="w-full text-text-muted hover:text-text-primary font-medium py-2 transition"
+                  >
+                    Use a different email
+                  </button>
+                </form>
+              )}
+            </>
+          )}
+
+          {/* Footer */}
+          <p className="mt-8 text-center text-sm text-text-muted">
+            Don't have an account?{' '}
+            <span className="text-text-muted">
+              It will be created automatically when you log in.
+            </span>
+          </p>
         </div>
       </div>
 
-      {/* Right Side - Image */}
-      <div className="hidden lg:flex lg:w-1/2 bg-primary/20 items-center justify-center p-12">
-        <div className="text-center max-w-md">
-          <div className="text-6xl font-serif font-bold text-accent mb-6">ORA</div>
-          <p className="text-xl font-serif italic text-text-primary mb-4">own. radiate. adorn.</p>
-          <p className="text-text-secondary">
-            Join our community of jewellery lovers and discover pieces that celebrate your unique style.
+      {/* Right Side - Marketing */}
+      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-accent/20 via-background to-accent/10 flex-col items-center justify-center p-8">
+        <div className="max-w-md text-center">
+          <h2 className="text-4xl font-serif font-bold text-text-primary mb-6">
+            own. radiate. adorn.
+          </h2>
+          <p className="text-text-muted mb-12 leading-relaxed">
+            Experience the perfect blend of elegance and affordability with ORA's premium artificial jewellery collection.
           </p>
-          <div className="mt-12 flex justify-center gap-8">
-            <div className="text-center">
-              <p className="text-3xl font-serif font-bold text-accent">10K+</p>
-              <p className="text-sm text-text-muted">Happy Customers</p>
+
+          <div className="flex items-center justify-center gap-3 mb-12">
+            <div className="h-1 w-12 bg-accent rounded-full" />
+            <div className="h-1 w-2 bg-accent/30 rounded-full" />
+            <div className="h-1 w-2 bg-accent/30 rounded-full" />
+          </div>
+
+          <div className="flex gap-8 justify-center">
+            <div>
+              <p className="text-3xl font-serif font-bold text-accent">10k+</p>
+              <p className="text-text-muted text-sm">Happy Customers</p>
             </div>
-            <div className="text-center">
-              <p className="text-3xl font-serif font-bold text-accent">500+</p>
-              <p className="text-sm text-text-muted">Unique Designs</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl font-serif font-bold text-accent">4.9★</p>
-              <p className="text-sm text-text-muted">Rating</p>
+            <div>
+              <p className="text-3xl font-serif font-bold text-accent">4.9</p>
+              <p className="text-text-muted text-sm">Rating</p>
             </div>
           </div>
         </div>
       </div>
     </div>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-background">Loading...</div>}>
-      <LoginForm />
-    </Suspense>
   );
 }
