@@ -99,6 +99,31 @@ export const getOrCreateUser = async (
 // @desc    OTP Login - Create/get user and return JWT
 // @route   POST /api/auth/login
 // @access  Public
+let supabaseIdColumnAvailable: boolean | null = null;
+
+const hasSupabaseIdColumn = async (): Promise<boolean> => {
+  if (supabaseIdColumnAvailable !== null) {
+    return supabaseIdColumnAvailable;
+  }
+
+  try {
+    const result = await prisma.$queryRaw<{ column_name: string }[]>`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'users' AND column_name = 'supabase_id'
+      LIMIT 1
+    `;
+    supabaseIdColumnAvailable = result.length > 0;
+  } catch (error) {
+    console.warn('[Auth] ⚠️ Could not verify supabase_id column availability:', {
+      message: error instanceof Error ? error.message : String(error),
+    });
+    supabaseIdColumnAvailable = false;
+  }
+
+  return supabaseIdColumnAvailable;
+};
+
 export const login = async (
   req: Request,
   res: Response,
@@ -120,52 +145,80 @@ export const login = async (
 
     console.log('[Auth] 📧 OTP Login - Creating/updating user:', { supabaseId, email });
 
-    // FIX: Try to find existing user by supabaseId first (more reliable)
-    // Then fall back to email if not found
-    let existingUser = null;
-    try {
-      existingUser = await prisma.user.findUnique({
-        where: { supabaseId },
-      });
-    } catch (err) {
-      console.warn('[Auth] ⚠️ Could not query by supabaseId, falling back to email:', err instanceof Error ? err.message : String(err));
-    }
+    const canUseSupabaseId = await hasSupabaseIdColumn();
 
     let user;
-
-    if (existingUser) {
-      // Update existing user
-      console.log('[Auth] 🔄 Updating existing user:', { supabaseId, userId: existingUser.id });
-      user = await withRetry(() =>
-        prisma.user.update({
+    if (canUseSupabaseId) {
+      // FIX: Try to find existing user by supabaseId first (more reliable)
+      // Then fall back to email if not found
+      let existingUser = null;
+      try {
+        existingUser = await prisma.user.findUnique({
           where: { supabaseId },
-          data: {
-            fullName: fullName || existingUser.fullName,
-            isVerified: true,
-          },
-          select: {
-            id: true,
-            email: true,
-            fullName: true,
-            role: true,
-            isVerified: true,
-            createdAt: true,
-          },
-        })
-      );
+        });
+      } catch (err) {
+        console.warn('[Auth] ⚠️ Could not query by supabaseId, falling back to email:', err instanceof Error ? err.message : String(err));
+      }
+
+      if (existingUser) {
+        // Update existing user
+        console.log('[Auth] 🔄 Updating existing user:', { supabaseId, userId: existingUser.id });
+        user = await withRetry(() =>
+          prisma.user.update({
+            where: { supabaseId },
+            data: {
+              fullName: fullName || existingUser.fullName,
+              isVerified: true,
+            },
+            select: {
+              id: true,
+              email: true,
+              fullName: true,
+              role: true,
+              isVerified: true,
+              createdAt: true,
+            },
+          })
+        );
+      } else {
+        // Create new user (or upsert by email if exists)
+        console.log('[Auth] ✨ Creating new user:', { supabaseId, email });
+        user = await withRetry(() =>
+          prisma.user.upsert({
+            where: { email },
+            update: {
+              supabaseId, // Link supabaseId to existing email-based account
+              fullName: fullName || undefined,
+              isVerified: true,
+            },
+            create: {
+              supabaseId,
+              email,
+              fullName: fullName || '',
+              isVerified: true,
+              role: 'CUSTOMER' as const,
+            },
+            select: {
+              id: true,
+              email: true,
+              fullName: true,
+              role: true,
+              isVerified: true,
+              createdAt: true,
+            },
+          })
+        );
+      }
     } else {
-      // Create new user (or upsert by email if exists)
-      console.log('[Auth] ✨ Creating new user:', { supabaseId, email });
+      console.warn('[Auth] ⚠️ supabase_id column missing. Falling back to email-only upsert.');
       user = await withRetry(() =>
         prisma.user.upsert({
           where: { email },
           update: {
-            supabaseId, // Link supabaseId to existing email-based account
             fullName: fullName || undefined,
             isVerified: true,
           },
           create: {
-            supabaseId,
             email,
             fullName: fullName || '',
             isVerified: true,
