@@ -290,17 +290,7 @@ app.listen(PORT, async () => {
   ╚════════════════════════════════════════╝
   `);
   
-  // Apply any pending migrations before warming up
-  console.log('\n[Startup] 📦 Applying pending database migrations...');
-  const migrationsApplied = await runPendingMigrations();
-  
-  if (migrationsApplied) {
-    console.log('[Startup] ✅ Migrations: COMPLETE');
-  } else {
-    console.log('[Startup] ⚠️  Migrations: SKIPPED (will retry on first request)');
-  }
-  
-  // Warmup database connection on startup
+  // Warmup database connection on startup FIRST
   // This is especially important for Render free-tier
   // DB might also be waking up from sleep
   console.log('\n[Startup] 🔥 Warming up database connection...');
@@ -309,9 +299,20 @@ app.listen(PORT, async () => {
   
   if (dbWarmed) {
     console.log('[Startup] ✅ Database: READY');
+    
+    // NOW apply pending migrations after DB is warmed up
+    console.log('\n[Startup] 📦 Applying pending database migrations...');
+    const migrationsApplied = await runPendingMigrations();
+    
+    if (migrationsApplied) {
+      console.log('[Startup] ✅ Migrations: COMPLETE');
+    } else {
+      console.log('[Startup] ⚠️  Migrations: SKIPPED (will retry on first request)');
+    }
   } else {
     console.warn('[Startup] ⚠️  Database: NOT READY (will retry on first request)');
     console.log('[Startup] 📌 Possible causes: DB restarting, network delay, connection pool exhausted');
+    console.log('[Startup] ⚠️  Skipping migrations (will retry after DB is ready)');
   }
 
   // Test Supabase Storage connection at startup (optional, non-blocking)
