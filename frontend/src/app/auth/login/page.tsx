@@ -190,7 +190,7 @@ export default function LoginPage() {
 
       for (retryCount = 0; retryCount < MAX_RETRIES; retryCount++) {
         try {
-          const response = await api.post('/auth/otp-login', {
+          const response = await api.post('/api/auth/otp-login', {
             supabaseId,
             email: supabaseUser.email,
             fullName: supabaseUser.user_metadata?.full_name || '',
