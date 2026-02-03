@@ -8,36 +8,56 @@ const execAsync = promisify(exec);
  * Fallback: Apply critical migrations manually if prisma migrate fails
  * This handles cases where prisma can't authenticate with the database
  */
-async function applyManualMigrations(): Promise<void> {
-  try {
-    console.log('[Migration] 🔧 Applying manual migrations as fallback...');
+async function applyManualMigrations(retries: number = 3): Promise<void> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      console.log(`[Migration] 🔧 Applying manual migrations (attempt ${attempt}/${retries})...`);
 
-    // Check if password_hash column is nullable
-    const columnInfo = await prisma.$queryRaw<any[]>`
-      SELECT is_nullable FROM information_schema.columns 
-      WHERE table_name = 'users' AND column_name = 'password_hash'
-    `;
+      // Check if password_hash column is nullable
+      const columnInfo = await prisma.$queryRaw<any[]>`
+        SELECT is_nullable FROM information_schema.columns 
+        WHERE table_name = 'users' AND column_name = 'password_hash'
+      `;
 
-    if (columnInfo.length > 0 && columnInfo[0].is_nullable === 'YES') {
-      console.log('[Migration] ✅ password_hash column is already nullable');
+      if (columnInfo.length > 0 && columnInfo[0].is_nullable === 'YES') {
+        console.log('[Migration] ✅ password_hash column is already nullable');
+        return;
+      }
+
+      // Apply the migration manually
+      console.log('[Migration] ⏳ Making password_hash column nullable...');
+      await prisma.$executeRaw`ALTER TABLE "users" ALTER COLUMN "password_hash" DROP NOT NULL`;
+      
+      console.log('[Migration] ✅ Manual migration applied: password_hash is now nullable');
       return;
-    }
+    } catch (error: any) {
+      const errorMsg = error.message || String(error);
+      
+      if (errorMsg.includes('already nullable') || errorMsg.includes('not a valid column') || errorMsg.includes('no attribute')) {
+        console.log('[Migration] ℹ️  Migration already applied or column structure differs');
+        return;
+      }
 
-    // Apply the migration manually
-    console.log('[Migration] ⏳ Making password_hash column nullable...');
-    await prisma.$executeRaw`ALTER TABLE "users" ALTER COLUMN "password_hash" DROP NOT NULL`;
-    
-    console.log('[Migration] ✅ Manual migration applied: password_hash is now nullable');
-  } catch (error: any) {
-    const errorMsg = error.message || String(error);
-    
-    if (errorMsg.includes('already nullable') || errorMsg.includes('column does not exist')) {
-      console.log('[Migration] ℹ️  Migration already applied or column structure differs');
-      return;
-    }
+      if (errorMsg.includes('connect ECONNREFUSED') || errorMsg.includes('ENOTFOUND')) {
+        if (attempt < retries) {
+          console.log(`[Migration] ⏳ Database not ready, retrying in 2s...`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          continue;
+        }
+      }
 
-    console.error('[Migration] ⚠️  Manual migration failed:', errorMsg.split('\n')[0]);
-    // Continue anyway - the migration might be already applied
+      if (attempt === retries) {
+        console.error('[Migration] ⚠️  Manual migration failed after retries:', errorMsg.split('\n')[0]);
+        // Continue anyway - the migration might be already applied
+        return;
+      }
+
+      // Retry on other errors
+      if (attempt < retries) {
+        console.log(`[Migration] ⏳ Retrying after error...`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
   }
 }
 
