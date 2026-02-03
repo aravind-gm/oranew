@@ -132,26 +132,16 @@ if (process.env.NODE_ENV === 'development') {
 // - Each connection attempt tests the pool
 // - Periodic pings prevent the sleep cycle
 
-app.get('/api/health', async (_req: Request, res: Response) => {
-  try {
-    // Quick check: Can we reach the database?
-    const { prisma } = await import('./config/database');
-    await prisma.$queryRaw`SELECT 1`;
-    
-    res.json({
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      database: 'connected',
-    });
-  } catch (error) {
-    console.warn('[Keep-Alive] Database unreachable:', error instanceof Error ? error.message : String(error));
-    res.status(503).json({
-      status: 'degraded',
-      timestamp: new Date().toISOString(),
-      database: 'unreachable',
-      message: 'Database temporarily unavailable',
-    });
-  }
+// ============================================
+// LIGHTWEIGHT HEALTH CHECK - NO DATABASE TOUCH
+// ============================================
+// Used by Render to detect cold starts and route traffic
+// MUST respond instantly without touching database
+app.get('/api/health', (_req: Request, res: Response) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // ============================================
@@ -191,11 +181,6 @@ app.get('/api', (_req: Request, res: Response) => {
 
 // Health check - basic
 app.get('/health', (_req: Request, res: Response) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// Health check - API version (for monitoring)
-app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
