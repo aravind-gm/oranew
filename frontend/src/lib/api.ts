@@ -1,61 +1,37 @@
 /**
  * Vercel Serverless Backend API Client
- * Updated for serverless architecture
+ * Updated for serverless architecture with Render cold-start handling
  * 
- * Communicates with /api/* endpoints on Vercel
- * All requests include JWT token in Authorization header
+ * Features:
+ * - Communicates with Render backend
+ * - Automatic retry on 503 (backend cold start)
+ * - JWT token injection
+ * - Graceful error handling
  */
 
 import { useAuthStore } from '@/store/authStore';
 import axios, { AxiosError } from 'axios';
+import { setupErrorInterceptor, setupRequestInterceptor } from './api-interceptors';
 
 const api = axios.create({
-  // Point to Vercel serverless backend
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000, // 30 second timeout for serverless functions
+  timeout: 30000,
 });
 
-// Request interceptor - Add auth token from localStorage
-api.interceptors.request.use(
-  (config) => {
-    // Only access localStorage in browser environment
-    if (typeof window !== 'undefined') {
-      const authStore = useAuthStore.getState();
-      const storeToken = authStore.token;
-      const localToken = localStorage.getItem('ora_token');
-      const token = localToken || storeToken;
-      
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      
-      // CRITICAL: Do NOT set Content-Type for FormData
-      if (config.data instanceof FormData) {
-        delete config.headers['Content-Type'];
-      }
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+// Setup custom interceptors for 503 retry and auth
+setupRequestInterceptor(api);
+setupErrorInterceptor(api);
 
-// Response interceptor - Handle errors gracefully
+// Additional response interceptor for 401 handling
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     // 🛑 CRITICAL: Never logout on backend API 401 errors
     // Backend 401 does NOT mean authentication is invalid
     // It means this specific endpoint doesn't accept our token format
-    // 
-    // Example:
-    // - User is authenticated with Supabase + AuthStore
-    // - Backend API doesn't recognize Supabase tokens
-    // - API returns 401
-    // - Frontend should NOT logout or redirect
-    // - User stays logged in, page shows error message
     
     if (typeof window !== 'undefined' && error.response?.status === 401) {
       const authStore = useAuthStore.getState();
@@ -67,10 +43,7 @@ api.interceptors.response.use(
       });
       
       // ✅ DO NOT logout
-      // ✅ DO NOT clear token
-      // ✅ DO NOT redirect to login
-      // Just log and return error for page to handle
-      console.log('[API] ✅ Keeping user logged in — backend may have different token requirements');
+      console.log('[API] ✅ Keeping user logged in');
     }
     
     return Promise.reject(error);
