@@ -13,7 +13,8 @@ type LoginStep = 'password-login' | 'admin-login';
 export default function LoginPage() {
   return (
     <div style={{ padding: 40 }}>
-      <h1>🚨 PASSWORD LOGIN LIVE 🚨</h1>
+      <h1>✅ PASSWORD LOGIN - VERCEL LIVE TEST ✅</h1>
+      <p>Deployed: {new Date().toISOString()}</p>
     </div>
   );
   
