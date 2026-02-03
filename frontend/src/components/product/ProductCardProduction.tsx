@@ -32,6 +32,7 @@
  */
 
 import { useCartStore } from '@/store/cartStore';
+import { useCartNotificationStore } from '@/store/cartNotificationStore';
 import { useWishlistStore } from '@/store/wishlistStore';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check, Heart, ShoppingBag } from 'lucide-react';
@@ -164,8 +165,11 @@ function ProductCard({
    * - Prevents default navigation
    * - Shows loading state
    * - Animates success feedback
+   * - Triggers cart notification popup
    * - Auto-reverts after 2 seconds
    */
+  const { showNotification } = useCartNotificationStore();
+
   const handleAddToCart = useCallback(
     async (e: React.MouseEvent) => {
       e.preventDefault();
@@ -185,6 +189,15 @@ function ProductCard({
           quantity: 1,
         });
 
+        // Show cart notification popup
+        showNotification({
+          productId: product.id,
+          productName: product.name,
+          productImage: primaryImage?.imageUrl || '/placeholder.png',
+          productPrice: product.finalPrice,
+          quantity: 1,
+        });
+
         setIsAddingToCart(false);
         setAddedToCart(true);
 
@@ -199,7 +212,7 @@ function ProductCard({
         setIsAddingToCart(false);
       }
     },
-    [product, primaryImage, isAddingToCart, addedToCart, addItem, onAddToCart]
+    [product, primaryImage, isAddingToCart, addedToCart, addItem, showNotification, onAddToCart]
   );
 
   /**

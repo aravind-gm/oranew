@@ -16,7 +16,7 @@ The **Supabase database server itself is down or offline**, not just a connectio
 ### 1. Check Supabase Project Status
 
 **Go to:** https://app.supabase.com/
-**Select Project:** `hgejomvgldqnqzkgffoi`
+**Select Project:** `                                                                                   `
 **Check:**
 1. Navigate to: **Settings → Database**
 2. Look for:

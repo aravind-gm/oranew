@@ -1,0 +1,44 @@
+# 🚨 PROFILE 403 ERROR - ONE-PAGE CHEAT SHEET
+
+## THE ISSUE
+```
+Error: 403 Forbidden when accessing /account
+Cause: RLS policy using FOR ALL (ambiguous)
+Impact: Users stuck in redirect loop
+```
+
+## THE FIX (Copy This SQL)
+```sql
+DROP POLICY IF EXISTS "Users can manage their own profile" ON profiles;
+DROP POLICY IF EXISTS "Service role can insert profiles" ON profiles;
+CREATE POLICY "Users can select their own profile" ON profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can insert their own profile" ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "Users can update their own profile" ON profiles FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
+CREATE POLICY "Users can delete their own profile" ON profiles FOR DELETE USING (auth.uid() = id);
+```
+
+## HOW TO APPLY
+1. **Open**: Supabase Dashboard → SQL Editor
+2. **Paste**: SQL above
+3. **Click**: "Run"
+4. **Done**: ✅
+
+## VERIFY IT WORKS
+```sql
+SELECT policyname FROM pg_policies WHERE tablename = 'profiles';
+```
+Should show 4 policies (SELECT, INSERT, UPDATE, DELETE)
+
+## TEST
+1. Clear cache: Ctrl+Shift+Del
+2. Go to: `/account`
+3. ✅ Should work!
+
+## DOCUMENTATION
+- **Quick** (2 min): [QUICK_FIX](./PROFILE_403_QUICK_FIX.md)
+- **Full** (10 min): [COMPLETE_FIX](./PROFILE_403_FIX_COMPLETE.md)
+- **Visual** (5 min): [VISUAL_GUIDE](./PROFILE_403_VISUAL_GUIDE.md)
+- **Help** (10 min): [TROUBLESHOOTING](./PROFILE_403_TROUBLESHOOTING.md)
+- **Index**: [INDEX](./PROFILE_403_INDEX.md)
+
+## TIME: 5 minutes | RISK: 🟢 Very Low | IMPACT: 🔴 Critical

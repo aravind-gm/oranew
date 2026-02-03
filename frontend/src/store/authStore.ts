@@ -47,6 +47,15 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         console.log('[AuthStore] 🚪 Logging out user');
         localStorage.removeItem('ora_token');
+        // Also clear Supabase session
+        try {
+          const { supabase } = require('@/lib/supabase');
+          supabase.auth.signOut().catch((err: any) => {
+            console.error('[AuthStore] Error signing out from Supabase:', err);
+          });
+        } catch (err) {
+          // Supabase client may not be available
+        }
         set({ user: null, token: null, isAuthenticated: false });
       },
       

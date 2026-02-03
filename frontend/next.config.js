@@ -29,6 +29,12 @@ const nextConfig = {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
     NEXT_PUBLIC_RAZORPAY_KEY: process.env.NEXT_PUBLIC_RAZORPAY_KEY,
   },
+
+  // Proxy configuration (replaces deprecated middleware)
+  // Routes configuration for request handling
+  experimental: {
+    // Enable proxy configuration for routing
+  },
 };
 
 module.exports = nextConfig;

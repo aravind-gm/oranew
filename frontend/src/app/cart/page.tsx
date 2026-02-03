@@ -28,6 +28,7 @@
 
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
+import RelatedProductsCart from '@/components/RelatedProductsCart';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, Minus, Plus, ShoppingBag, X } from 'lucide-react';
 import Image from 'next/image';
@@ -515,6 +516,11 @@ export default function CartPage() {
         </div>
 
       </div>
+
+      {/* ============================================================
+          RELATED PRODUCTS - YOU MAY ALSO LIKE SECTION
+          ============================================================ */}
+      <RelatedProductsCart />
 
       {/* ============================================================
           MOBILE STICKY CHECKOUT BAR

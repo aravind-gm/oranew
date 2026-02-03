@@ -1,12 +1,9 @@
 /**
  * Vercel Serverless Backend API Client
- * Updated for serverless architecture with production-grade error handling
+ * Updated for serverless architecture
  * 
- * Features:
- * - Automatic 503 retry with exponential backoff
- * - Graceful handling of database connection failures
- * - JWT token management via authStore
- * - Request/response interceptors for cross-cutting concerns
+ * Communicates with /api/* endpoints on Vercel
+ * All requests include JWT token in Authorization header
  */
 
 import { useAuthStore } from '@/store/authStore';
@@ -21,10 +18,7 @@ const api = axios.create({
   timeout: 30000, // 30 second timeout for serverless functions
 });
 
-// ============================================
-// REQUEST INTERCEPTOR
-// ============================================
-// Add JWT token from localStorage/authStore
+// Request interceptor - Add auth token from localStorage
 api.interceptors.request.use(
   (config) => {
     // Only access localStorage in browser environment
@@ -48,59 +42,37 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ============================================
-// RESPONSE INTERCEPTOR - WITH 503 AUTO-RETRY
-// ============================================
-// Handle errors gracefully:
-// - 503: Retry after delay (database temporarily unavailable)
-// - 401: Clear auth and redirect to login
-// - Other: Pass through to caller
+// Response interceptor - Handle errors gracefully
 api.interceptors.response.use(
   (response) => response,
-  async (error: AxiosError) => {
-    const config = error.config;
-    const originalRequest = config as any;
-
-    // ============================================
-    // 503 Service Unavailable - RETRY LOGIC
-    // ============================================
-    // Backend database is temporarily down
-    // Retry silently after exponential backoff
-    if (
-      error.response?.status === 503 &&
-      originalRequest._retryCount < 3
-    ) {
-      originalRequest._retryCount = (originalRequest._retryCount || 0) + 1;
-
-      // Exponential backoff: 2s, 4s, 8s
-      const delayMs = 2000 * Math.pow(2, originalRequest._retryCount - 1);
-
-      console.warn(
-        `[API 503] Service unavailable. Retry ${originalRequest._retryCount}/3 after ${delayMs}ms`,
-        error.response?.data?.message || 'Database temporarily unavailable'
-      );
-
-      // Wait before retrying
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
-
-      // Retry the request
-      return api.request(config);
-    }
-
-    // ============================================
-    // 401 UNAUTHORIZED
-    // ============================================
-    // Session expired or token invalid
+  (error: AxiosError) => {
+    // 🛑 CRITICAL: Never logout on backend API 401 errors
+    // Backend 401 does NOT mean authentication is invalid
+    // It means this specific endpoint doesn't accept our token format
+    // 
+    // Example:
+    // - User is authenticated with Supabase + AuthStore
+    // - Backend API doesn't recognize Supabase tokens
+    // - API returns 401
+    // - Frontend should NOT logout or redirect
+    // - User stays logged in, page shows error message
+    
     if (typeof window !== 'undefined' && error.response?.status === 401) {
       const authStore = useAuthStore.getState();
-      localStorage.removeItem('ora_token');
-      authStore.logout();
+      console.log('[API] ⚠️ Backend API returned 401 (not an auth failure)');
+      console.log('[API] Supabase session status:', { 
+        hasToken: !!authStore.token, 
+        hasUser: !!authStore.user,
+        isHydrated: authStore.isHydrated 
+      });
       
-      if (window.location.pathname !== '/auth/login') {
-        window.location.href = '/auth/login?error=unauthorized';
-      }
+      // ✅ DO NOT logout
+      // ✅ DO NOT clear token
+      // ✅ DO NOT redirect to login
+      // Just log and return error for page to handle
+      console.log('[API] ✅ Keeping user logged in — backend may have different token requirements');
     }
-
+    
     return Promise.reject(error);
   }
 );

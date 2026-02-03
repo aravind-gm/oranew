@@ -4,15 +4,26 @@ import api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const { setToken, setUser } = useAuthStore();
+  const { setToken, setUser, user, token, isHydrated } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // 🔒 SINGLE REDIRECT AUTHORITY - Admin login page guard
+  // Only redirect after hydration is complete and user is logged in
+  useEffect(() => {
+    if (!isHydrated) return;
+
+    if (user && token && user.role === 'ADMIN') {
+      console.log('[Admin Login] ✅ Admin already authenticated, redirecting to /admin');
+      router.replace('/admin');
+    }
+  }, [isHydrated, user, token, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +41,8 @@ export default function AdminLoginPage() {
         }
         setToken(token);
         setUser(user);
-        router.push('/admin');
+        // ✅ DO NOT redirect here - Let the useEffect guard above handle it
+        console.log('[Admin Login] ✅ Admin logged in, guard will handle redirect');
       }
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Login failed');

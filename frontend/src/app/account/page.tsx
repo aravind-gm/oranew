@@ -1,10 +1,11 @@
 'use client';
 
 import api from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 interface Order {
   id: string;
@@ -15,34 +16,183 @@ interface Order {
 
 export default function AccountPage() {
   const router = useRouter();
-  const { token, user, logout } = useAuthStore();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { token, user, logout, isHydrated } = useAuthStore();
+  const hasRedirected = useRef(false);
 
-  useEffect(() => {
-    if (!token) {
-      router.push('/auth/login');
+  // 🛡️ DOUBLE-REDIRECT SAFETY HELPER
+  // Prevents infinite redirect loops
+  const safeRedirect = (path: string) => {
+    if (hasRedirected.current) {
+      console.log(`[AccountPage Guard] 🛡️ Blocking double redirect to ${path}`);
       return;
     }
+    hasRedirected.current = true;
+    router.replace(path);
+  };
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(true);
+  const [ordersError, setOrdersError] = useState('');
+  const [sessionUser, setSessionUser] = useState<any>(null);
 
-    fetchOrders();
-  }, [token, router]);
+  useEffect(() => {
+    const checkUserAndProfile = async () => {
+      try {
+        // � SINGLE REDIRECT AUTHORITY - Account page guard
+        // Wait for hydration before any redirect decisions
+        if (!isHydrated) {
+          console.log('[Account Page] ⏳ Waiting for AuthStore hydration...');
+          return; // Will run again once isHydrated changes
+        }
+
+        console.log('[Account Page] ✅ isHydrated = true, checking auth state');
+
+        // Check auth using AuthStore ONLY (no Supabase direct calls)
+        if (!token || !user) {
+          console.log('[Account Page] ❌ No token or user in AuthStore, redirecting to login');
+          safeRedirect('/auth/login');
+          return;
+        }
+
+        // 🚨 ADMIN BYPASS - Never redirect admin
+        if (user.role === 'admin') {
+          console.log('[Account Page] ✅ Admin detected — bypassing profile checks');
+          setSessionUser(user);
+          setPageLoading(false);
+          fetchOrders();
+          return;
+        }
+
+        // 👤 NORMAL USER - Check profile completion
+        console.log('[Account Page] 👤 Regular user, checking profile completion...');
+        
+        // Try to fetch profile with retry
+        let profile = null;
+        let error = null;
+        let retries = 0;
+        const maxRetries = 3;
+
+        while (retries < maxRetries && !profile) {
+          try {
+            const result = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', user.id)
+              .single();
+
+            error = result.error;
+            profile = result.data;
+
+            if (!profile && error?.code !== 'PGRST116') {
+              // Non-404 error, stop retrying
+              console.error('[Account Page] Non-404 Supabase error:', error);
+              break;
+            }
+
+            if (!profile && retries < maxRetries - 1) {
+              // Profile not found, wait and retry
+              console.log(`[Account Page] Profile not found (attempt ${retries + 1}/${maxRetries}), retrying...`);
+              await new Promise(resolve => setTimeout(resolve, 500));
+              retries++;
+            } else {
+              break;
+            }
+          } catch (queryErr: any) {
+            // Catch network or other Supabase errors
+            console.error('[Account Page] Supabase query error:', queryErr?.message);
+            // If we get an auth error, don't retry - just redirect to login
+            if (queryErr?.message?.includes('Unauthorized') || queryErr?.message?.includes('Invalid')) {
+              error = queryErr;
+              break;
+            }
+            if (retries < maxRetries - 1) {
+              await new Promise(resolve => setTimeout(resolve, 500));
+              retries++;
+            } else {
+              error = queryErr;
+              break;
+            }
+          }
+        }
+
+        console.log('[Account Page] Profile check:', { 
+          found: !!profile, 
+          error: error?.message,
+          userId: user.id,
+          retries
+        });
+
+        if (!profile) {
+          // No profile found - redirect to complete-profile
+          console.log('[Account Page] ❌ Profile not found, redirecting to complete-profile');
+          safeRedirect('/auth/complete-profile');
+          return;
+        }
+
+        // ✅ Profile exists, continue with fetching orders
+        console.log('[Account Page] ✅ Profile found, loading orders');
+        setSessionUser(user);
+        setPageLoading(false);
+        fetchOrders();
+      } catch (err: any) {
+        console.error('[Account Page] Error:', err);
+        setPageLoading(false);
+      }
+    };
+
+    checkUserAndProfile();
+  }, [isHydrated, token, user]);
 
   const fetchOrders = async () => {
     try {
+      console.log('[Account Page] 📝 Fetching orders...');
+      setOrdersError(''); // Clear any previous errors
       const response = await api.get('/orders');
+      console.log('[Account Page] ✅ Orders fetched:', response.data);
       if (response.data.success) {
         setOrders(response.data.orders || []);
+      } else {
+        console.warn('[Account Page] ⚠️ API returned success: false');
+        setOrders([]);
       }
-    } catch (err) {
-      console.error('Failed to fetch orders:', err);
+    } catch (err: any) {
+      // ✅ DO NOT logout on API errors
+      // ✅ DO NOT redirect to login
+      // ✅ Just show error message and continue
+      
+      if (err?.response?.status === 401) {
+        console.log('[Account Page] ⚠️ Orders API returned 401 (backend may not accept this token format)');
+        setOrdersError('Orders are temporarily unavailable. You remain logged in.');
+      } else if (err?.response?.status === 403) {
+        console.log('[Account Page] ⚠️ Orders API returned 403 (forbidden)');
+        setOrdersError('You do not have permission to view orders.');
+      } else if (err?.message === 'Network Error') {
+        console.log('[Account Page] ⚠️ Network error fetching orders');
+        setOrdersError('Network error. Orders will appear when connection is restored.');
+      } else {
+        console.error('[Account Page] ❌ Failed to fetch orders:', {
+          message: err?.message,
+          status: err?.response?.status,
+          data: err?.response?.data,
+        });
+        setOrdersError('Could not load orders. Please try refreshing the page.');
+      }
+      
+      setOrders([]); // Show empty state but not as error
     } finally {
       setLoading(false);
     }
   };
 
-  if (!token || !user) {
-    return null;
+  if (pageLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-text-muted">Loading your profile...</p>
+        </div>
+      </div>
+    );
   }
 
   const getStatusColor = (status: string) => {
@@ -70,7 +220,7 @@ export default function AccountPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl md:text-4xl font-serif font-light text-text-primary">
-                Welcome back, {user.firstName}!
+                Welcome back, {sessionUser?.user_metadata?.full_name || sessionUser?.email || 'Guest'}!
               </h1>
               <p className="text-text-muted mt-2">Manage your account and view your orders</p>
             </div>
@@ -100,7 +250,7 @@ export default function AccountPage() {
               </svg>
             </div>
             <p className="text-sm text-text-muted">Account</p>
-            <p className="font-serif font-semibold text-text-primary truncate">{user.email}</p>
+            <p className="font-serif font-semibold text-text-primary truncate">{sessionUser?.email}</p>
           </div>
           <div className="bg-background-white rounded-2xl p-5 shadow-luxury">
             <div className="w-10 h-10 bg-accent/20 rounded-xl flex items-center justify-center mb-3">
@@ -130,7 +280,7 @@ export default function AccountPage() {
             </div>
             <p className="text-sm text-text-muted">Member Since</p>
             <p className="font-serif font-semibold text-text-primary">
-              {user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : 'N/A'}
+              {sessionUser?.created_at ? new Date(sessionUser.created_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : 'N/A'}
             </p>
           </div>
         </div>
@@ -227,6 +377,15 @@ export default function AccountPage() {
                   </Link>
                 )}
               </div>
+
+              {ordersError && (
+                <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+                  <svg className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4v2m0 0v2m0-2h2m-2 0h-2m8-8a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-sm text-amber-800">{ordersError}</p>
+                </div>
+              )}
 
               {loading ? (
                 <div className="text-center py-12">

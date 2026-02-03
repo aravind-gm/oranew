@@ -27,10 +27,11 @@
  */
 
 import api from '@/lib/api';
+import { getStateNames, getDistrictsByState, validatePhoneNumber, validatePincode } from '@/lib/addressData';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, ChevronDown, ChevronUp, Lock } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Lock, AlertCircle } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -40,9 +41,14 @@ import { useEffect, useState } from 'react';
 // ============================================================================
 
 interface ShippingAddress {
+  fullName: string;
+  email: string;
+  phone: string;
   street: string;
+  street2?: string;
   city: string;
   state: string;
+  district: string;
   zipCode: string;
   country: string;
 }
@@ -157,9 +163,14 @@ export default function CheckoutPage() {
   const [currentStep, setCurrentStep] = useState<'contact' | 'delivery' | 'payment'>('contact');
   
   const [address, setAddress] = useState<ShippingAddress>({
+    fullName: '',
+    email: '',
+    phone: '',
     street: '',
+    street2: '',
     city: '',
     state: '',
+    district: '',
     zipCode: '',
     country: 'India',
   });
@@ -187,12 +198,41 @@ export default function CheckoutPage() {
   // ====== HANDLERS ======
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setAddress(prev => ({ ...prev, [name]: value }));
+    setAddress(prev => {
+      const updated = { ...prev, [name]: value };
+      // When state changes, clear district
+      if (name === 'state') {
+        updated.district = '';
+      }
+      return updated;
+    });
+    setError(null);
   };
 
   const handleAddressComplete = () => {
-    if (!address.street || !address.city || !address.state || !address.zipCode) {
+    // Validate required fields
+    if (!address.fullName.trim()) {
+      setError('Full name is required');
+      return;
+    }
+    
+    if (!address.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address.email)) {
+      setError('Valid email is required');
+      return;
+    }
+
+    if (!address.phone.trim() || !validatePhoneNumber(address.phone)) {
+      setError('Valid 10-digit phone number is required');
+      return;
+    }
+
+    if (!address.street || !address.city || !address.state || !address.district || !address.zipCode) {
       setError('Please fill in all address fields');
+      return;
+    }
+
+    if (!validatePincode(address.zipCode)) {
+      setError('Pincode must be 6 digits');
       return;
     }
     
@@ -313,87 +353,202 @@ export default function CheckoutPage() {
               isExpanded={currentStep === 'contact'}
               onToggle={() => setCurrentStep('contact')}
             >
-              <div className="space-y-4">
+              <div className="space-y-6">
+                {/* Contact Section */}
+                <div className="pb-6 border-b border-border/20">
+                  <h4 className="text-sm font-semibold text-text-primary mb-5 uppercase tracking-wide">Contact Information</h4>
+                  
+                  <div className="space-y-4">
+                    {/* Full Name */}
+                    <div>
+                      <label className="block text-xs text-text-muted uppercase tracking-wide mb-2 font-semibold">
+                        Full Name <span className="text-error">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="fullName"
+                        value={address.fullName}
+                        onChange={handleAddressChange}
+                        placeholder="Enter your full name"
+                        autoFocus
+                        className="w-full px-4 py-3.5 bg-background-white border-2 border-border/30 rounded-lg text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-accent transition-colors min-h-[48px]"
+                      />
+                    </div>
+
+                    {/* Email */}
+                    <div>
+                      <label className="block text-xs text-text-muted uppercase tracking-wide mb-2 font-semibold">
+                        Email Address <span className="text-error">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={address.email}
+                        onChange={handleAddressChange}
+                        placeholder="your.email@example.com"
+                        className="w-full px-4 py-3.5 bg-background-white border-2 border-border/30 rounded-lg text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-accent transition-colors min-h-[48px]"
+                      />
+                      <p className="text-xs text-text-muted mt-1">Order confirmation will be sent here</p>
+                    </div>
+
+                    {/* Phone */}
+                    <div>
+                      <label className="block text-xs text-text-muted uppercase tracking-wide mb-2 font-semibold">
+                        Phone Number <span className="text-error">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        name="phone"
+                        value={address.phone}
+                        onChange={handleAddressChange}
+                        placeholder="9876543210"
+                        inputMode="numeric"
+                        maxLength={10}
+                        className="w-full px-4 py-3.5 bg-background-white border-2 border-border/30 rounded-lg text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-accent transition-colors min-h-[48px]"
+                      />
+                      <p className="text-xs text-text-muted mt-1">10-digit mobile number for delivery updates</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Delivery Address Section */}
                 <div>
-                  <label className="block text-xs text-text-muted uppercase tracking-wide mb-2">
-                    Street Address
-                  </label>
-                  <input
-                    type="text"
-                    name="street"
-                    value={address.street}
-                    onChange={handleAddressChange}
-                    placeholder="123 Main Street"
-                    className="w-full px-4 py-3.5 sm:py-3 bg-background-white border border-border/40 rounded-lg text-base sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-text-primary transition-colors min-h-[52px]"
-                  />
+                  <h4 className="text-sm font-semibold text-text-primary mb-5 uppercase tracking-wide">Delivery Address</h4>
+                  
+                  <div className="space-y-4">
+                    {/* Street Address */}
+                    <div>
+                      <label className="block text-xs text-text-muted uppercase tracking-wide mb-2 font-semibold">
+                        Address Line 1 <span className="text-error">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="street"
+                        value={address.street}
+                        onChange={handleAddressChange}
+                        placeholder="e.g., 123 Main Street, Apartment 4"
+                        className="w-full px-4 py-3.5 bg-background-white border-2 border-border/30 rounded-lg text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-accent transition-colors min-h-[48px]"
+                      />
+                    </div>
+
+                    {/* Street 2 */}
+                    <div>
+                      <label className="block text-xs text-text-muted uppercase tracking-wide mb-2 font-semibold">
+                        Address Line 2 <span className="text-text-muted text-[10px]">(Optional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="street2"
+                        value={address.street2 || ''}
+                        onChange={handleAddressChange}
+                        placeholder="e.g., Building name, Floor number"
+                        className="w-full px-4 py-3.5 bg-background-white border-2 border-border/30 rounded-lg text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-accent transition-colors min-h-[48px]"
+                      />
+                    </div>
+
+                    {/* State & District Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* State Dropdown */}
+                      <div>
+                        <label className="block text-xs text-text-muted uppercase tracking-wide mb-2 font-semibold">
+                          State <span className="text-error">*</span>
+                        </label>
+                        <div className="relative">
+                          <select
+                            name="state"
+                            value={address.state}
+                            onChange={handleAddressChange}
+                            className="w-full px-4 py-3.5 bg-background-white border-2 border-border/30 rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent transition-colors min-h-[48px] appearance-none cursor-pointer"
+                            style={{
+                              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+                              backgroundRepeat: 'no-repeat',
+                              backgroundPosition: 'right 12px center',
+                              paddingRight: '32px',
+                            }}
+                          >
+                            <option value="">Select state</option>
+                            {getStateNames().map(state => (
+                              <option key={state} value={state}>{state}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* District Dropdown */}
+                      <div>
+                        <label className="block text-xs text-text-muted uppercase tracking-wide mb-2 font-semibold">
+                          District <span className="text-error">*</span>
+                        </label>
+                        <div className="relative">
+                          <select
+                            name="district"
+                            value={address.district}
+                            onChange={handleAddressChange}
+                            disabled={!address.state}
+                            className="w-full px-4 py-3.5 bg-background-white border-2 border-border/30 rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent transition-colors min-h-[48px] appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-background-white/50"
+                            style={{
+                              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+                              backgroundRepeat: 'no-repeat',
+                              backgroundPosition: 'right 12px center',
+                              paddingRight: '32px',
+                            }}
+                          >
+                            <option value="">{address.state ? 'Select district' : 'Select state first'}</option>
+                            {address.state && getDistrictsByState(address.state).map(district => (
+                              <option key={district.name} value={district.name}>{district.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* City & Pincode Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* City */}
+                      <div>
+                        <label className="block text-xs text-text-muted uppercase tracking-wide mb-2 font-semibold">
+                          City / Town <span className="text-error">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          name="city"
+                          value={address.city}
+                          onChange={handleAddressChange}
+                          placeholder="e.g., Mumbai, Delhi, Bangalore"
+                          className="w-full px-4 py-3.5 bg-background-white border-2 border-border/30 rounded-lg text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-accent transition-colors min-h-[48px]"
+                        />
+                      </div>
+
+                      {/* Pincode */}
+                      <div>
+                        <label className="block text-xs text-text-muted uppercase tracking-wide mb-2 font-semibold">
+                          Pincode <span className="text-error">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          name="zipCode"
+                          value={address.zipCode}
+                          onChange={handleAddressChange}
+                          placeholder="e.g., 400001"
+                          inputMode="numeric"
+                          maxLength={6}
+                          className="w-full px-4 py-3.5 bg-background-white border-2 border-border/30 rounded-lg text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-accent transition-colors min-h-[48px]"
+                        />
+                        <p className="text-xs text-text-muted mt-1">6-digit postal code</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs text-text-muted uppercase tracking-wide mb-2">
-                      City
-                    </label>
-                    <input
-                      type="text"
-                      name="city"
-                      value={address.city}
-                      onChange={handleAddressChange}
-                      placeholder="Mumbai"
-                      className="w-full px-4 py-3.5 sm:py-3 bg-background-white border border-border/40 rounded-lg text-base sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-text-primary transition-colors min-h-[52px]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs text-text-muted uppercase tracking-wide mb-2">
-                      State
-                    </label>
-                    <input
-                      type="text"
-                      name="state"
-                      value={address.state}
-                      onChange={handleAddressChange}
-                      placeholder="Maharashtra"
-                      className="w-full px-4 py-3.5 sm:py-3 bg-background-white border border-border/40 rounded-lg text-base sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-text-primary transition-colors min-h-[52px]"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs text-text-muted uppercase tracking-wide mb-2">
-                      ZIP Code
-                    </label>
-                    <input
-                      type="text"
-                      name="zipCode"
-                      value={address.zipCode}
-                      onChange={handleAddressChange}
-                      placeholder="400001"
-                      className="w-full px-4 py-3.5 sm:py-3 bg-background-white border border-border/40 rounded-lg text-base sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-text-primary transition-colors min-h-[52px]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs text-text-muted uppercase tracking-wide mb-2">
-                      Country
-                    </label>
-                    <select
-                      name="country"
-                      value={address.country}
-                      onChange={handleAddressChange}
-                      className="w-full px-4 py-3.5 sm:py-3 bg-background-white border border-border/40 rounded-lg text-base sm:text-sm text-text-primary focus:outline-none focus:border-text-primary transition-colors min-h-[52px]"
-                    >
-                      <option value="India">India</option>
-                    </select>
-                  </div>
-                </div>
-
-                <button
+                {/* Continue Button */}
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={handleAddressComplete}
-                  className="mt-6 w-full sm:w-auto px-6 py-3.5 sm:py-3 bg-text-primary text-background rounded-full text-sm font-medium hover:bg-text-secondary transition-colors min-h-[48px]"
+                  className="mt-8 w-full py-4 bg-accent text-white rounded-full text-base font-semibold hover:bg-accent/90 transition-all min-h-[52px] shadow-md hover:shadow-lg"
                 >
-                  Continue to Delivery
-                </button>
+                  Proceed to Payment
+                </motion.button>
               </div>
             </CollapsibleSection>
 
@@ -405,33 +560,50 @@ export default function CheckoutPage() {
             >
               {sections[0].isComplete ? (
                 <div className="space-y-6">
-                  {/* Address Receipt Line */}
-                  <div className="p-3 sm:p-4 bg-primary/5 rounded-lg border border-primary/20">
-                    <p className="text-xs text-text-muted uppercase tracking-wide mb-2">
-                      Shipping to
+                  {/* Contact Info Receipt */}
+                  <div className="p-5 bg-gradient-to-br from-accent/5 via-accent/3 to-transparent rounded-xl border border-accent/20">
+                    <p className="text-xs text-text-muted uppercase tracking-wide font-semibold mb-4">
+                      ✓ Contact Information
                     </p>
-                    <div className="text-sm text-text-primary space-y-1">
-                      <p>{address.street}</p>
-                      <p>{address.city}, {address.state} {address.zipCode}</p>
-                      <p>{address.country}</p>
+                    <div className="text-sm text-text-primary space-y-2.5">
+                      <p><span className="text-text-muted font-medium">Name:</span> {address.fullName}</p>
+                      <p><span className="text-text-muted font-medium">Email:</span> {address.email}</p>
+                      <p><span className="text-text-muted font-medium">Phone:</span> {address.phone}</p>
                     </div>
-                    <button
-                      onClick={() => setCurrentStep('contact')}
-                      className="mt-3 text-xs text-accent hover:underline p-1 -ml-1"
-                    >
-                      Edit address
-                    </button>
                   </div>
 
-                  <button
+                  {/* Address Receipt */}
+                  <div className="p-5 bg-gradient-to-br from-accent/5 via-accent/3 to-transparent rounded-xl border border-accent/20">
+                    <p className="text-xs text-text-muted uppercase tracking-wide font-semibold mb-4">
+                      ✓ Shipping Address
+                    </p>
+                    <div className="text-sm text-text-primary space-y-1.5">
+                      <p className="font-medium">{address.street}</p>
+                      {address.street2 && <p>{address.street2}</p>}
+                      <p>{address.city}, {address.district}</p>
+                      <p>{address.state} {address.zipCode}</p>
+                      <p className="text-text-muted">{address.country}</p>
+                    </div>
+                    <motion.button
+                      whileHover={{ x: -4 }}
+                      onClick={() => setCurrentStep('contact')}
+                      className="mt-4 text-sm text-accent hover:text-accent/80 font-semibold transition-colors flex items-center gap-1"
+                    >
+                      ← Edit address
+                    </motion.button>
+                  </div>
+
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={handleDeliveryConfirm}
-                    className="w-full sm:w-auto px-6 py-3.5 sm:py-3 bg-text-primary text-background rounded-full text-sm font-medium hover:bg-text-secondary transition-colors min-h-[48px]"
+                    className="w-full py-4 bg-accent text-white rounded-full text-base font-semibold hover:bg-accent/90 transition-all min-h-[52px] shadow-md hover:shadow-lg"
                   >
-                    Confirm Delivery
-                  </button>
+                    Continue to Payment
+                  </motion.button>
                 </div>
               ) : (
-                <p className="text-sm text-text-muted">Complete address first</p>
+                <p className="text-sm text-text-muted py-8 text-center">Please fill address first</p>
               )}
             </CollapsibleSection>
 
@@ -445,40 +617,62 @@ export default function CheckoutPage() {
                 <div className="space-y-6">
                   {/* Payment Method Selection */}
                   <div className="space-y-3">
-                    <label className="flex items-center gap-3 p-4 border border-border/40 rounded-lg cursor-pointer hover:border-text-primary transition-colors min-h-[60px]">
-                      <input type="radio" name="payment" value="razorpay" defaultChecked className="w-5 h-5 sm:w-4 sm:h-4" />
+                    <p className="text-xs text-text-muted uppercase tracking-wide font-semibold mb-4">
+                      Select Payment Method
+                    </p>
+                    <motion.label
+                      whileHover={{ borderColor: '#9B2C46' }}
+                      className="flex items-center gap-4 p-5 border-2 border-border/30 rounded-xl cursor-pointer hover:bg-accent/5 transition-all min-h-[72px]"
+                    >
+                      <input type="radio" name="payment" value="razorpay" defaultChecked className="w-5 h-5 accent-accent cursor-pointer" />
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-text-primary">Razorpay</p>
-                        <p className="text-xs text-text-muted">Card, UPI, Netbanking, Wallets</p>
+                        <p className="text-base font-semibold text-text-primary">Razorpay Payments</p>
+                        <p className="text-xs text-text-muted mt-1">💳 Card • 🏦 UPI • 🏪 Netbanking • 🪙 Wallets</p>
                       </div>
-                    </label>
+                      <div className="text-accent text-2xl">→</div>
+                    </motion.label>
+                  </div>
+
+                  {/* Security Trust Badge */}
+                  <div className="flex items-center justify-center gap-6 py-6 px-4 bg-accent/5 rounded-xl border border-accent/20">
+                    <div className="text-center">
+                      <div className="text-2xl mb-1">🔒</div>
+                      <p className="text-xs text-text-muted">SSL Encrypted</p>
+                    </div>
+                    <div className="w-px h-12 bg-border/30" />
+                    <div className="text-center">
+                      <div className="text-2xl mb-1">✓</div>
+                      <p className="text-xs text-text-muted">Secure Payment</p>
+                    </div>
                   </div>
 
                   {/* Desktop Place Order - Hidden on mobile */}
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={handleCreateOrder}
                     disabled={loading}
-                    className="hidden sm:flex w-full py-4 bg-text-primary text-background rounded-full font-medium hover:bg-text-secondary transition-all disabled:opacity-50 disabled:cursor-not-allowed items-center justify-center gap-2 min-h-[52px]"
+                    className="hidden sm:flex w-full py-4 bg-accent text-white rounded-full font-semibold hover:bg-accent/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed items-center justify-center gap-3 min-h-[52px] shadow-md hover:shadow-lg text-base"
                   >
                     {loading ? (
                       <>
-                        <div className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" />
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                         <span>Processing...</span>
                       </>
                     ) : (
                       <>
-                        <Lock className="w-4 h-4" />
-                        <span>Place Secure Order</span>
+                        <Lock className="w-5 h-5" />
+                        <span>Complete Purchase</span>
                       </>
                     )}
-                  </button>
+                  </motion.button>
 
                   <p className="hidden sm:block text-center text-xs text-text-muted">
-                    Your payment information is encrypted and secure
+                    Your payment is encrypted & processed securely by Razorpay
                   </p>
                 </div>
               ) : (
-                <p className="text-sm text-text-muted">Complete delivery confirmation first</p>
+                <p className="text-sm text-text-muted py-8 text-center">Complete delivery confirmation first</p>
               )}
             </CollapsibleSection>
 
@@ -488,58 +682,63 @@ export default function CheckoutPage() {
               RIGHT: ORDER SUMMARY - Hidden on mobile, shown below on tablet+
               ============================================================ */}
           <aside className="hidden lg:block lg:sticky lg:top-24 lg:self-start">
-            <div className="space-y-6">
+            <div className="space-y-6 bg-gradient-to-br from-accent/5 via-transparent to-accent/3 rounded-2xl p-6 border border-accent/20">
               
               {/* Summary Header */}
               <div>
-                <p className="text-xs uppercase tracking-widest text-text-muted mb-4">
+                <p className="text-xs uppercase tracking-widest text-text-muted font-semibold mb-4">
                   Order Summary
                 </p>
               </div>
 
               {/* Items Preview */}
-              <div className="space-y-3">
+              <div className="space-y-3 pb-4 border-b border-border/20">
                 {items.map((item) => (
-                  <div key={item.productId} className="flex items-center gap-3">
-                    <div className="relative w-12 h-12 flex-shrink-0 rounded overflow-hidden bg-background-white border border-border/30">
+                  <motion.div 
+                    key={item.productId} 
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="flex items-center gap-3"
+                  >
+                    <div className="relative w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden bg-white border border-border/20 shadow-sm">
                       <Image
                         src={item.image}
                         alt={item.name}
                         fill
                         className="object-cover"
-                        sizes="48px"
+                        sizes="56px"
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-text-primary truncate">{item.name}</p>
+                      <p className="text-sm font-medium text-text-primary truncate">{item.name}</p>
                       <p className="text-xs text-text-muted">Qty: {item.quantity}</p>
                     </div>
-                    <p className="text-xs text-text-primary font-medium">
+                    <p className="text-sm font-semibold text-text-primary whitespace-nowrap">
                       ₹{(item.price * item.quantity).toLocaleString('en-IN')}
                     </p>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
 
-              {/* Pricing */}
-              <div className="pt-4 border-t border-border/30 space-y-2">
+              {/* Pricing Breakdown */}
+              <div className="space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-text-secondary">Subtotal</span>
-                  <span className="text-text-primary">₹{totalPrice.toLocaleString('en-IN')}</span>
+                  <span className="text-text-primary font-medium">₹{totalPrice.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-text-secondary">Shipping</span>
-                  <span className="text-text-muted text-xs">Free</span>
+                  <span className="text-success text-xs font-semibold">FREE</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-text-secondary">Tax</span>
                   <span className="text-text-muted text-xs">Included</span>
                 </div>
                 
-                <div className="pt-3 border-t border-text-primary/40">
-                  <div className="flex justify-between">
-                    <span className="text-text-primary font-medium">Total</span>
-                    <span className="text-lg font-medium text-text-primary">
+                <div className="pt-3 border-t-2 border-accent/30 mt-3">
+                  <div className="flex justify-between items-baseline gap-2">
+                    <span className="text-text-primary font-semibold">Total</span>
+                    <span className="text-2xl font-bold text-accent">
                       ₹{totalPrice.toLocaleString('en-IN')}
                     </span>
                   </div>
@@ -557,36 +756,42 @@ export default function CheckoutPage() {
           MOBILE STICKY PLACE ORDER BAR
           ============================================================ */}
       {currentStep === 'payment' && sections[1].isComplete && (
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-50 safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
+        <motion.div
+          initial={{ y: 100 }}
+          animate={{ y: 0 }}
+          className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t-2 border-border/20 px-4 py-3 z-50 safe-area-bottom shadow-[0_-4px_24px_rgba(0,0,0,0.1)]"
+        >
           <div className="flex items-center gap-3">
             {/* Total Display */}
             <div className="flex-1">
-              <p className="text-xs text-text-muted">Total</p>
-              <p className="text-lg font-bold text-text-primary">
+              <p className="text-xs text-text-muted uppercase tracking-wide font-semibold">Total</p>
+              <p className="text-lg font-bold text-accent">
                 ₹{totalPrice.toLocaleString('en-IN')}
               </p>
             </div>
             
             {/* Place Order Button */}
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={handleCreateOrder}
               disabled={loading}
-              className="flex-1 py-3.5 bg-text-primary text-background rounded-full font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
+              className="flex-1 py-3.5 bg-accent text-white rounded-full font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
             >
               {loading ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   <span>Processing</span>
                 </>
               ) : (
                 <>
-                  <Lock className="w-3.5 h-3.5" />
-                  <span>Place Order</span>
+                  <Lock className="w-4 h-4" />
+                  <span>Pay Now</span>
                 </>
               )}
-            </button>
+            </motion.button>
           </div>
-        </div>
+        </motion.div>
       )}
     </main>
   );
