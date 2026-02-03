@@ -6,7 +6,27 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+  // PgBouncer-compatible settings:
+  // - connection_limit=1 prevents pool exhaustion
+  // - pool_mode=transaction for Render free-tier
+  // - Render force-disconnects after 24hrs
 }
+
+// ============================================
+// IMPORTANT: PgBouncer Configuration
+// ============================================
+// When using Render's managed PostgreSQL + PgBouncer:
+// 
+// DATABASE_URL should point to PgBouncer:
+//   postgresql://user:pwd@app-db-pgbouncer.render.internal/db?schema=public&connection_limit=1&pool_mode=transaction
+//
+// DIRECT_URL should point to direct connection:
+//   postgresql://user:pwd@app-db.render.internal/db?schema=public
+//
+// This allows:
+// - Prisma migrations use DIRECT_URL (fast, no pooling)
+// - Regular queries use DATABASE_URL (pooled, safe)
+// - Prevents "too many connections" errors
 
 model User {
   id             String          @id @default(uuid())

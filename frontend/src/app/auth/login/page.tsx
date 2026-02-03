@@ -132,7 +132,7 @@ export default function LoginPage() {
     try {
       console.log('[Login] ✅ Verifying OTP for:', email);
 
-      // Verify OTP
+      // Verify OTP with Supabase
       const { data, error: verifyError } = await supabase.auth.verifyOtp({
         email,
         token: otp,
@@ -153,19 +153,87 @@ export default function LoginPage() {
         throw new Error('No user returned from Supabase');
       }
 
-      // Call backend to get/create user and JWT
-      console.log('[Login] 📤 Sending to backend:', { supabaseId: supabaseUser.id, email: supabaseUser.email, fullName: supabaseUser.user_metadata?.full_name });
-      
-      const { data: backendData } = await api.post('/auth/otp-login', {
-        supabaseId: supabaseUser.id,
+      // ============================================
+      // CRITICAL: Call backend with supabaseId
+      // ============================================
+      // The backend REQUIRES supabaseId to:
+      // 1. Find or create user in database
+      // 2. Link Supabase auth to backend user
+      // 3. Return JWT for protected endpoints
+      //
+      // If supabaseId is missing or empty:
+      // - Backend will return 400 error
+      // - Frontend should retry (retryable: true)
+      // - After 3 retries, give up and show error
+
+      const supabaseId = supabaseUser.id;
+      if (!supabaseId) {
+        throw new Error('No supabaseId from Supabase user (auth flow broken)');
+      }
+
+      console.log('[Login] 📤 Sending to backend with supabaseId:', {
+        supabaseId: supabaseId.slice(0, 8) + '...', // Don't log full ID
         email: supabaseUser.email,
-        fullName: supabaseUser.user_metadata?.full_name || '',
+        fullName: supabaseUser.user_metadata?.full_name || '(not set)',
       });
 
-      console.log('[Login] 📥 Backend response:', backendData);
+      // ============================================
+      // BACKEND CALL WITH RETRY LOGIC
+      // ============================================
+      // If the backend is temporarily down, retry up to 3 times
+      // But if we get a 400 error, don't retry (validation error)
+
+      let backendData = null;
+      let lastError = null;
+      let retryCount = 0;
+      const MAX_RETRIES = 3;
+
+      for (retryCount = 0; retryCount < MAX_RETRIES; retryCount++) {
+        try {
+          const response = await api.post('/auth/otp-login', {
+            supabaseId,
+            email: supabaseUser.email,
+            fullName: supabaseUser.user_metadata?.full_name || '',
+          });
+
+          backendData = response.data;
+          console.log('[Login] 📥 Backend response (attempt', retryCount + 1, '):', backendData);
+          break; // Success, exit retry loop
+        } catch (err: any) {
+          lastError = err;
+
+          // Check if error is retryable
+          if (err.response?.status === 400) {
+            // 400: Bad request (non-retryable)
+            // Usually means validation error
+            console.error('[Login] ❌ Backend validation error (400):', err.response?.data);
+            throw err; // Don't retry validation errors
+          }
+
+          if (err.response?.status === 401 || err.response?.status === 403) {
+            // 401/403: Auth error (non-retryable)
+            console.error('[Login] ❌ Backend auth error:', err.response?.data);
+            throw err;
+          }
+
+          // 5xx or network error: retryable
+          if (retryCount < MAX_RETRIES - 1) {
+            const delayMs = 500 * Math.pow(2, retryCount); // Exponential backoff
+            console.warn('[Login] 🔄 Retrying backend call (attempt', retryCount + 2, '/', MAX_RETRIES, ') in', delayMs, 'ms');
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+          } else {
+            console.error('[Login] ❌ Max retries exceeded');
+            throw err;
+          }
+        }
+      }
+
+      if (!backendData) {
+        throw lastError || new Error('Backend call failed');
+      }
 
       if (!backendData?.success) {
-        throw new Error('Backend login failed');
+        throw new Error(backendData?.error || 'Backend login failed');
       }
 
       const { user: backendUser, token: jwtToken } = backendData.data;
@@ -182,32 +250,33 @@ export default function LoginPage() {
       });
 
       setMessage('Login successful! Redirecting...');
-      
+
       // Let the redirect guard handle it
       setTimeout(() => {
         router.push('/account');
       }, 500);
     } catch (err: any) {
       console.error('[Login] ❌ Verification error:', err);
-      
+
       // Log backend response error details
       if (err.response?.data) {
         console.error('[Login] 📥 Backend error response:', err.response.data);
       }
+
       if (err.response?.status === 400) {
         console.error('[Login] ❌ Backend validation error (400):', {
           status: err.response.status,
           data: err.response.data,
         });
       }
-      
+
       setError(err.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  // 🔑 ADMIN PASSWORD LOGIN (DEV ONLY)
+  // 🔑 ADMIN PASSWORD LOGIN (DEV ONLY - Uses separate endpoint)
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -222,32 +291,32 @@ export default function LoginPage() {
     try {
       console.log('[Login] 🔐 Admin login attempt for:', adminEmail);
 
-      // Supabase password login
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      // ============================================
+      // IMPORTANT: Admin login flow is SEPARATE
+      // ============================================
+      // Do NOT use OTP login endpoint!
+      // Admin login:
+      // 1. Email + password (NOT Supabase OTP)
+      // 2. Uses /api/auth/admin-login endpoint
+      // 3. Returns JWT if credentials valid
+      //
+      // This is completely separate from user OTP login
+
+      const { data: backendData } = await api.post('/auth/admin-login', {
         email: adminEmail,
         password: adminPassword,
       });
 
-      if (signInError || !data.session) {
-        console.error('[Login] ❌ Admin signin failed:', signInError?.message);
-        setError(signInError?.message || 'Invalid credentials');
-        return;
+      if (!backendData?.success) {
+        throw new Error(backendData?.error || 'Admin login failed');
       }
 
-      const supabaseUser = data.user;
+      const backendUser = backendData.data?.user;
+      const jwtToken = backendData.data?.token;
 
-      // Call backend to get/create admin user
-      const { data: backendData } = await api.post('/auth/otp-login', {
-        supabaseId: supabaseUser.id,
-        email: supabaseUser.email,
-        fullName: supabaseUser.user_metadata?.full_name || 'Admin',
-      });
-
-      if (!backendData?.success || backendData.data.user.role !== 'ADMIN') {
+      if (backendUser?.role !== 'ADMIN') {
         throw new Error('Admin access required');
       }
-
-      const { user: backendUser, token: jwtToken } = backendData.data;
 
       console.log('[Login] ✅ Admin login successful:', { userId: backendUser.id });
 
@@ -261,7 +330,7 @@ export default function LoginPage() {
       });
 
       setMessage('Admin login successful! Redirecting...');
-      
+
       setTimeout(() => {
         router.push('/admin');
       }, 500);

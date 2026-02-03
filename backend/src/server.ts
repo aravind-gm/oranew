@@ -3,10 +3,6 @@ import dotenv from 'dotenv';
 import express, { Application, NextFunction, Request, Response } from 'express';
 import path from 'path';
 
-import { isStorageConfigured, testStorageConnection } from './config/supabase';
-import { errorHandler } from './middleware/errorHandler';
-import { notFound } from './middleware/notFound';
-
 // Routes
 import adminRoutes from './routes/admin.routes';
 import authRoutes from './routes/auth.routes';
@@ -20,8 +16,12 @@ import reviewRoutes from './routes/review.routes';
 import uploadRoutes from './routes/upload.routes';
 import userRoutes from './routes/user.routes';
 import wishlistRoutes from './routes/wishlist.routes';
+import healthRoutes from './routes/health.routes';
 
-dotenv.config();
+import { isStorageConfigured, testStorageConnection } from './config/supabase';
+import { errorHandler } from './middleware/errorHandler';
+import { notFound } from './middleware/notFound';
+import { warmupDatabase } from './config/database';
 
 const app: Application = express();
 const PORT = process.env.PORT || 8000;
@@ -240,6 +240,7 @@ app.get('/health/detailed', detailedHealthCheck);
 app.get('/api/health/detailed', detailedHealthCheck);
 
 // API Routes
+app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
@@ -264,17 +265,17 @@ app.use(errorHandler);
 // START SERVER (RENDER-SAFE STARTUP)
 // ============================================
 // 
-// Important: This startup is LAZY
-// - Does NOT aggressively test database on boot
-// - Does NOT crash if DB is temporarily unavailable
-// - First request will test/establish connection
-// - Prevents "cold start" failures
+// Important: This startup is SMART
+// - Warmup database connection on boot (Render cold start)
+// - But doesn't crash if DB is slow
+// - Returns proper 503 if DB unavailable
+// - Allows graceful recovery on connection failure
 //
 // Why this helps on Render:
-// - Render kills processes that hang on startup
-// - Aggressive DB tests can timeout on wake-up
-// - Lazy connection allows requests to trigger reconnect
-// - Server stays alive even if DB is briefly unavailable
+// - Cold start: server boots, DB might be waking too
+// - Warmup: polls DB with exponential backoff
+// - Timeout: gives up after 30s, still starts server
+// - First request will reinitialize connection
 
 app.listen(PORT, async () => {
   console.log(`
@@ -284,12 +285,26 @@ app.listen(PORT, async () => {
   ╠════════════════════════════════════════╣
   ║   Port: ${PORT.toString().padEnd(30)}║
   ║   Env:  ${(process.env.NODE_ENV || 'development').padEnd(30)}║
-  ║   Mode: LAZY (DB connects on demand)   ║
+  ║   Mode: AUTO-WARMUP on cold start      ║
   ╚════════════════════════════════════════╝
   `);
   
+  // Warmup database connection on startup
+  // This is especially important for Render free-tier
+  // DB might also be waking up from sleep
+  console.log('\n[Startup] 🔥 Warming up database connection...');
+  
+  const dbWarmed = await warmupDatabase(30000); // Wait max 30 seconds
+  
+  if (dbWarmed) {
+    console.log('[Startup] ✅ Database: READY');
+  } else {
+    console.warn('[Startup] ⚠️  Database: NOT READY (will retry on first request)');
+    console.log('[Startup] 📌 Possible causes: DB restarting, network delay, connection pool exhausted');
+  }
+
   // Test Supabase Storage connection at startup (optional, non-blocking)
-  console.log('\n[Startup] 🔍 Checking Supabase Storage configuration...');
+  console.log('[Startup] 🔍 Checking Supabase Storage configuration...');
   
   // Run storage check in background (don't block startup)
   if (isStorageConfigured()) {
@@ -306,10 +321,10 @@ app.listen(PORT, async () => {
     console.log('          Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in backend/.env');
   }
 
-  console.log('\n[Startup] ✅ Server ready');
-  console.log('[Startup] 📌 Database connection: LAZY (connects on first request)');
-  console.log('[Startup] 📌 Keep-alive endpoint: GET /api/health');
-  console.log('[Startup] 📌 Recovery strategy: Auto-reconnect on connection error\n');
+  console.log('\n[Startup] ✅ Server ready for requests');
+  console.log('[Startup] 📌 Health check: GET /api/health');
+  console.log('[Startup] 📌 Detailed health: GET /api/health/detailed (requires auth)');
+  console.log('[Startup] 📌 Auto-recovery: Enabled (reconnect on connection error)\n');
 });
 
 export default app;

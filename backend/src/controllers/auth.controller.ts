@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { NextFunction, Request, Response } from 'express';
 import { prisma } from '../config/database';
 import { withRetry } from '../utils/retry';
+import { classifyDatabaseError } from '../utils/retry';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { getWelcomeEmailTemplate, sendEmail } from '../utils/email';
@@ -98,11 +99,14 @@ export const getOrCreateUser = async (
 
 // @desc    Login user (DEPRECATED - Use Supabase OTP instead)
 // @desc    OTP Login - Create/get user and return JWT
-// @route   POST /api/auth/login
-// @access  Public
-// @desc    OTP Login - Supabase OTP users
 // @route   POST /api/auth/otp-login
-// @access  Public
+// @access  Public (Requires valid supabaseId from Supabase Auth)
+// 
+// CRITICAL: This endpoint MUST:
+// 1. Receive supabaseId from Supabase OTP flow (not auto-generated)
+// 2. Link it to backend user record
+// 3. Handle DB connection failures gracefully
+// 4. Return structured error responses
 export const otpLogin = async (
   req: Request,
   res: Response,
@@ -113,60 +117,97 @@ export const otpLogin = async (
 
     console.log('[Auth] 📥 OTP Login:', { supabaseId, email });
 
+    // ============================================
+    // VALIDATION: Reject invalid requests
+    // ============================================
     if (!supabaseId || !email) {
       console.error('[Auth] ❌ Invalid OTP payload:', { supabaseId, email });
       return res.status(400).json({
         success: false,
-        error: 'supabaseId and email required',
+        error: 'supabaseId and email are required',
+        retryable: false,
+      });
+    }
+
+    // supabaseId must be a valid UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(supabaseId)) {
+      console.error('[Auth] ❌ Invalid supabaseId format:', { supabaseId });
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid supabaseId format',
+        retryable: false,
       });
     }
 
     try {
-      // Try to find user by supabaseId first
-      let user = await prisma.user.findUnique({
-        where: { supabaseId },
-      });
+      // ============================================
+      // STEP 1: Try to find user by supabaseId
+      // ============================================
+      let user = await withRetry(() =>
+        prisma.user.findUnique({
+          where: { supabaseId },
+        })
+      );
 
       if (user) {
         console.log('[Auth] 🔄 Found by supabaseId, updating:', { id: user.id });
-        user = await prisma.user.update({
-          where: { id: user.id },
-          data: {
-            email,
-            fullName: fullName || user.fullName,
-            isVerified: true,
-          },
-        });
-      } else {
-        // Try by email
-        user = await prisma.user.findUnique({
-          where: { email },
-        });
-
-        if (user) {
-          console.log('[Auth] 🔄 Found by email, updating:', { id: user.id });
-          user = await prisma.user.update({
+        // Update existing user
+        user = await withRetry(() =>
+          prisma.user.update({
             where: { id: user.id },
             data: {
-              supabaseId,
+              email,
               fullName: fullName || user.fullName,
               isVerified: true,
             },
-          });
+          })
+        );
+      } else {
+        // ============================================
+        // STEP 2: Try to find user by email
+        // ============================================
+        user = await withRetry(() =>
+          prisma.user.findUnique({
+            where: { email },
+          })
+        );
+
+        if (user) {
+          console.log('[Auth] 🔄 Found by email, updating:', { id: user.id });
+          // Link supabaseId to existing user
+          user = await withRetry(() =>
+            prisma.user.update({
+              where: { id: user.id },
+              data: {
+                supabaseId,
+                fullName: fullName || user.fullName,
+                isVerified: true,
+              },
+            })
+          );
         } else {
-          console.log('[Auth] ✨ Creating OTP user:', { email });
-          user = await prisma.user.create({
-            data: {
-              supabaseId,
-              email,
-              fullName: fullName || 'User',
-              isVerified: true,
-              role: 'CUSTOMER' as const,
-            },
-          });
+          // ============================================
+          // STEP 3: Create new user with supabaseId
+          // ============================================
+          console.log('[Auth] ✨ Creating new OTP user:', { email });
+          user = await withRetry(() =>
+            prisma.user.create({
+              data: {
+                supabaseId,
+                email,
+                fullName: fullName || 'User',
+                isVerified: true,
+                role: 'CUSTOMER' as const,
+              },
+            })
+          );
         }
       }
 
+      // ============================================
+      // Generate JWT token for backend
+      // ============================================
       const token = generateToken({
         id: user.id,
         email: user.email,
@@ -188,10 +229,23 @@ export const otpLogin = async (
         },
       });
     } catch (dbError) {
-      console.error('[Auth] 💥 Database error:', {
+      // ============================================
+      // Handle database errors with classification
+      // ============================================
+      const classified = classifyDatabaseError(dbError);
+      
+      console.error('[Auth] 💥 Database error in OTP login:', {
         message: dbError instanceof Error ? dbError.message : String(dbError),
+        code: (dbError as any).code,
+        retryable: classified.retryable,
       });
-      throw dbError;
+
+      return res.status(classified.statusCode).json({
+        success: false,
+        error: classified.message,
+        retryable: classified.retryable,
+        code: classified.code,
+      });
     }
   } catch (error) {
     console.error('[Auth] ❌ OTP login failed:', error instanceof Error ? error.message : String(error));
@@ -199,9 +253,14 @@ export const otpLogin = async (
   }
 };
 
-// @desc    Admin Login - Email + password
+// @desc    Admin Login - Email + password (SEPARATE FROM OTP)
 // @route   POST /api/auth/admin-login
 // @access  Public
+//
+// CRITICAL: This is a SEPARATE flow from OTP login!
+// - OTP login: Uses Supabase-generated supabaseId
+// - Admin login: Uses password + email (no OTP)
+// - Never confuse the two or admin login will fail
 export const adminLogin = async (
   req: Request,
   res: Response,
@@ -212,73 +271,111 @@ export const adminLogin = async (
 
     console.log('[Auth] 📥 Admin login attempt:', { email });
 
+    // ============================================
+    // VALIDATION
+    // ============================================
     if (!email || !password) {
       return res.status(400).json({
         success: false,
         error: 'email and password required',
+        retryable: false,
       });
     }
 
-    // Find admin user
-    const admin = await prisma.user.findUnique({
-      where: { email },
-    });
+    try {
+      // ============================================
+      // Find admin user
+      // ============================================
+      const admin = await withRetry(() =>
+        prisma.user.findUnique({
+          where: { email },
+        })
+      );
 
-    if (!admin) {
-      console.log('[Auth] ❌ Admin not found:', { email });
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid credentials',
+      if (!admin) {
+        console.log('[Auth] ❌ Admin not found:', { email });
+        return res.status(401).json({
+          success: false,
+          error: 'Invalid credentials',
+          retryable: false,
+        });
+      }
+
+      // ============================================
+      // Check admin role
+      // ============================================
+      if (admin.role !== 'ADMIN' && admin.role !== 'STAFF') {
+        console.log('[Auth] ❌ User is not admin:', { email, role: admin.role });
+        return res.status(403).json({
+          success: false,
+          error: 'You do not have admin access',
+          retryable: false,
+        });
+      }
+
+      // ============================================
+      // Verify password
+      // ============================================
+      const passwordField = (admin as any).password;
+      if (!passwordField) {
+        console.log('[Auth] ❌ Admin has no password set:', { email });
+        return res.status(401).json({
+          success: false,
+          error: 'Invalid credentials',
+          retryable: false,
+        });
+      }
+
+      const isPasswordValid = await bcrypt.compare(password, passwordField);
+      if (!isPasswordValid) {
+        console.log('[Auth] ❌ Invalid password:', { email });
+        return res.status(401).json({
+          success: false,
+          error: 'Invalid credentials',
+          retryable: false,
+        });
+      }
+
+      // ============================================
+      // Generate JWT token
+      // ============================================
+      const token = generateToken({
+        id: admin.id,
+        email: admin.email,
+        role: admin.role,
       });
-    }
 
-    if (admin.role !== 'ADMIN' && admin.role !== 'STAFF') {
-      console.log('[Auth] ❌ User is not admin:', { email, role: admin.role });
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized',
-      });
-    }
+      console.log('[Auth] ✅ Admin login success:', { id: admin.id, email });
 
-    // Verify password
-    const passwordField = (admin as any).password;
-    if (!passwordField) {
-      console.log('[Auth] ❌ Admin has no password set:', { email });
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid credentials',
-      });
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, passwordField);
-    if (!isPasswordValid) {
-      console.log('[Auth] ❌ Invalid password:', { email });
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid credentials',
-      });
-    }
-
-    const token = generateToken({
-      id: admin.id,
-      email: admin.email,
-      role: admin.role,
-    });
-
-    console.log('[Auth] ✅ Admin login success:', { id: admin.id, email });
-
-    return res.status(200).json({
-      success: true,
-      data: {
-        user: {
-          id: admin.id,
-          email: admin.email,
-          fullName: admin.fullName,
-          role: admin.role,
+      return res.status(200).json({
+        success: true,
+        data: {
+          user: {
+            id: admin.id,
+            email: admin.email,
+            fullName: admin.fullName,
+            role: admin.role,
+          },
+          token,
         },
-        token,
-      },
-    });
+      });
+    } catch (dbError) {
+      // ============================================
+      // Handle database errors
+      // ============================================
+      const classified = classifyDatabaseError(dbError);
+      
+      console.error('[Auth] 💥 Database error in admin login:', {
+        message: dbError instanceof Error ? dbError.message : String(dbError),
+        retryable: classified.retryable,
+      });
+
+      return res.status(classified.statusCode).json({
+        success: false,
+        error: classified.message,
+        retryable: classified.retryable,
+      });
+    }
   } catch (error) {
     console.error('[Auth] ❌ Admin login failed:', error instanceof Error ? error.message : String(error));
     next(error);
