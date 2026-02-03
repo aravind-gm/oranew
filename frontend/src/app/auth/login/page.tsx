@@ -1,5 +1,6 @@
 'use client';
 
+// OTP Login Page - Supabase Email OTP Authentication
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import api from '@/lib/api';
