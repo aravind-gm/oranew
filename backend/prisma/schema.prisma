@@ -13,20 +13,21 @@ datasource db {
 }
 
 // ============================================
-// IMPORTANT: PgBouncer Configuration
+// IMPORTANT: Supabase PgBouncer Configuration
 // ============================================
-// When using Render's managed PostgreSQL + PgBouncer:
+// When using Supabase with Render (serverless/free tier):
 // 
-// DATABASE_URL should point to PgBouncer:
-//   postgresql://user:pwd@app-db-pgbouncer.render.internal/db?schema=public&connection_limit=1&pool_mode=transaction
+// DATABASE_URL should point to Supabase PgBouncer:
+//   postgresql://postgres.[PROJECT]:[PWD]@aws-1-ap-south-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1
 //
-// DIRECT_URL should point to direct connection:
-//   postgresql://user:pwd@app-db.render.internal/db?schema=public
+// DIRECT_URL should point to direct Supabase connection:
+//   postgresql://postgres.[PROJECT]:[PWD]@db.[PROJECT].supabase.co:5432/postgres
 //
 // This allows:
-// - Prisma migrations use DIRECT_URL (fast, no pooling)
-// - Regular queries use DATABASE_URL (pooled, safe)
-// - Prevents "too many connections" errors
+// - Prisma migrations use DIRECT_URL (fast, direct)
+// - Regular queries use DATABASE_URL (pooled via PgBouncer)
+// - Prevents "too many connections" errors on serverless
+// - Compatible with Render's connection limits
 
 model User {
   id             String          @id @default(uuid())
