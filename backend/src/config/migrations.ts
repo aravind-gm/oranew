@@ -5,60 +5,80 @@ import { prisma } from './database';
 const execAsync = promisify(exec);
 
 /**
+ * Apply password_hash nullable migration directly via raw SQL
+ */
+async function applyPasswordHashMigration(): Promise<boolean> {
+  try {
+    console.log('[Migration] 🔍 Checking password_hash column constraint...');
+
+    // First, check the current constraint status
+    const checkResult = await prisma.$queryRaw<any[]>`
+      SELECT 
+        column_name,
+        is_nullable,
+        data_type
+      FROM information_schema.columns 
+      WHERE table_name = 'users' AND column_name = 'password_hash'
+    `;
+
+    if (!checkResult || checkResult.length === 0) {
+      console.log('[Migration] ℹ️  password_hash column not found (schema mismatch?)');
+      return false;
+    }
+
+    const column = checkResult[0];
+    console.log(`[Migration] Column status: ${column.column_name} (${column.data_type}), nullable=${column.is_nullable}`);
+
+    if (column.is_nullable === 'YES') {
+      console.log('[Migration] ✅ password_hash is already nullable - no action needed');
+      return true;
+    }
+
+    // Apply the migration
+    console.log('[Migration] ⏳ Applying: ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL');
+    await prisma.$executeRawUnsafe(
+      'ALTER TABLE "users" ALTER COLUMN "password_hash" DROP NOT NULL'
+    );
+    
+    console.log('[Migration] ✅ Successfully made password_hash nullable');
+    return true;
+  } catch (error: any) {
+    const errorMsg = error.message || String(error);
+    console.error('[Migration] ❌ Error:', errorMsg);
+    return false;
+  }
+}
+
+/**
  * Fallback: Apply critical migrations manually if prisma migrate fails
  * This handles cases where prisma can't authenticate with the database
  */
 async function applyManualMigrations(retries: number = 3): Promise<void> {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      console.log(`[Migration] 🔧 Applying manual migrations (attempt ${attempt}/${retries})...`);
+      console.log(`[Migration] 🔧 Attempt ${attempt}/${retries}: Applying manual migrations...`);
 
-      // Check if password_hash column is nullable
-      const columnInfo = await prisma.$queryRaw<any[]>`
-        SELECT is_nullable FROM information_schema.columns 
-        WHERE table_name = 'users' AND column_name = 'password_hash'
-      `;
-
-      if (columnInfo.length > 0 && columnInfo[0].is_nullable === 'YES') {
-        console.log('[Migration] ✅ password_hash column is already nullable');
+      const success = await applyPasswordHashMigration();
+      if (success) {
         return;
       }
 
-      // Apply the migration manually
-      console.log('[Migration] ⏳ Making password_hash column nullable...');
-      await prisma.$executeRaw`ALTER TABLE "users" ALTER COLUMN "password_hash" DROP NOT NULL`;
-      
-      console.log('[Migration] ✅ Manual migration applied: password_hash is now nullable');
-      return;
+      if (attempt < retries) {
+        console.log(`[Migration] ⏳ Retrying in 2 seconds...`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
     } catch (error: any) {
       const errorMsg = error.message || String(error);
-      
-      if (errorMsg.includes('already nullable') || errorMsg.includes('not a valid column') || errorMsg.includes('no attribute')) {
-        console.log('[Migration] ℹ️  Migration already applied or column structure differs');
-        return;
-      }
+      console.error(`[Migration] ⚠️  Attempt ${attempt} failed:`, errorMsg.split('\n')[0]);
 
-      if (errorMsg.includes('connect ECONNREFUSED') || errorMsg.includes('ENOTFOUND')) {
-        if (attempt < retries) {
-          console.log(`[Migration] ⏳ Database not ready, retrying in 2s...`);
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          continue;
-        }
-      }
-
-      if (attempt === retries) {
-        console.error('[Migration] ⚠️  Manual migration failed after retries:', errorMsg.split('\n')[0]);
-        // Continue anyway - the migration might be already applied
-        return;
-      }
-
-      // Retry on other errors
       if (attempt < retries) {
-        console.log(`[Migration] ⏳ Retrying after error...`);
+        console.log(`[Migration] ⏳ Retrying...`);
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
   }
+
+  console.log('[Migration] ⚠️  Manual migration completed (with possible errors)');
 }
 
 /**
