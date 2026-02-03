@@ -27,16 +27,16 @@ import { PrismaClient } from '@prisma/client';
 // - Error handlers allow graceful recovery
 // ============================================
 
-let prisma: PrismaClient;
+let globalPrisma: PrismaClient;
 
 const getPrismaClient = () => {
-  if (prisma) {
-    return prisma;
+  if (globalPrisma) {
+    return globalPrisma;
   }
 
   console.log('[DB] 🔌 Initializing Prisma Client (Singleton)...');
 
-  prisma = new PrismaClient({
+  globalPrisma = new PrismaClient({
     // Logging configuration
     log: process.env.NODE_ENV === 'development'
       ? ['query', 'error', 'warn']
@@ -44,17 +44,7 @@ const getPrismaClient = () => {
     errorFormat: 'pretty',
   });
 
-  // ============================================
-  // CONNECTION EVENT HANDLERS
-  // ============================================
-  // These detect when the database connection fails
-  // so we can implement graceful recovery
-
-  prisma.$on('beforeDisconnect', async () => {
-    console.warn('[DB] ⚠️  Database disconnect event detected');
-  });
-
-  return prisma;
+  return globalPrisma;
 };
 
 // Ensure we use the singleton
@@ -183,14 +173,3 @@ export const warmupDatabase = async (maxWaitMs = 30000): Promise<boolean> => {
 };
 
 export default prisma;
-
-      console.log('[DB Recovery] Successfully reconnected');
-      return true;
-    } catch (reconnectError) {
-      console.error('[DB Recovery] Reconnect failed:', reconnectError instanceof Error ? reconnectError.message : String(reconnectError));
-      return false;
-    }
-  }
-};
-
-export { prisma };
