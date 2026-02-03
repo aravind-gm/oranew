@@ -6,6 +6,7 @@ import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { getWelcomeEmailTemplate, sendEmail } from '../utils/email';
 import { generateToken } from '../utils/jwt';
+import bcrypt from 'bcryptjs';
 
 // @desc    Get or create user from Supabase Auth
 // @route   POST /api/auth/me
@@ -99,7 +100,10 @@ export const getOrCreateUser = async (
 // @desc    OTP Login - Create/get user and return JWT
 // @route   POST /api/auth/login
 // @access  Public
-export const login = async (
+// @desc    OTP Login - Supabase OTP users
+// @route   POST /api/auth/otp-login
+// @access  Public
+export const otpLogin = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -107,10 +111,10 @@ export const login = async (
   try {
     const { supabaseId, email, fullName } = req.body;
 
-    console.log('[Auth] 📥 POST /auth/login:', { supabaseId, email });
+    console.log('[Auth] 📥 OTP Login:', { supabaseId, email });
 
     if (!supabaseId || !email) {
-      console.error('[Auth] ❌ Missing payload:', { supabaseId, email });
+      console.error('[Auth] ❌ Invalid OTP payload:', { supabaseId, email });
       return res.status(400).json({
         success: false,
         error: 'supabaseId and email required',
@@ -118,46 +122,58 @@ export const login = async (
     }
 
     try {
-      // Find or create user
+      // Try to find user by supabaseId first
       let user = await prisma.user.findUnique({
-        where: { email },
+        where: { supabaseId },
       });
 
       if (user) {
-        console.log('[Auth] 🔄 Found user, updating:', { id: user.id, email });
-        // Update existing user with supabaseId
+        console.log('[Auth] 🔄 Found by supabaseId, updating:', { id: user.id });
         user = await prisma.user.update({
           where: { id: user.id },
           data: {
-            supabaseId,
+            email,
             fullName: fullName || user.fullName,
             isVerified: true,
           },
         });
       } else {
-        console.log('[Auth] ✨ Creating new user:', { email });
-        // Create new user
-        user = await prisma.user.create({
-          data: {
-            supabaseId,
-            email,
-            fullName: fullName || 'User',
-            isVerified: true,
-            role: 'CUSTOMER' as const,
-          },
+        // Try by email
+        user = await prisma.user.findUnique({
+          where: { email },
         });
+
+        if (user) {
+          console.log('[Auth] 🔄 Found by email, updating:', { id: user.id });
+          user = await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              supabaseId,
+              fullName: fullName || user.fullName,
+              isVerified: true,
+            },
+          });
+        } else {
+          console.log('[Auth] ✨ Creating OTP user:', { email });
+          user = await prisma.user.create({
+            data: {
+              supabaseId,
+              email,
+              fullName: fullName || 'User',
+              isVerified: true,
+              role: 'CUSTOMER' as const,
+            },
+          });
+        }
       }
 
-      console.log('[Auth] ✅ User ready:', { id: user.id, email: user.email });
-
-      // Generate JWT
       const token = generateToken({
         id: user.id,
         email: user.email,
         role: user.role,
       });
 
-      console.log('[Auth] 🔐 Token generated');
+      console.log('[Auth] ✅ OTP login success:', { id: user.id });
 
       return res.status(200).json({
         success: true,
@@ -174,16 +190,126 @@ export const login = async (
     } catch (dbError) {
       console.error('[Auth] 💥 Database error:', {
         message: dbError instanceof Error ? dbError.message : String(dbError),
-        code: (dbError as any)?.code,
       });
       throw dbError;
     }
   } catch (error) {
-    console.error('[Auth] ❌ Login failed:', {
-      message: error instanceof Error ? error.message : String(error),
-    });
+    console.error('[Auth] ❌ OTP login failed:', error instanceof Error ? error.message : String(error));
     next(error);
   }
+};
+
+// @desc    Admin Login - Email + password
+// @route   POST /api/auth/admin-login
+// @access  Public
+export const adminLogin = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { email, password } = req.body;
+
+    console.log('[Auth] 📥 Admin login attempt:', { email });
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'email and password required',
+      });
+    }
+
+    // Find admin user
+    const admin = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!admin) {
+      console.log('[Auth] ❌ Admin not found:', { email });
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid credentials',
+      });
+    }
+
+    if (admin.role !== 'ADMIN' && admin.role !== 'STAFF') {
+      console.log('[Auth] ❌ User is not admin:', { email, role: admin.role });
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized',
+      });
+    }
+
+    // Verify password
+    const passwordField = (admin as any).password;
+    if (!passwordField) {
+      console.log('[Auth] ❌ Admin has no password set:', { email });
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid credentials',
+      });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, passwordField);
+    if (!isPasswordValid) {
+      console.log('[Auth] ❌ Invalid password:', { email });
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid credentials',
+      });
+    }
+
+    const token = generateToken({
+      id: admin.id,
+      email: admin.email,
+      role: admin.role,
+    });
+
+    console.log('[Auth] ✅ Admin login success:', { id: admin.id, email });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        user: {
+          id: admin.id,
+          email: admin.email,
+          fullName: admin.fullName,
+          role: admin.role,
+        },
+        token,
+      },
+    });
+  } catch (error) {
+    console.error('[Auth] ❌ Admin login failed:', error instanceof Error ? error.message : String(error));
+    next(error);
+  }
+};
+
+// @desc    Legacy login (kept for backward compatibility)
+// @route   POST /api/auth/login
+// @access  Public
+export const login = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const { supabaseId, email, password } = req.body;
+
+  // If it's OTP login (has supabaseId)
+  if (supabaseId) {
+    return otpLogin(req, res, next);
+  }
+
+  // If it's admin login (has password)
+  if (password) {
+    return adminLogin(req, res, next);
+  }
+
+  // Invalid payload
+  return res.status(400).json({
+    success: false,
+    error: 'Invalid payload',
+  });
 };
 
 // @desc    Register new user (DEPRECATED - Use Supabase OTP instead)

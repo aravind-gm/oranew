@@ -156,7 +156,7 @@ export default function LoginPage() {
       // Call backend to get/create user and JWT
       console.log('[Login] 📤 Sending to backend:', { supabaseId: supabaseUser.id, email: supabaseUser.email, fullName: supabaseUser.user_metadata?.full_name });
       
-      const { data: backendData } = await api.post('/auth/login', {
+      const { data: backendData } = await api.post('/auth/otp-login', {
         supabaseId: supabaseUser.id,
         email: supabaseUser.email,
         fullName: supabaseUser.user_metadata?.full_name || '',
@@ -237,7 +237,7 @@ export default function LoginPage() {
       const supabaseUser = data.user;
 
       // Call backend to get/create admin user
-      const { data: backendData } = await api.post('/auth/login', {
+      const { data: backendData } = await api.post('/auth/otp-login', {
         supabaseId: supabaseUser.id,
         email: supabaseUser.email,
         fullName: supabaseUser.user_metadata?.full_name || 'Admin',

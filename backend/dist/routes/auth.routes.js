@@ -7,6 +7,8 @@ const rateLimiter_1 = require("../middleware/rateLimiter");
 const router = (0, express_1.Router)();
 router.post('/register', rateLimiter_1.authLimiter, auth_controller_1.register);
 router.post('/login', rateLimiter_1.authLimiter, auth_controller_1.login);
+router.post('/otp-login', rateLimiter_1.authLimiter, auth_controller_1.otpLogin);
+router.post('/admin-login', rateLimiter_1.authLimiter, auth_controller_1.adminLogin);
 router.post('/forgot-password', rateLimiter_1.authLimiter, auth_controller_1.forgotPassword);
 router.post('/reset-password', rateLimiter_1.authLimiter, auth_controller_1.resetPassword);
 router.get('/me', auth_1.protect, auth_controller_1.getMe);
