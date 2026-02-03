@@ -361,6 +361,7 @@ export default function CollectionsPage() {
       const params: any = {
         page,
         limit: pagination.limit,
+        sortBy, // Add sortBy parameter (send to backend as 'sortBy')
       };
 
       // Only add category to params if user has selected one
@@ -378,7 +379,7 @@ export default function CollectionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [activeCategory, pagination.limit]);
+  }, [activeCategory, pagination.limit, sortBy]);
 
   // Fetch on filter change
   useEffect(() => {

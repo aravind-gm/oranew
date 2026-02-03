@@ -24,6 +24,10 @@ export const metadata: Metadata = {
   title: 'ORA Jewellery | Premium Artificial Fashion Jewellery',
   description: 'own. radiate. adorn. - Discover our exquisite collection of artificial fashion jewellery. Chains, necklaces, bracelets, rings, earrings and more.',
   keywords: 'jewellery, fashion jewellery, artificial jewellery, necklaces, earrings, bracelets, rings, ORA',
+  icons: {
+    icon: '/oralogo.png',
+    apple: '/oralogo.png',
+  },
   openGraph: {
     title: 'ORA Jewellery',
     description: 'own. radiate. adorn.',
