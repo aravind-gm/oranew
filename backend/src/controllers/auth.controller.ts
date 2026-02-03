@@ -99,31 +99,6 @@ export const getOrCreateUser = async (
 // @desc    OTP Login - Create/get user and return JWT
 // @route   POST /api/auth/login
 // @access  Public
-let supabaseIdColumnAvailable: boolean | null = null;
-
-const hasSupabaseIdColumn = async (): Promise<boolean> => {
-  if (supabaseIdColumnAvailable !== null) {
-    return supabaseIdColumnAvailable;
-  }
-
-  try {
-    const result = await prisma.$queryRaw<{ column_name: string }[]>`
-      SELECT column_name
-      FROM information_schema.columns
-      WHERE table_name = 'users' AND column_name = 'supabase_id'
-      LIMIT 1
-    `;
-    supabaseIdColumnAvailable = result.length > 0;
-  } catch (error) {
-    console.warn('[Auth] ⚠️ Could not verify supabase_id column availability:', {
-      message: error instanceof Error ? error.message : String(error),
-    });
-    supabaseIdColumnAvailable = false;
-  }
-
-  return supabaseIdColumnAvailable;
-};
-
 export const login = async (
   req: Request,
   res: Response,
@@ -132,93 +107,58 @@ export const login = async (
   try {
     const { supabaseId, email, fullName } = req.body;
 
-    console.log('[Auth] 📥 POST /auth/login received:', { supabaseId, email, fullName });
+    console.log('[Auth] 📥 POST /auth/login:', { supabaseId, email });
 
-    // ✅ HARD validation (only required fields)
     if (!supabaseId || !email) {
-      console.error('[Auth] ❌ Missing required fields:', { supabaseId, email });
       return res.status(400).json({
         success: false,
-        error: 'supabaseId and email are required',
+        error: 'supabaseId and email required',
       });
     }
 
-    console.log('[Auth] 📧 OTP Login - Creating/updating user:', { supabaseId, email });
+    // Try email lookup first (most reliable since column might not exist yet)
+    let user = await withRetry(() =>
+      prisma.user.findUnique({
+        where: { email },
+        select: {
+          id: true,
+          email: true,
+          fullName: true,
+          role: true,
+          isVerified: true,
+          createdAt: true,
+        },
+      })
+    );
 
-    const canUseSupabaseId = await hasSupabaseIdColumn();
-
-    let user;
-    if (canUseSupabaseId) {
-      // FIX: Try to find existing user by supabaseId first (more reliable)
-      // Then fall back to email if not found
-      let existingUser = null;
-      try {
-        existingUser = await prisma.user.findUnique({
-          where: { supabaseId },
-        });
-      } catch (err) {
-        console.warn('[Auth] ⚠️ Could not query by supabaseId, falling back to email:', err instanceof Error ? err.message : String(err));
-      }
-
-      if (existingUser) {
-        // Update existing user
-        console.log('[Auth] 🔄 Updating existing user:', { supabaseId, userId: existingUser.id });
-        user = await withRetry(() =>
-          prisma.user.update({
-            where: { supabaseId },
-            data: {
-              fullName: fullName || existingUser.fullName,
-              isVerified: true,
-            },
-            select: {
-              id: true,
-              email: true,
-              fullName: true,
-              role: true,
-              isVerified: true,
-              createdAt: true,
-            },
-          })
-        );
-      } else {
-        // Create new user (or upsert by email if exists)
-        console.log('[Auth] ✨ Creating new user:', { supabaseId, email });
-        user = await withRetry(() =>
-          prisma.user.upsert({
-            where: { email },
-            update: {
-              supabaseId, // Link supabaseId to existing email-based account
-              fullName: fullName || undefined,
-              isVerified: true,
-            },
-            create: {
-              supabaseId,
-              email,
-              fullName: fullName || '',
-              isVerified: true,
-              role: 'CUSTOMER' as const,
-            },
-            select: {
-              id: true,
-              email: true,
-              fullName: true,
-              role: true,
-              isVerified: true,
-              createdAt: true,
-            },
-          })
-        );
-      }
-    } else {
-      console.warn('[Auth] ⚠️ supabase_id column missing. Falling back to email-only upsert.');
+    if (user) {
+      // Update existing user
+      console.log('[Auth] 🔄 Updating user:', { id: user.id });
       user = await withRetry(() =>
-        prisma.user.upsert({
-          where: { email },
-          update: {
-            fullName: fullName || undefined,
+        prisma.user.update({
+          where: { id: user.id },
+          data: {
+            supabaseId,
+            fullName: fullName || user.fullName,
             isVerified: true,
           },
-          create: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            role: true,
+            isVerified: true,
+            createdAt: true,
+          },
+        })
+      );
+    } else {
+      // Create new user
+      console.log('[Auth] ✨ Creating user:', { email });
+      user = await withRetry(() =>
+        prisma.user.create({
+          data: {
+            supabaseId,
             email,
             fullName: fullName || '',
             isVerified: true,
@@ -236,30 +176,20 @@ export const login = async (
       );
     }
 
-    console.log('[Auth] ✅ User created/updated:', { userId: user.id, email: user.email });
-
-    // Generate JWT token
     const token = generateToken({
       id: user.id,
       email: user.email,
       role: user.role,
     });
 
-    console.log('[Auth] 🔐 JWT generated for user:', user.id);
+    console.log('[Auth] ✅ Login success:', { id: user.id });
 
-    // ✅ Return success response with token
     return res.status(200).json({
       success: true,
-      data: {
-        user,
-        token,
-      },
+      data: { user, token },
     });
   } catch (error) {
-    console.error('[Auth] ❌ OTP login error:', {
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-    });
+    console.error('[Auth] ❌ Login error:', error instanceof Error ? error.message : String(error));
     next(error);
   }
 };
