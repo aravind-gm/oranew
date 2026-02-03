@@ -41,6 +41,7 @@ const getOrCreateUser = async (req, res, next) => {
             user = await (0, retry_1.withRetry)(() => database_1.prisma.user.create({
                 data: {
                     email: req.user.email,
+                    supabaseId: req.user.id,
                     fullName: req.user.email.split('@')[0], // Placeholder
                     isVerified: true, // Supabase verified the identity
                 },

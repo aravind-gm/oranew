@@ -50,6 +50,7 @@ export const getOrCreateUser = async (
         prisma.user.create({
           data: {
             email: req.user!.email,
+            supabaseId: req.user!.id,
             fullName: req.user!.email.split('@')[0], // Placeholder
             isVerified: true, // Supabase verified the identity
           },
