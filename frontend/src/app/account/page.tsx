@@ -1,7 +1,6 @@
 'use client';
 
 import api from '@/lib/api';
-import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -47,90 +46,16 @@ export default function AccountPage() {
 
         console.log('[Account Page] ✅ isHydrated = true, checking auth state');
 
-        // Check auth using AuthStore ONLY (no Supabase direct calls)
+        // Check auth using AuthStore ONLY
         if (!token || !user) {
           console.log('[Account Page] ❌ No token or user in AuthStore, redirecting to login');
           safeRedirect('/auth/login');
           return;
         }
 
-        // 🚨 ADMIN BYPASS - Never redirect admin
-        if (user.role === 'admin') {
-          console.log('[Account Page] ✅ Admin detected — bypassing profile checks');
-          setSessionUser(user);
-          setPageLoading(false);
-          fetchOrders();
-          return;
-        }
-
-        // 👤 NORMAL USER - Check profile completion
-        console.log('[Account Page] 👤 Regular user, checking profile completion...');
-        
-        // Try to fetch profile with retry
-        let profile = null;
-        let error = null;
-        let retries = 0;
-        const maxRetries = 3;
-
-        while (retries < maxRetries && !profile) {
-          try {
-            const result = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', user.id)
-              .single();
-
-            error = result.error;
-            profile = result.data;
-
-            if (!profile && error?.code !== 'PGRST116') {
-              // Non-404 error, stop retrying
-              console.error('[Account Page] Non-404 Supabase error:', error);
-              break;
-            }
-
-            if (!profile && retries < maxRetries - 1) {
-              // Profile not found, wait and retry
-              console.log(`[Account Page] Profile not found (attempt ${retries + 1}/${maxRetries}), retrying...`);
-              await new Promise(resolve => setTimeout(resolve, 500));
-              retries++;
-            } else {
-              break;
-            }
-          } catch (queryErr: any) {
-            // Catch network or other Supabase errors
-            console.error('[Account Page] Supabase query error:', queryErr?.message);
-            // If we get an auth error, don't retry - just redirect to login
-            if (queryErr?.message?.includes('Unauthorized') || queryErr?.message?.includes('Invalid')) {
-              error = queryErr;
-              break;
-            }
-            if (retries < maxRetries - 1) {
-              await new Promise(resolve => setTimeout(resolve, 500));
-              retries++;
-            } else {
-              error = queryErr;
-              break;
-            }
-          }
-        }
-
-        console.log('[Account Page] Profile check:', { 
-          found: !!profile, 
-          error: error?.message,
-          userId: user.id,
-          retries
-        });
-
-        if (!profile) {
-          // No profile found - redirect to complete-profile
-          console.log('[Account Page] ❌ Profile not found, redirecting to complete-profile');
-          safeRedirect('/auth/complete-profile');
-          return;
-        }
-
-        // ✅ Profile exists, continue with fetching orders
-        console.log('[Account Page] ✅ Profile found, loading orders');
+        // ✅ Password-based auth users are verified on registration
+        // No need for separate profile completion
+        console.log('[Account Page] ✅ User authenticated:', user.email);
         setSessionUser(user);
         setPageLoading(false);
         fetchOrders();
