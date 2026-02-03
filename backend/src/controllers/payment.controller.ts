@@ -71,31 +71,31 @@ export const createPayment = asyncHandler(async (req: any, res: Response) => {
         payments: true,
       },
     })
-  );
+  ) as any;
 
   if (!order) {
     throw new AppError('Order not found', 404);
   }
 
-  if (order.userId !== userId) {
+  if ((order as any).userId !== userId) {
     throw new AppError('Unauthorized - order belongs to another user', 403);
   }
 
-  if (order.status !== 'PENDING') {
+  if ((order as any).status !== 'PENDING') {
     throw new AppError('Order is not in PENDING state', 400);
   }
 
   console.log('[Payment.create] Order found:', {
-    orderNumber: order.orderNumber,
-    totalAmount: order.totalAmount,
-    paymentCount: order.payments.length,
+    orderNumber: (order as any).orderNumber,
+    totalAmount: (order as any).totalAmount,
+    paymentCount: (order as any).payments.length,
   });
 
   // ────────────────────────────────────────────
   // IDEMPOTENCY: RETURN EXISTING PAYMENT IF ACTIVE
   // ────────────────────────────────────────────
-  const activePayment = order.payments?.find(
-    (p) => p.status !== 'FAILED' && p.status !== 'REFUNDED'
+  const activePayment = (order as any).payments?.find(
+    (p: any) => p.status !== 'FAILED' && p.status !== 'REFUNDED'
   );
 
   if (activePayment) {

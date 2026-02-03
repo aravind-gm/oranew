@@ -75,7 +75,7 @@ export const createReview = async (
     );
 
     const avgRating =
-      reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+      (reviews as any).reduce((sum: number, r: any) => sum + r.rating, 0) / (reviews as any).length;
 
     await withRetry(() =>
       prisma.product.update({

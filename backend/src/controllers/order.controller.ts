@@ -47,20 +47,20 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
       prisma.user.findUnique({
         where: { id: req.user!.id },
       })
-    );
+    ) as any;
 
     // Create new address for user
     const newAddress = await withRetry(() =>
       prisma.address.create({
         data: {
           userId: req.user!.id,
-          fullName: fullUser?.fullName || 'Customer',
+          fullName: (fullUser as any)?.fullName || 'Customer',
           addressLine1: street,
           city,
           state,
           pincode: zipCode,
           country: country || 'India',
-          phone: fullUser?.phone || '',
+          phone: (fullUser as any)?.phone || '',
           isDefault: false,
         },
       })
@@ -89,9 +89,9 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
         where: { id: { in: productIds } },
         include: { images: true },
       })
-    );
+    ) as any[];
 
-    if (products.length !== productIds.length) {
+    if ((products as any).length !== productIds.length) {
       const missingIds = productIds.filter(id => !products.find(p => p.id === id));
       console.error('[Checkout] Some products not found:', { missingIds });
     }

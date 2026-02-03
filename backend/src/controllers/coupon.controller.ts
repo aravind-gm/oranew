@@ -34,34 +34,34 @@ export const validateCoupon = asyncHandler(async (req: AuthRequest, res: Respons
     prisma.coupon.findUnique({
       where: { code: code.toUpperCase() },
     })
-  );
+  ) as any;
 
   if (!coupon) {
     throw new AppError('Coupon code not found', 404);
   }
 
   // Check if coupon is active
-  if (!coupon.isActive) {
+  if (!(coupon as any).isActive) {
     throw new AppError('This coupon code is no longer active', 400);
   }
 
   // Check validity dates
   const now = new Date();
-  if (coupon.validFrom > now) {
+  if ((coupon as any).validFrom > now) {
     throw new AppError('This coupon code is not yet valid', 400);
   }
 
-  if (coupon.validUntil < now) {
+  if ((coupon as any).validUntil < now) {
     throw new AppError('This coupon code has expired', 400);
   }
 
   // Check usage limit
-  if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
+  if ((coupon as any).usageLimit && (coupon as any).usageCount >= (coupon as any).usageLimit) {
     throw new AppError('This coupon code has reached its usage limit', 400);
   }
 
   // Check minimum order amount
-  if (coupon.minOrderAmount && orderAmount < coupon.minOrderAmount.toNumber()) {
+  if ((coupon as any).minOrderAmount && orderAmount < (coupon as any).minOrderAmount.toNumber()) {
     throw new AppError(
       `Minimum order amount of ₹${coupon.minOrderAmount} required for this coupon`,
       400
@@ -71,15 +71,15 @@ export const validateCoupon = asyncHandler(async (req: AuthRequest, res: Respons
   // Calculate discount
   let discountAmount: number;
 
-  if (coupon.discountType === 'PERCENTAGE') {
-    discountAmount = (orderAmount * coupon.discountValue.toNumber()) / 100;
+  if ((coupon as any).discountType === 'PERCENTAGE') {
+    discountAmount = (orderAmount * (coupon as any).discountValue.toNumber()) / 100;
   } else {
-    discountAmount = coupon.discountValue.toNumber();
+    discountAmount = (coupon as any).discountValue.toNumber();
   }
 
   // Apply max discount limit if set
-  if (coupon.maxDiscount && discountAmount > coupon.maxDiscount.toNumber()) {
-    discountAmount = coupon.maxDiscount.toNumber();
+  if ((coupon as any).maxDiscount && discountAmount > (coupon as any).maxDiscount.toNumber()) {
+    discountAmount = (coupon as any).maxDiscount.toNumber();
   }
 
   // Cannot exceed order amount
@@ -93,9 +93,9 @@ export const validateCoupon = asyncHandler(async (req: AuthRequest, res: Respons
     success: true,
     message: 'Coupon applied successfully',
     data: {
-      couponCode: coupon.code,
+      couponCode: (coupon as any).code,
       discountAmount: parseFloat(discountAmount.toFixed(2)),
-      discountType: coupon.discountType,
+      discountType: (coupon as any).discountType,
       originalAmount: orderAmount,
       finalAmount: parseFloat((orderAmount - discountAmount).toFixed(2)),
     },
