@@ -7,7 +7,7 @@
 2. Click **Settings** (⚙️ icon) in the top right
 3. Select **Webhooks** from the left menu
 4. Click **Add webhook**
-5. Enter webhook URL: `https://your-backend-domain.com/api/payments/webhook`
+5. Enter webhook URL: `https://razorpay-webhook-zm3s.onrender.com/webhook/razorpay`
 6. Select events:
    - ✅ `payment.captured` (payment success)
    - ✅ `payment.failed` (payment failed)
@@ -18,7 +18,7 @@
 1. Same process but use your local/test backend URL:
    - Local: `http://localhost:8000/api/payments/webhook`
    - Staging: `https://staging-backend.com/api/payments/webhook`
-   - Render: `https://your-render-app.onrender.com/api/payments/webhook`
+   - Render (Webhook Service): `https://razorpay-webhook-zm3s.onrender.com/webhook/razorpay`
 
 ---
 

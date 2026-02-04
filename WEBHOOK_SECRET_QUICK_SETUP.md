@@ -8,7 +8,7 @@
 → Click: Settings (⚙️)
 → Click: Webhooks
 → Click: Add webhook
-→ Enter URL: https://your-backend.com/api/payments/webhook
+→ Enter URL: https://razorpay-webhook-zm3s.onrender.com/webhook/razorpay
 → Select: ✓ payment.captured, ✓ payment.failed
 → Copy: Signing Secret
 ```

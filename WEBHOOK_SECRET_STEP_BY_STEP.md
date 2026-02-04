@@ -40,8 +40,8 @@ OR with ngrok (for testing with Razorpay):
 OR STAGING:
 └─ https://your-staging-backend.com/api/payments/webhook
 
-OR PRODUCTION (Render):
-└─ https://your-render-app.onrender.com/api/payments/webhook
+OR PRODUCTION (Render - Webhook Service):
+└─ https://razorpay-webhook-zm3s.onrender.com/webhook/razorpay
 ```
 
 #### Step 5: Select Events
