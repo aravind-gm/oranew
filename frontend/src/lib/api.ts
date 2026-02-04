@@ -13,8 +13,24 @@ import { useAuthStore } from '@/store/authStore';
 import axios, { AxiosError } from 'axios';
 import { setupErrorInterceptor, setupRequestInterceptor } from './api-interceptors';
 
+// Determine API URL with fallback
+const getApiUrl = () => {
+  // First: Check environment variable (set in Vercel/deployment)
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  
+  // Second: Production Render backend
+  if (typeof window !== 'undefined' && window.location.hostname === 'orashop.in') {
+    return 'https://oranew.onrender.com/api';
+  }
+  
+  // Third: Default to localhost for development
+  return 'http://localhost:8000/api';
+};
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
+  baseURL: getApiUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
