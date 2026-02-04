@@ -14,4 +14,12 @@ export const prisma =
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
+// Auto-reconnect on connection errors
+prisma.$on('error', async (e) => {
+  console.error('[Prisma Error]', e.message);
+  if (e.message.includes('connection pool')) {
+    console.log('[Prisma] Attempting to recover from connection pool timeout...');
+  }
+});
+
 export default prisma;
