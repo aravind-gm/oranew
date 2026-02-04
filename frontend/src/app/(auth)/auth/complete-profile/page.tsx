@@ -82,8 +82,8 @@ export default function CompleteProfilePage() {
 
       console.log('[Profile] 📝 Updating profile for:', user?.email);
 
-      // Call backend - CORRECT ENDPOINT: PUT /users/complete-profile
-      const { data: updateData } = await api.put('/users/complete-profile', {
+      // Call backend - CORRECT ENDPOINT: PUT /user/complete-profile (singular)
+      const { data: updateData } = await api.put('/user/complete-profile', {
         fullName: fullName.trim(),
         phone: phone.replace(/\D/g, ''),
         gender: gender || undefined,
@@ -110,13 +110,15 @@ export default function CompleteProfilePage() {
       const error = err as { response?: { data?: { error?: string } }; message?: string };
       console.error('[Profile Submit Error]', err);
       
+      let errorMessage = 'Failed to save profile. Please try again.';
+      
       if (error.response?.data?.error) {
-        setError(error.response.data.error);
+        errorMessage = error.response.data.error;
       } else if (error.message) {
-        setError(error.message);
-      } else {
-        setError('Failed to save profile. Please try again.');
+        errorMessage = error.message;
       }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
