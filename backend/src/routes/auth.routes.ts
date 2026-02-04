@@ -1,21 +1,18 @@
 import { Router } from 'express';
-import { changePassword, deleteAccount, forgotPassword, getMe, login, register, resetPassword, updateProfile, adminLogin } from '../controllers/auth.controller';
+import { otpLogin, verifyOtp, getMe, logout, deleteAccount } from '../controllers/auth.controller';
 import { protect } from '../middleware/auth';
 import { authLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
-// Password-based authentication (replaces OTP)
-router.post('/register', authLimiter, register);
-router.post('/login', authLimiter, login);
-router.post('/admin-login', authLimiter, adminLogin);
-router.post('/forgot-password', authLimiter, forgotPassword);
-router.post('/reset-password', authLimiter, resetPassword);
+// OTP / Magic Link authentication (Supabase-based)
+router.post('/otp-login', authLimiter, otpLogin);
+router.post('/verify-otp', authLimiter, verifyOtp);
 
 // Protected routes (requires JWT token)
 router.get('/me', protect, getMe);
-router.put('/profile', protect, updateProfile);
-router.put('/change-password', protect, changePassword);
+router.post('/logout', protect, logout);
 router.delete('/account', protect, deleteAccount);
 
 export default router;
+

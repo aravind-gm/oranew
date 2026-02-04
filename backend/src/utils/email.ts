@@ -68,7 +68,7 @@ export const getWelcomeEmailTemplate = (name: string): string => {
   `;
 };
 
-export const getPasswordResetEmailTemplate = (name: string, resetUrl: string): string => {
+export const getOtpEmailTemplate = (name: string, otp: string): string => {
   return `
     <!DOCTYPE html>
     <html>
@@ -82,7 +82,7 @@ export const getPasswordResetEmailTemplate = (name: string, resetUrl: string): s
         .content { background: white; padding: 40px; border-radius: 8px; }
         h1 { font-family: 'Cormorant Garamond', serif; font-size: 28px; margin-bottom: 20px; }
         .warning { background: #FEF3CD; padding: 15px; border-left: 4px solid #FFC107; margin: 20px 0; border-radius: 4px; }
-        .button { display: inline-block; padding: 12px 32px; background: #FFD6E8; color: #2D2D2D; text-decoration: none; border-radius: 8px; margin-top: 20px; font-weight: 500; }
+        .otp-code { display: inline-block; padding: 12px 32px; background: #FFD6E8; color: #2D2D2D; border-radius: 8px; margin-top: 20px; font-weight: 600; font-size: 24px; font-family: 'Courier New', monospace; }
         .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #E5E5E5; font-size: 12px; color: #888; }
       </style>
     </head>
@@ -93,15 +93,14 @@ export const getPasswordResetEmailTemplate = (name: string, resetUrl: string): s
           <div class="tagline">own. radiate. adorn.</div>
         </div>
         <div class="content">
-          <h1>Reset Your Password</h1>
+          <h1>Your Login Code</h1>
           <p>Hi ${name},</p>
-          <p>We received a request to reset your password. Click the button below to create a new password.</p>
-          <a href="${resetUrl}" class="button">Reset Password</a>
+          <p>Enter this code to verify your email and access your account:</p>
+          <div class="otp-code">${otp}</div>
           <div class="warning">
-            <strong>This link expires in 1 hour.</strong> If you didn't request this, you can safely ignore this email.
+            <strong>This code expires in 10 minutes.</strong> If you didn't request this, you can safely ignore this email.
           </div>
-          <p>Or paste this link in your browser:</p>
-          <p style="word-break: break-all; font-size: 12px; color: #666;"><code>${resetUrl}</code></p>
+          <p style="margin-top: 20px; font-size: 14px;">Never share this code with anyone. ORA will never ask for your code.</p>
           <div class="footer">
             <p>This is an automated email. Please do not reply directly.</p>
             <p>&copy; ${new Date().getFullYear()} ORA Jewellery. All rights reserved.</p>

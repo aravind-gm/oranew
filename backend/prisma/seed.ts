@@ -1,22 +1,20 @@
 import { PrismaClient } from '@prisma/client';
 import { slugify } from '../src/utils/helpers';
-import { hashPassword } from '../src/utils/password';
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Starting database seed...');
 
-  // Create Admin User
+  // Create Admin User (requires supabaseId from Supabase)
   console.log('Creating admin user...');
-  const adminPassword = await hashPassword('admin123');
   
   await prisma.user.upsert({
     where: { email: 'admin@orashop.in' },
     update: {},
     create: {
       email: 'admin@orashop.in',
-      passwordHash: adminPassword,
+      supabaseId: 'seed-admin-user-id', // Replace with actual Supabase user ID
       fullName: 'Admin User',
       phone: '9876543210',
       role: 'ADMIN',
@@ -153,16 +151,15 @@ async function main() {
 
   console.log('✅ Sample products created');
 
-  // Create Demo Customer
+  // Create Demo Customer (requires supabaseId from Supabase)
   console.log('Creating demo customer...');
-  const customerPassword = await hashPassword('customer123');
   
   await prisma.user.upsert({
     where: { email: 'customer@demo.com' },
     update: {},
     create: {
       email: 'customer@demo.com',
-      passwordHash: customerPassword,
+      supabaseId: 'seed-customer-user-id', // Replace with actual Supabase user ID
       fullName: 'Demo Customer',
       phone: '9876543211',
       role: 'CUSTOMER',
@@ -173,8 +170,8 @@ async function main() {
   console.log('✅ Demo customer created');
 
   console.log('\n🎉 Seeding completed successfully!\n');
-  console.log('📝 Credentials:');
-  console.log('   Admin: admin@orashop.in / admin123');
+  console.log('📝 Note: Users are now authenticated via Supabase OTP only');
+
   console.log('   Customer: customer@demo.com / customer123');
 }
 
