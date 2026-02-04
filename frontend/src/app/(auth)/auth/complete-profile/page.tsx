@@ -1,83 +1,63 @@
 'use client';
 
+// ORA Jewellery - Complete Profile Page
+// Shown after first OTP login for new users
+
 import { useAuthStore } from '@/store/authStore';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
-import { Phone, User, ArrowRight, Loader2, AlertCircle, Mail } from 'lucide-react';
+import { Phone, User, Sparkles, Loader2, ArrowRight } from 'lucide-react';
 import api from '@/lib/api';
+import Link from 'next/link';
 
 export default function CompleteProfilePage() {
   const router = useRouter();
-  const { user, token, isHydrated } = useAuthStore();
+  const { user, token, setUser, isHydrated } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [checkingProfile, setCheckingProfile] = useState(true);
   const hasRedirectedRef = useRef(false);
 
   // Form state
-  const [fullName, setFullName] = useState(user?.fullName || '');
-  const [phone, setPhone] = useState(user?.phone || '');
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [gender, setGender] = useState('');
 
-  // 🔒 CHECK AUTH AND ADMIN STATUS
+  // 🔒 CHECK AUTH STATUS
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        // Wait for hydration
-        if (!isHydrated) {
-          console.log('[Profile] ⏳ Waiting for auth hydration');
-          return;
-        }
+    if (!isHydrated) return;
 
-        // No auth = redirect to login
-        if (!user || !token) {
-          console.log('[Profile] ❌ Not authenticated, redirecting to login');
-          if (!hasRedirectedRef.current) {
-            hasRedirectedRef.current = true;
-            router.replace('/auth/login');
-          }
-          return;
-        }
-
-        console.log('[Profile] ✅ User verified:', user.email);
-        
-        // 🛑 ADMIN BYPASS - NEVER SHOW PROFILE FORM FOR ADMIN
-        if (user.role === 'ADMIN' || user.role === 'admin') {
-          console.log('[Profile] 🛡️ Admin detected, skipping profile completion');
-          if (!hasRedirectedRef.current) {
-            hasRedirectedRef.current = true;
-            router.replace('/admin');
-          }
-          return;
-        }
-
-        // Pre-fill form with user data
-        if (user.fullName) {
-          setFullName(user.fullName);
-        }
-        if (user.phone) {
-          setPhone(user.phone);
-        }
-
-        console.log('[Profile] ✅ Auth check passed, showing profile form');
-        setCheckingProfile(false);
-      } catch (err: unknown) {
-        const error = err as Error;
-        console.error('[Profile] ❌ Auth check error:', error);
-        if (!hasRedirectedRef.current) {
-          hasRedirectedRef.current = true;
-          router.replace('/auth/login');
-        }
-        return;
+    // No auth = redirect to login
+    if (!user || !token) {
+      console.log('[Profile] ❌ Not authenticated, redirecting to login');
+      if (!hasRedirectedRef.current) {
+        hasRedirectedRef.current = true;
+        router.replace('/auth/login');
       }
-    };
+      return;
+    }
 
-    checkAuth();
+    console.log('[Profile] ✅ User verified:', user.email);
+    
+    // Admin bypass
+    if (user.role === 'ADMIN' || user.role === 'admin') {
+      console.log('[Profile] 🛡️ Admin detected, skipping profile completion');
+      if (!hasRedirectedRef.current) {
+        hasRedirectedRef.current = true;
+        router.replace('/admin');
+      }
+      return;
+    }
+
+    // Pre-fill form with user data
+    if (user.fullName) setFullName(user.fullName);
+    if (user.phone) setPhone(user.phone);
+
+    setCheckingProfile(false);
   }, [isHydrated, user, token, router]);
 
   const validatePhone = (phoneValue: string) => {
-    // Remove all non-digits
     const digits = phoneValue.replace(/\D/g, '');
-    // Valid Indian phone: 10 digits
     return digits.length === 10;
   };
 
@@ -101,31 +81,42 @@ export default function CompleteProfilePage() {
       }
 
       console.log('[Profile] 📝 Updating profile for:', user?.email);
-      console.log('[Profile] 📝 Data:', { fullName: fullName.trim(), phone: phone.replace(/\D/g, '') });
 
-      // Call backend to update profile
-      const { data: updateData, status } = await api.post('/auth/profile', {
+      // Call backend - CORRECT ENDPOINT: PUT /users/complete-profile
+      const { data: updateData } = await api.put('/users/complete-profile', {
         fullName: fullName.trim(),
         phone: phone.replace(/\D/g, ''),
+        gender: gender || undefined,
       });
 
-      if (status !== 200 || !updateData?.success) {
-        throw new Error('Failed to save profile');
+      if (!updateData?.success) {
+        throw new Error(updateData?.error || 'Failed to save profile');
       }
 
       console.log('[Profile] ✅ Profile updated successfully');
 
-      // Redirect to account page
-      console.log('[Profile] 🎉 Profile complete, redirecting to /account');
-      router.replace('/account');
-    } catch (err: unknown) {
-      const error = err as Error;
-      const errorMessage = error?.message || 'Failed to save profile';
-      setError(errorMessage);
-      console.error('[Profile Submit Error]', {
-        error: err,
-        message: error?.message,
+      // Update local auth store
+      setUser({
+        ...user!,
+        fullName: fullName.trim(),
+        phone: phone.replace(/\D/g, ''),
+        profileCompleted: true,
       });
+
+      // Redirect to account page
+      router.replace('/account');
+      router.refresh();
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } }; message?: string };
+      console.error('[Profile Submit Error]', err);
+      
+      if (error.response?.data?.error) {
+        setError(error.response.data.error);
+      } else if (error.message) {
+        setError(error.message);
+      } else {
+        setError('Failed to save profile. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -133,139 +124,163 @@ export default function CompleteProfilePage() {
 
   if (checkingProfile) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center max-w-sm mx-auto p-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-text-muted">Preparing profile setup...</p>
-          <p className="text-xs text-text-muted mt-4">This should only take a moment</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-rose-500 mx-auto mb-4" />
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-[#FFF5F7] to-background flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4">
+      {/* Glassmorphic Card */}
       <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8 lg:mb-12">
-          <h1 className="text-3xl font-serif font-bold text-accent tracking-wide">ORA</h1>
-        </div>
+        <div className="backdrop-blur-xl bg-white/70 rounded-3xl shadow-2xl border border-white/50 p-8 sm:p-10">
+          {/* Logo */}
+          <div className="text-center mb-6">
+            <Link href="/" className="inline-block">
+              <h1 className="text-3xl font-serif font-bold bg-gradient-to-r from-rose-600 via-pink-500 to-amber-500 bg-clip-text text-transparent tracking-wide">
+                ORA
+              </h1>
+            </Link>
+          </div>
 
-        {/* Card */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 space-y-8">
           {/* Header */}
-          <div className="text-center space-y-2">
-            <div className="flex justify-center mb-4">
-              <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center">
-                <User className="w-6 h-6 text-accent" />
-              </div>
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-gradient-to-br from-rose-100 to-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <User className="w-8 h-8 text-rose-500" />
             </div>
-            <h2 className="text-2xl font-serif font-medium text-text-primary">
+            <h2 className="text-2xl font-serif font-medium text-gray-800 mb-2">
               Complete Your Profile
             </h2>
-            <p className="text-text-muted text-sm">
-              Just a couple of details to get started
+            <p className="text-gray-600 text-sm">
+              Just a few details to personalize your experience
             </p>
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 animate-in fade-in">
-              <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-              <p className="text-red-600 text-sm">{error}</p>
+            <div className="mb-6 p-4 bg-red-50/80 backdrop-blur border border-red-200 rounded-2xl">
+              <p className="text-red-600 text-sm text-center">{error}</p>
             </div>
           )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Full Name */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-text-primary ml-1">Full Name</label>
-              <div className="relative group">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Full Name <span className="text-rose-500">*</span>
+              </label>
+              <div className="relative">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  disabled={loading}
-                  className="w-full px-4 py-3 bg-transparent border border-gray-200 rounded-xl outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all pl-12 disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="Your full name"
+                  className="w-full pl-12 pr-4 py-4 bg-white/60 backdrop-blur border border-gray-200 rounded-2xl focus:outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-200 transition-all text-gray-800 placeholder:text-gray-400"
+                  disabled={loading}
                   required
                 />
-                <User className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-accent" />
               </div>
-              <p className="text-xs text-text-muted ml-1">As you'd like it displayed</p>
             </div>
 
             {/* Phone Number */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-text-primary ml-1">Phone Number</label>
-              <div className="relative group">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Phone Number <span className="text-rose-500">*</span>
+              </label>
+              <div className="relative">
+                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="tel"
+                  inputMode="numeric"
                   value={phone}
-                  onChange={(e) => {
-                    // Allow only digits and format as user types
-                    const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
-                    setPhone(digits);
-                  }}
-                  disabled={loading}
-                  className="w-full px-4 py-3 bg-transparent border border-gray-200 rounded-xl outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all pl-12 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                   placeholder="10-digit phone number"
                   maxLength={10}
+                  className="w-full pl-12 pr-4 py-4 bg-white/60 backdrop-blur border border-gray-200 rounded-2xl focus:outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-200 transition-all text-gray-800 placeholder:text-gray-400"
+                  disabled={loading}
                   required
                 />
-                <Phone className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-accent" />
               </div>
-              <p className="text-xs text-text-muted ml-1">
-                {phone.length === 0 ? 'Enter 10 digits' : phone.length < 10 ? `${10 - phone.length} more digits` : '✅ Valid'}
+              <p className="text-xs text-gray-500 mt-1 ml-1">
+                {phone.length === 0 
+                  ? 'Required for order updates' 
+                  : phone.length < 10 
+                    ? `${10 - phone.length} more digits needed`
+                    : '✓ Valid'
+                }
               </p>
+            </div>
+
+            {/* Gender (Optional) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Gender <span className="text-gray-400">(optional)</span>
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                {['Female', 'Male', 'Other'].map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setGender(gender === option ? '' : option)}
+                    disabled={loading}
+                    className={`py-3 px-4 rounded-xl border transition-all text-sm font-medium ${
+                      gender === option
+                        ? 'bg-gradient-to-r from-rose-500 to-pink-500 text-white border-transparent shadow-md'
+                        : 'bg-white/60 text-gray-600 border-gray-200 hover:border-rose-300'
+                    }`}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={
-                loading ||
-                !fullName.trim() ||
-                fullName.trim().length < 2 ||
-                !phone ||
-                !validatePhone(phone)
-              }
-              className="w-full bg-accent text-white py-3 rounded-xl font-medium text-sm hover:bg-accent/90 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed group shadow-lg shadow-accent/20 mt-6"
+              disabled={loading || !fullName.trim() || !validatePhone(phone)}
+              className="w-full bg-gradient-to-r from-rose-500 via-pink-500 to-amber-500 hover:from-rose-600 hover:via-pink-600 hover:to-amber-600 disabled:from-gray-300 disabled:via-gray-300 disabled:to-gray-300 text-white font-semibold py-4 rounded-2xl transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-rose-500/25 hover:shadow-rose-500/40 disabled:shadow-none mt-6"
             >
               {loading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Saving...
+                </>
               ) : (
                 <>
-                  Continue to ORA <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  <Sparkles className="w-5 h-5" />
+                  Complete Profile
+                  <ArrowRight className="w-5 h-5" />
                 </>
               )}
             </button>
           </form>
 
           {/* Email Display */}
-          <div className="pt-6 border-t border-gray-100">
-            <div className="flex items-center justify-center gap-2 text-xs text-text-muted">
-              <Mail className="w-4 h-4" />
-              <span>Logged in as: <strong>{user?.email}</strong></span>
-            </div>
+          <div className="mt-6 pt-4 border-t border-gray-200/50">
+            <p className="text-center text-sm text-gray-500">
+              Logged in as <span className="font-medium text-gray-700">{user?.email}</span>
+            </p>
           </div>
         </div>
 
-        {/* Trust Badges */}
-        <div className="mt-8 grid grid-cols-3 gap-4 text-center text-xs text-text-muted">
-          <div className="space-y-1">
-            <div className="text-lg">🔒</div>
-            <p>Secure</p>
-          </div>
-          <div className="space-y-1">
-            <div className="text-lg">⚡</div>
-            <p>Instant</p>
-          </div>
-          <div className="space-y-1">
-            <div className="text-lg">✨</div>
-            <p>Premium</p>
-          </div>
+        {/* Trust Indicators */}
+        <div className="mt-6 flex items-center justify-center gap-6 text-xs text-gray-500">
+          <span className="flex items-center gap-1">
+            <span>🔒</span> Secure
+          </span>
+          <span className="flex items-center gap-1">
+            <span>⚡</span> Instant
+          </span>
+          <span className="flex items-center gap-1">
+            <span>✨</span> Premium
+          </span>
         </div>
       </div>
     </div>

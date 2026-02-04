@@ -10,6 +10,7 @@ interface User {
   phone?: string;
   role: string;
   createdAt?: string;
+  profileCompleted?: boolean;
 }
 
 interface AuthState {
