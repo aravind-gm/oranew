@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
-import Header from '@/components/Header';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -54,10 +53,8 @@ export default function LoginPage() {
   };
 
   return (
-    <>
-      <Header />
-      <main className="min-h-screen bg-background">
-        <div className="flex items-center justify-center py-16 px-4">
+    <main className="min-h-screen bg-background">
+      <div className="flex items-center justify-center py-16 px-4">
           <div className="w-full max-w-md">
             {/* Logo */}
             <div className="text-center mb-8">
@@ -161,6 +158,6 @@ export default function LoginPage() {
           </div>
         </div>
       </main>
-    </>
-  );
+    );
+  }
 }
