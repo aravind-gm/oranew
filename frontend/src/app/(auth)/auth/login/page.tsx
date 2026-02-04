@@ -87,16 +87,20 @@ export default function LoginPage() {
       setStep('otp');
       setOtpTimer(300); // 5 minutes
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { error?: string } }; message?: string };
+      const error = err as { response?: { status: number; data?: { error?: string } }; message?: string };
       console.error('[Login] ❌ OTP request error:', error);
       
-      if (error.response?.data?.error) {
-        setError(error.response.data.error);
-      } else if (error.message) {
-        setError(error.message);
-      } else {
-        setError('Failed to send code. Please try again.');
+      let errorMessage = 'Failed to send code. Please try again.';
+      
+      if (error.response?.status === 404) {
+        errorMessage = 'Backend service not available. Please try again later.';
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message && typeof error.message === 'string') {
+        errorMessage = error.message;
       }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -155,16 +159,20 @@ export default function LoginPage() {
         router.refresh();
       }, 500);
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { error?: string } }; message?: string };
+      const error = err as { response?: { status: number; data?: { error?: string } }; message?: string };
       console.error('[Login] ❌ Verification error:', error);
-
-      if (error.response?.data?.error) {
-        setError(error.response.data.error);
-      } else if (error.message) {
-        setError(error.message);
-      } else {
-        setError('Verification failed. Please try again.');
+      
+      let errorMessage = 'Verification failed. Please try again.';
+      
+      if (error.response?.status === 404) {
+        errorMessage = 'Backend service not available. Please try again later.';
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message && typeof error.message === 'string') {
+        errorMessage = error.message;
       }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
