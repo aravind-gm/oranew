@@ -109,14 +109,14 @@ export const errorHandler = (
 
   res.status(statusCode).json({
     success: false,
-    error: {
-      message,
-      category,
-      ...(process.env.NODE_ENV === 'development' && { 
-        stack: err.stack,
-        diagnostics: { isColdStart, isPoolExhaustion, isNetworkDrop }
-      }),
-    },
+    error: process.env.NODE_ENV === 'development' 
+      ? {
+          message,
+          category,
+          stack: err.stack,
+          diagnostics: { isColdStart, isPoolExhaustion, isNetworkDrop }
+        }
+      : message,
   });
 };
 

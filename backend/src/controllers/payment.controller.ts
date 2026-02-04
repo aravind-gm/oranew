@@ -351,14 +351,16 @@ export const verifyPayment = asyncHandler(async (req: any, res: Response) => {
  * POST /api/payments/webhook
  * 
  * Receives Razorpay webhook events and processes them atomically:
- * 1. Verifies signature using raw body + webhook secret
- * 2. Updates Payment → status = CONFIRMED
- * 3. Updates Order → status = CONFIRMED, paymentStatus = PAID
- * 4. Reduces inventory stock for each order item
- * 5. Clears user's cart
  * 
- * All operations happen in a SINGLE Prisma transaction.
- * This ensures no partial updates if any step fails.
+ * HANDLES:
+ * - payment.captured → SUCCESS flow (confirms order, deducts inventory)
+ * - payment.failed → FAILURE flow (cancels order)
+ * 
+ * SECURITY:
+ * 1. Uses raw body for signature verification
+ * 2. Verifies HMAC-SHA256 signature using webhook secret
+ * 3. Idempotent - safe to receive same webhook multiple times
+ * 4. Atomic transaction - all or nothing
  * 
  * IMPORTANT: This endpoint uses express.raw() middleware
  * configured in server.ts to receive raw body for signature verification.
@@ -366,7 +368,10 @@ export const verifyPayment = asyncHandler(async (req: any, res: Response) => {
 export const webhook = async (req: Request, res: Response) => {
   console.log('[Webhook] ════════════════════════════════════════════════');
   console.log('[Webhook] Webhook received at:', new Date().toISOString());
-  console.log('[Webhook] Headers:', req.headers);
+  
+  // ────────────────────────────────────────────
+  // STEP 1: Extract raw body (CRITICAL for signature)
+  // ────────────────────────────────────────────
   let rawBody: Buffer;
   if (Buffer.isBuffer(req.body)) {
     rawBody = req.body;
@@ -376,48 +381,82 @@ export const webhook = async (req: Request, res: Response) => {
     rawBody = Buffer.from('');
   }
   console.log('[Webhook] Raw body length:', rawBody.length);
+
+  // ────────────────────────────────────────────
+  // STEP 2: Validate signature exists
+  // ────────────────────────────────────────────
   const signature = req.headers['x-razorpay-signature'] as string;
   if (!signature) {
-    console.log('[Webhook] Signature missing');
+    console.log('[Webhook] ❌ Signature missing');
     return res.status(400).json({ success: false, reason: 'Signature missing' });
   }
   if (!rawBody || !rawBody.length) {
-    console.log('[Webhook] Raw body missing');
+    console.log('[Webhook] ❌ Raw body missing');
     return res.status(400).json({ success: false, reason: 'Raw body missing' });
   }
-  // Signature verification
+
+  // ────────────────────────────────────────────
+  // STEP 3: Verify HMAC-SHA256 signature
+  // ────────────────────────────────────────────
   const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_KEY_SECRET;
   if (!webhookSecret) {
-    console.log('[Webhook] Webhook secret not configured');
+    console.log('[Webhook] ❌ Webhook secret not configured');
     return res.status(500).json({ success: false, reason: 'Webhook secret not configured' });
   }
+  
   const expectedSignature = crypto
     .createHmac('sha256', webhookSecret)
     .update(rawBody)
     .digest('hex');
+    
   if (expectedSignature !== signature) {
-    console.log('[Webhook] Signature verification failed');
+    console.log('[Webhook] ❌ Signature verification FAILED');
+    console.log('[Webhook] Expected:', expectedSignature.substring(0, 20) + '...');
+    console.log('[Webhook] Received:', signature.substring(0, 20) + '...');
     return res.status(400).json({ success: false, reason: 'Invalid signature' });
   }
-  console.log('[Webhook] Signature verification: OK');
+  console.log('[Webhook] ✓ Signature verification: OK');
+
+  // ────────────────────────────────────────────
+  // STEP 4: Parse event JSON
+  // ────────────────────────────────────────────
   let event;
   try {
     event = JSON.parse(rawBody.toString());
   } catch (err) {
-    console.log('[Webhook] Invalid JSON:', err);
+    console.log('[Webhook] ❌ Invalid JSON:', err);
     return res.status(400).json({ success: false, reason: 'Invalid JSON' });
   }
+
   const eventType = event?.event;
   console.log('[Webhook] Event type:', eventType);
-  if (eventType !== 'payment.captured') {
+
+  // ────────────────────────────────────────────
+  // STEP 5: Route to appropriate handler
+  // ────────────────────────────────────────────
+  // ONLY handle payment.captured and payment.failed
+  if (eventType === 'payment.captured') {
+    return handlePaymentCaptured(event, res);
+  } else if (eventType === 'payment.failed') {
+    return handlePaymentFailed(event, res);
+  } else {
     console.log('[Webhook] Ignoring event type:', eventType);
     return res.status(200).json({ success: true, reason: 'Event ignored' });
   }
+};
+
+// ============================================
+// WEBHOOK HANDLER: PAYMENT CAPTURED (SUCCESS)
+// ============================================
+async function handlePaymentCaptured(event: any, res: Response) {
+  console.log('[Webhook:Captured] Processing payment.captured event');
+  
   const paymentEntity = event.payload?.payment?.entity;
   if (!paymentEntity) {
-    console.log('[Webhook] Missing payment entity in payload');
+    console.log('[Webhook:Captured] ❌ Missing payment entity in payload');
     return res.status(400).json({ success: false, reason: 'Missing payment entity' });
   }
+
   const {
     id: razorpayPaymentId,
     order_id: razorpayOrderId,
@@ -425,14 +464,16 @@ export const webhook = async (req: Request, res: Response) => {
     notes,
   } = paymentEntity;
   const internalOrderId = notes?.orderId;
-  console.log('[Webhook] Payment data extracted:', {
+  
+  console.log('[Webhook:Captured] Payment data extracted:', {
     razorpayPaymentId,
     razorpayOrderId,
     webhookAmount,
     internalOrderId,
   });
-  // Find payment record
-  console.log('[Webhook] Looking up payment record...');
+
+  // Find payment record by Razorpay Order ID
+  console.log('[Webhook:Captured] Looking up payment record...');
   const payment = await prisma.payment.findFirst({
     where: { transactionId: razorpayOrderId },
     include: {
@@ -444,42 +485,61 @@ export const webhook = async (req: Request, res: Response) => {
       },
     },
   });
+
   if (!payment) {
-    console.log('[Webhook] Payment record not found for Razorpay Order:', razorpayOrderId);
+    console.log('[Webhook:Captured] ❌ Payment record not found for Razorpay Order:', razorpayOrderId);
     return res.status(200).json({ success: false, reason: 'Payment not found' });
   }
-  console.log('[Webhook] Payment found:', {
+
+  console.log('[Webhook:Captured] ✓ Payment found:', {
     paymentId: payment.id,
     status: payment.status,
     amount: payment.amount,
   });
-  // Idempotency
+
+  // ────────────────────────────────────────────
+  // IDEMPOTENCY CHECK: Already processed?
+  // ────────────────────────────────────────────
   if (payment.status === 'CONFIRMED') {
-    console.log('[Webhook] Payment already CONFIRMED (idempotent - returning success)');
+    console.log('[Webhook:Captured] ✓ Payment already CONFIRMED (idempotent - returning success)');
     return res.status(200).json({ success: true, reason: 'Already confirmed' });
   }
-  // Validate amount
+
+  // Skip if already failed (shouldn't receive captured after failed, but safety check)
+  if (payment.status === 'FAILED') {
+    console.log('[Webhook:Captured] ⚠️ Payment already FAILED - ignoring captured event');
+    return res.status(200).json({ success: true, reason: 'Payment already failed' });
+  }
+
+  // Validate amount matches
   const expectedAmountPaise = Math.round(Number(payment.amount) * 100);
   if (webhookAmount !== expectedAmountPaise) {
-    console.log('[Webhook] Amount mismatch!', { expectedAmountPaise, webhookAmount });
-    // Optionally reject or just log
+    console.log('[Webhook:Captured] ⚠️ Amount mismatch!', { expectedAmountPaise, webhookAmount });
+    // Log but don't reject - amount validation is secondary to signature
   }
+
   const order = payment.order;
   if (!order) {
-    console.log('[Webhook] Order not found for payment');
+    console.log('[Webhook:Captured] ❌ Order not found for payment');
     return res.status(200).json({ success: false, reason: 'Order not found' });
   }
-  console.log('[Webhook] Order found:', {
+
+  console.log('[Webhook:Captured] ✓ Order found:', {
     orderId: order.id,
     orderNumber: order.orderNumber,
     status: order.status,
     itemCount: order.items.length,
     userId: order.userId,
   });
-  // Atomic transaction
+
+  // ────────────────────────────────────────────
+  // ATOMIC TRANSACTION: Update everything at once
+  // ────────────────────────────────────────────
   try {
-    console.log('[Webhook] Before transaction');
+    console.log('[Webhook:Captured] Starting atomic transaction...');
+    
     await prisma.$transaction(async (tx) => {
+      // 1. Update Payment to CONFIRMED
       await tx.payment.update({
         where: { id: payment.id },
         data: {
@@ -490,10 +550,14 @@ export const webhook = async (req: Request, res: Response) => {
               : {}),
             razorpayPaymentId,
             webhookReceivedAt: new Date().toISOString(),
-            webhookEvent: eventType,
+            webhookEvent: 'payment.captured',
+            confirmedAt: new Date().toISOString(),
           },
         },
       });
+      console.log('[Webhook:Captured] ✓ Payment updated to CONFIRMED');
+
+      // 2. Update Order status and payment status
       await tx.order.update({
         where: { id: order.id },
         data: {
@@ -502,8 +566,11 @@ export const webhook = async (req: Request, res: Response) => {
           paymentMethod: 'RAZORPAY',
         },
       });
+      console.log('[Webhook:Captured] ✓ Order updated to CONFIRMED');
+
+      // 3. Deduct inventory for each item
       for (const item of order.items) {
-        console.log('[Webhook] Deducting inventory:', item.productId, item.quantity);
+        console.log('[Webhook:Captured] Deducting inventory:', item.productId, 'qty:', item.quantity);
         await tx.product.update({
           where: { id: item.productId },
           data: {
@@ -513,14 +580,25 @@ export const webhook = async (req: Request, res: Response) => {
           },
         });
       }
-      console.log('[Webhook] Clearing cart for user:', order.userId);
-      await tx.cartItem.deleteMany({ where: { userId: order.userId } });
-      console.log('[Webhook] Removing inventory locks for order');
-      await tx.inventoryLock.deleteMany({ where: { orderId: order.id } });
-    });
-    console.log('[Webhook] After transaction');
+      console.log('[Webhook:Captured] ✓ Inventory deducted');
 
-    // Send order confirmation email
+      // 4. Clear user's cart
+      console.log('[Webhook:Captured] Clearing cart for user:', order.userId);
+      await tx.cartItem.deleteMany({ where: { userId: order.userId } });
+      console.log('[Webhook:Captured] ✓ Cart cleared');
+
+      // 5. Remove inventory locks for this order
+      console.log('[Webhook:Captured] Removing inventory locks for order');
+      await tx.inventoryLock.deleteMany({ where: { orderId: order.id } });
+      console.log('[Webhook:Captured] ✓ Inventory locks removed');
+    });
+
+    console.log('[Webhook:Captured] ════════════════════════════════════════');
+    console.log('[Webhook:Captured] ✅ PAYMENT CONFIRMED SUCCESSFULLY');
+    console.log('[Webhook:Captured] Order:', order.orderNumber);
+    console.log('[Webhook:Captured] ════════════════════════════════════════');
+
+    // Send order confirmation email (non-blocking)
     try {
       const emailTemplate = getOrderConfirmationTemplate(
         order.orderNumber,
@@ -531,20 +609,150 @@ export const webhook = async (req: Request, res: Response) => {
         subject: `Order Confirmed - ${order.orderNumber}`,
         html: emailTemplate,
       });
-      console.log('[Webhook] Order confirmation email sent');
+      console.log('[Webhook:Captured] ✓ Order confirmation email sent');
     } catch (emailError) {
-      console.error('[Webhook] Failed to send confirmation email:', emailError);
+      console.error('[Webhook:Captured] ⚠️ Failed to send confirmation email:', emailError);
       // Continue - don't fail the webhook if email fails
     }
 
     return res.status(200).json({ success: true });
   } catch (err) {
-    console.log('[Webhook] Transaction error:', err);
-    return res.status(400).json({ success: false, reason: 'Transaction failed' });
+    console.error('[Webhook:Captured] ❌ Transaction error:', err);
+    return res.status(500).json({ success: false, reason: 'Transaction failed' });
   }
-};
-// ...existing code...
-// (Removed duplicate/erroneous block. The correct webhook handler is already implemented above.)
+}
+
+// ============================================
+// WEBHOOK HANDLER: PAYMENT FAILED
+// ============================================
+async function handlePaymentFailed(event: any, res: Response) {
+  console.log('[Webhook:Failed] Processing payment.failed event');
+  
+  const paymentEntity = event.payload?.payment?.entity;
+  if (!paymentEntity) {
+    console.log('[Webhook:Failed] ❌ Missing payment entity in payload');
+    return res.status(400).json({ success: false, reason: 'Missing payment entity' });
+  }
+
+  const {
+    id: razorpayPaymentId,
+    order_id: razorpayOrderId,
+    error_code,
+    error_description,
+    error_reason,
+    notes,
+  } = paymentEntity;
+  const internalOrderId = notes?.orderId;
+  
+  console.log('[Webhook:Failed] Payment failure data:', {
+    razorpayPaymentId,
+    razorpayOrderId,
+    error_code,
+    error_description,
+    error_reason,
+    internalOrderId,
+  });
+
+  // Find payment record
+  console.log('[Webhook:Failed] Looking up payment record...');
+  const payment = await prisma.payment.findFirst({
+    where: { transactionId: razorpayOrderId },
+    include: {
+      order: {
+        include: {
+          user: true,
+        },
+      },
+    },
+  });
+
+  if (!payment) {
+    console.log('[Webhook:Failed] ❌ Payment record not found for Razorpay Order:', razorpayOrderId);
+    return res.status(200).json({ success: false, reason: 'Payment not found' });
+  }
+
+  console.log('[Webhook:Failed] ✓ Payment found:', {
+    paymentId: payment.id,
+    status: payment.status,
+  });
+
+  // ────────────────────────────────────────────
+  // IDEMPOTENCY CHECK: Already processed?
+  // ────────────────────────────────────────────
+  if (payment.status === 'FAILED') {
+    console.log('[Webhook:Failed] ✓ Payment already FAILED (idempotent - returning success)');
+    return res.status(200).json({ success: true, reason: 'Already marked as failed' });
+  }
+
+  // Skip if already confirmed (shouldn't happen, but safety check)
+  if (payment.status === 'CONFIRMED') {
+    console.log('[Webhook:Failed] ⚠️ Payment already CONFIRMED - ignoring failed event');
+    return res.status(200).json({ success: true, reason: 'Payment already confirmed' });
+  }
+
+  const order = payment.order;
+  if (!order) {
+    console.log('[Webhook:Failed] ❌ Order not found for payment');
+    return res.status(200).json({ success: false, reason: 'Order not found' });
+  }
+
+  // ────────────────────────────────────────────
+  // ATOMIC TRANSACTION: Mark as failed
+  // ────────────────────────────────────────────
+  try {
+    console.log('[Webhook:Failed] Starting atomic transaction...');
+    
+    await prisma.$transaction(async (tx) => {
+      // 1. Update Payment to FAILED
+      await tx.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: 'FAILED',
+          gatewayResponse: {
+            ...(typeof payment.gatewayResponse === 'object' && payment.gatewayResponse
+              ? payment.gatewayResponse
+              : {}),
+            razorpayPaymentId,
+            webhookReceivedAt: new Date().toISOString(),
+            webhookEvent: 'payment.failed',
+            failedAt: new Date().toISOString(),
+            error_code,
+            error_description,
+            error_reason,
+          },
+        },
+      });
+      console.log('[Webhook:Failed] ✓ Payment updated to FAILED');
+
+      // 2. Update Order status to CANCELLED and payment status to FAILED
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          status: 'CANCELLED',
+          paymentStatus: 'FAILED',
+          cancelledAt: new Date(),
+          cancelReason: `Payment failed: ${error_description || error_reason || 'Unknown error'}`,
+        },
+      });
+      console.log('[Webhook:Failed] ✓ Order updated to CANCELLED');
+
+      // 3. Remove inventory locks (release reserved stock)
+      await tx.inventoryLock.deleteMany({ where: { orderId: order.id } });
+      console.log('[Webhook:Failed] ✓ Inventory locks released');
+    });
+
+    console.log('[Webhook:Failed] ════════════════════════════════════════');
+    console.log('[Webhook:Failed] ❌ PAYMENT FAILED - Order cancelled');
+    console.log('[Webhook:Failed] Order:', order.orderNumber);
+    console.log('[Webhook:Failed] Reason:', error_description || error_reason);
+    console.log('[Webhook:Failed] ════════════════════════════════════════');
+
+    return res.status(200).json({ success: true });
+  } catch (err) {
+    console.error('[Webhook:Failed] ❌ Transaction error:', err);
+    return res.status(500).json({ success: false, reason: 'Transaction failed' });
+  }
+}
 
 // ============================================
 // HELPER: GET PAYMENT STATUS (FOR POLLING)
@@ -553,7 +761,10 @@ export const webhook = async (req: Request, res: Response) => {
  * GET /api/payments/:orderId/status
  * 
  * Frontend uses this to poll payment status after verification
- * Returns current order and payment status
+ * Returns current order and payment status with clear flags
+ * 
+ * CRITICAL: This endpoint is polled by success page
+ * Must return clear isConfirmed/isFailed flags for frontend
  */
 export const getPaymentStatus = asyncHandler(async (req: any, res: Response) => {
   const { orderId } = req.params;
@@ -578,10 +789,52 @@ export const getPaymentStatus = asyncHandler(async (req: any, res: Response) => 
 
   const payment = (order as any).payments?.[0];
 
+  // Determine payment state for frontend
+  // CONFIRMED = webhook processed successfully = payment captured
+  // FAILED = payment failed at gateway
+  const paymentStatus = payment?.status || 'PENDING';
+  const orderPaymentStatus = (order as any).paymentStatus || 'PENDING';
+  
+  // CRITICAL: Only mark as confirmed when BOTH payment AND order are confirmed
+  // This ensures webhook has fully processed
+  const isConfirmed = paymentStatus === 'CONFIRMED' && orderPaymentStatus === 'CONFIRMED';
+  
+  // Check if payment failed
+  const isFailed = paymentStatus === 'FAILED' || orderPaymentStatus === 'FAILED';
+
+  // Generate message for frontend
+  let message = 'Processing payment...';
+  if (isConfirmed) {
+    message = 'Payment confirmed successfully';
+  } else if (isFailed) {
+    message = 'Payment failed. Please try again.';
+  } else if (paymentStatus === 'VERIFIED') {
+    message = 'Payment verified, awaiting confirmation...';
+  }
+
+  console.log('[PaymentStatus] Check:', {
+    orderId,
+    paymentStatus,
+    orderPaymentStatus,
+    isConfirmed,
+    isFailed,
+  });
+
   res.json({
     success: true,
+    // Order details
+    orderId: (order as any).id,
+    orderNumber: (order as any).orderNumber,
     orderStatus: (order as any).status,
-    paymentStatus: (order as any).paymentStatus,
+    // Payment details  
+    paymentStatus,
+    orderPaymentStatus,
+    paymentId: payment?.id || null,
+    // Clear flags for frontend
+    isConfirmed,
+    isFailed,
+    message,
+    // Legacy fields for backward compatibility
     paymentDetails: payment ? {
       id: payment.id,
       status: payment.status,

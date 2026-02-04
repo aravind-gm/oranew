@@ -6,15 +6,23 @@ import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { sendEmail } from '../utils/email';
 import { generateToken, verifyToken } from '../utils/jwt';
-import { supabase } from '../config/supabase';
+import { getSupabaseAdmin } from '../config/supabase';
 
 // ============================================
-// OTP / MAGIC LINK AUTHENTICATION SYSTEM
+// CUSTOM 8-DIGIT OTP AUTHENTICATION SYSTEM
 // ============================================
-// Supabase OTP is the SOURCE OF TRUTH
-// Prisma users are synced via supabaseId
+// Generate and verify 8-digit OTP codes
+// Store OTP temporarily in Prisma with expiration
 
-// @desc    Send OTP login link
+// Store OTPs in memory (for production, use Redis)
+const otpStore = new Map<string, { otp: string; expiresAt: Date }>();
+
+// Generate 8-digit OTP
+function generate8DigitOTP(): string {
+  return Math.floor(10000000 + Math.random() * 90000000).toString();
+}
+
+// @desc    Send 8-digit OTP to email
 // @route   POST /api/auth/otp-login
 // @access  Public
 export const otpLogin = async (
@@ -32,27 +40,75 @@ export const otpLogin = async (
       });
     }
 
-    // Send OTP via Supabase Auth
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.toLowerCase(),
-      options: {
-        shouldCreateUser: true,
-        emailRedirectTo: `${process.env.FRONTEND_URL}/auth/callback`,
-      },
+    // Generate 8-digit OTP
+    const otp = generate8DigitOTP();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+    // Store OTP with email as key
+    otpStore.set(email.toLowerCase(), { otp, expiresAt });
+
+    // Send OTP via email
+    const emailSent = await sendEmail({
+      to: email.toLowerCase(),
+      subject: 'Your ORA Login Code',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { text-align: center; padding: 20px 0; }
+            .logo { font-size: 36px; font-weight: 300; color: #d97706; font-family: serif; }
+            .tagline { color: #9ca3af; font-size: 14px; }
+            .otp-box { background: linear-gradient(135deg, #fef3c7 0%, #fce7f3 100%); border-radius: 12px; padding: 30px; text-align: center; margin: 30px 0; }
+            .otp-code { font-size: 48px; font-weight: bold; letter-spacing: 8px; color: #78350f; font-family: monospace; }
+            .message { color: #6b7280; font-size: 16px; margin: 20px 0; }
+            .footer { text-align: center; color: #9ca3af; font-size: 12px; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">ORA</div>
+              <div class="tagline">own. radiate. adorn.</div>
+            </div>
+            
+            <p class="message">Hello,</p>
+            <p class="message">Here's your login code for ORA Jewellery:</p>
+            
+            <div class="otp-box">
+              <div class="otp-code">${otp}</div>
+            </div>
+            
+            <p class="message">This code will expire in <strong>5 minutes</strong>.</p>
+            <p class="message">If you didn't request this code, please ignore this email.</p>
+            
+            <div class="footer">
+              <p>© 2026 ORA Jewellery. Crafted with elegance.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
     });
 
-    if (error) {
-      console.error('[Auth] ❌ OTP send error:', error);
-      return res.status(400).json({
-        success: false,
-        error: 'Failed to send OTP. Please try again.',
-      });
-    }
+    // For development/testing: Always log OTP to console
+    console.log('\n' + '='.repeat(60));
+    console.log('🔐 OTP LOGIN REQUEST');
+    console.log('='.repeat(60));
+    console.log(`📧 Email: ${email}`);
+    console.log(`🔢 OTP Code: ${otp}`);
+    console.log(`⏰ Expires: ${expiresAt.toLocaleString()}`);
+    console.log(`📬 Email Status: ${emailSent ? '✅ Sent' : '⚠️  Failed (check SMTP config)'}`);
+    console.log('='.repeat(60) + '\n');
 
-    console.log(`[Auth] ✅ OTP sent to: ${email}`);
+    // Allow login even if email fails (for testing)
     return res.status(200).json({
       success: true,
-      message: 'OTP sent to your email. Please check your inbox.',
+      message: emailSent 
+        ? 'OTP sent to your email. Please check your inbox.'
+        : 'OTP generated. Check server console for code (email service unavailable).',
     });
   } catch (error) {
     console.error('[Auth] ❌ OTP login error:', error);
@@ -60,7 +116,7 @@ export const otpLogin = async (
   }
 };
 
-// @desc    Verify OTP and create session
+// @desc    Verify 8-digit OTP and create session
 // @route   POST /api/auth/verify-otp
 // @access  Public
 export const verifyOtp = async (
@@ -78,44 +134,66 @@ export const verifyOtp = async (
       });
     }
 
-    // Verify OTP via Supabase Auth
-    const { data, error } = await supabase.auth.verifyOtp({
-      email: email.toLowerCase(),
-      token: otp,
-      type: 'email',
-    });
+    const emailLower = email.toLowerCase();
 
-    if (error || !data.session) {
-      console.error('[Auth] ❌ OTP verification error:', error);
+    // Check if OTP exists for this email
+    const storedOtpData = otpStore.get(emailLower);
+
+    if (!storedOtpData) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid or expired OTP',
+        error: 'OTP not found. Please request a new one.',
       });
     }
 
-    // Get or create user in Prisma using supabaseId
-    const supabaseId = data.user.id;
+    // Check if OTP is expired
+    if (new Date() > storedOtpData.expiresAt) {
+      otpStore.delete(emailLower);
+      return res.status(400).json({
+        success: false,
+        error: 'OTP has expired. Please request a new one.',
+      });
+    }
+
+    // Verify OTP
+    if (storedOtpData.otp !== otp) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid OTP. Please try again.',
+      });
+    }
+
+    // OTP is valid - delete it
+    otpStore.delete(emailLower);
+
+    // Get or create user in Prisma
     let user = await prisma.user.findUnique({
-      where: { supabaseId },
+      where: { email: emailLower },
     });
 
+    let isNewUser = false;
+
     if (!user) {
-      // First time OTP user - create in Prisma
+      // First time user - create account
+      isNewUser = true;
       user = await prisma.user.create({
         data: {
-          email: email.toLowerCase(),
-          supabaseId,
-          fullName: data.user.user_metadata?.full_name || email.split('@')[0],
-          phone: data.user.user_metadata?.phone || null,
+          email: emailLower,
+          fullName: '', // Empty - new user must complete profile
           role: 'CUSTOMER',
-          isVerified: false,
+          isVerified: true,
+          profileCompleted: false,
         },
       });
+      console.log(`[Auth] ✅ New user created: ${email}`);
     } else {
+      // Check if profile is incomplete (name is empty or profileCompleted is false)
+      isNewUser = !user.fullName || user.fullName === '' || user.profileCompleted === false;
+      
       // Mark as verified on successful OTP
       if (!user.isVerified) {
         user = await prisma.user.update({
-          where: { supabaseId },
+          where: { email: emailLower },
           data: { isVerified: true },
         });
       }
@@ -128,17 +206,20 @@ export const verifyOtp = async (
       role: user.role,
     });
 
-    console.log(`[Auth] ✅ User logged in via OTP: ${email}`);
+    console.log(`[Auth] ✅ User logged in via OTP: ${email} (isNewUser: ${isNewUser})`);
     return res.status(200).json({
       success: true,
       user: {
         id: user.id,
         email: user.email,
         fullName: user.fullName,
+        phone: user.phone,
         role: user.role,
         isVerified: user.isVerified,
+        profileCompleted: user.profileCompleted,
       },
       token,
+      isNewUser,
     });
   } catch (error) {
     console.error('[Auth] ❌ OTP verification error:', error);

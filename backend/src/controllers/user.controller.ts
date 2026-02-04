@@ -2,6 +2,134 @@ import { NextFunction, Response } from 'express';
 import { prisma } from '../config/database';
 import { withRetry } from '../utils/retry';
 import { AuthRequest } from '../middleware/auth';
+import { User } from '@prisma/client';
+
+// @desc    Complete user profile (for new users)
+// @route   PUT /api/users/complete-profile
+// @access  Private
+export const completeProfile = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { fullName, phone, gender } = req.body;
+
+    if (!fullName || fullName.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        error: 'Full name is required',
+      });
+    }
+
+    const user = await withRetry<User>(() =>
+      prisma.user.update({
+        where: { id: req.user!.id },
+        data: {
+          fullName: fullName.trim(),
+          phone: phone || null,
+          gender: gender || null,
+          profileCompleted: true,
+        },
+      })
+    );
+
+    console.log(`[User] ✅ Profile completed for: ${user.email}`);
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        phone: user.phone,
+        gender: user.gender,
+        role: user.role,
+        profileCompleted: user.profileCompleted,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get user profile
+// @route   GET /api/users/profile
+// @access  Private
+export const getProfile = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const user = await withRetry(() =>
+      prisma.user.findUnique({
+        where: { id: req.user!.id },
+        select: {
+          id: true,
+          email: true,
+          fullName: true,
+          phone: true,
+          gender: true,
+          role: true,
+          profileCompleted: true,
+          createdAt: true,
+        },
+      })
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+      });
+    }
+
+    res.json({ success: true, user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update user profile
+// @route   PUT /api/users/profile
+// @access  Private
+export const updateProfile = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { fullName, phone, gender } = req.body;
+
+    const updateData: any = {};
+    if (fullName) updateData.fullName = fullName.trim();
+    if (phone !== undefined) updateData.phone = phone;
+    if (gender !== undefined) updateData.gender = gender;
+
+    const user = await withRetry<User>(() =>
+      prisma.user.update({
+        where: { id: req.user!.id },
+        data: updateData,
+      })
+    );
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        phone: user.phone,
+        gender: user.gender,
+        role: user.role,
+        profileCompleted: user.profileCompleted,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const getAddresses = async (
   req: AuthRequest,

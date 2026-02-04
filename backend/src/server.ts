@@ -40,7 +40,9 @@ app.set('trust proxy', 1);
 // CORS - MUST be first before any other middleware
 const allowedOrigins = [
   'http://localhost:3000',
+  'http://localhost:3001',
   'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001',
   'https://oranew.vercel.app',
   'https://orashop.vercel.app',
   'https://oranew-staging.vercel.app',
@@ -82,7 +84,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // ============================================
 // Razorpay webhook signature verification requires the raw body
 // We use express.raw() specifically for the webhook endpoint
-app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
+// CRITICAL: This MUST be before express.json() middleware
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 
 // ============================================

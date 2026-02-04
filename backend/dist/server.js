@@ -71,7 +71,9 @@ app.set('trust proxy', 1);
 // CORS - MUST be first before any other middleware
 const allowedOrigins = [
     'http://localhost:3000',
+    'http://localhost:3001',
     'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001',
     'https://oranew.vercel.app',
     'https://orashop.vercel.app',
     'https://oranew-staging.vercel.app',

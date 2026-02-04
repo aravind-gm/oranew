@@ -1,149 +1,24 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cleanupExpiredTokens = exports.adminLogin = exports.deleteAccount = exports.changePassword = exports.updateProfile = exports.getMe = exports.resetPassword = exports.forgotPassword = exports.login = exports.register = void 0;
-const crypto_1 = __importDefault(require("crypto"));
+exports.deleteAccount = exports.logout = exports.getMe = exports.verifyOtp = exports.otpLogin = void 0;
 const database_1 = require("../config/database");
-const errorHandler_1 = require("../middleware/errorHandler");
 const email_1 = require("../utils/email");
 const jwt_1 = require("../utils/jwt");
-const bcryptjs_1 = __importDefault(require("bcryptjs"));
 // ============================================
-// PASSWORD-BASED AUTHENTICATION SYSTEM
+// CUSTOM 8-DIGIT OTP AUTHENTICATION SYSTEM
 // ============================================
-// Completely replaces Supabase OTP authentication
-// All endpoints use email + password only
-// @desc    Register new user with password
-// @route   POST /api/auth/register
+// Generate and verify 8-digit OTP codes
+// Store OTP temporarily in Prisma with expiration
+// Store OTPs in memory (for production, use Redis)
+const otpStore = new Map();
+// Generate 8-digit OTP
+function generate8DigitOTP() {
+    return Math.floor(10000000 + Math.random() * 90000000).toString();
+}
+// @desc    Send 8-digit OTP to email
+// @route   POST /api/auth/otp-login
 // @access  Public
-const register = async (req, res, next) => {
-    try {
-        const { email, password, fullName, phone } = req.body;
-        // Validate required fields
-        if (!email || !password || !fullName) {
-            return res.status(400).json({
-                success: false,
-                error: 'Email, password, and full name are required',
-            });
-        }
-        // Password strength validation
-        if (password.length < 6) {
-            return res.status(400).json({
-                success: false,
-                error: 'Password must be at least 6 characters long',
-            });
-        }
-        // Check if user already exists
-        const existingUser = await database_1.prisma.user.findUnique({
-            where: { email: email.toLowerCase() },
-        });
-        if (existingUser) {
-            return res.status(400).json({
-                success: false,
-                error: 'User with this email already exists',
-            });
-        }
-        // Hash password
-        const saltRounds = 12;
-        const passwordHash = await bcryptjs_1.default.hash(password, saltRounds);
-        // Create user
-        const user = await database_1.prisma.user.create({
-            data: {
-                email: email.toLowerCase(),
-                passwordHash,
-                fullName,
-                phone: phone || null,
-                role: 'CUSTOMER',
-                isVerified: true, // Password users are verified by default
-            },
-            select: {
-                id: true,
-                email: true,
-                fullName: true,
-                phone: true,
-                role: true,
-                isVerified: true,
-                createdAt: true,
-            },
-        });
-        // Generate JWT token
-        const token = (0, jwt_1.generateToken)({ id: user.id, email: user.email, role: user.role });
-        console.log(`[Auth] ✅ User registered successfully: ${user.email}`);
-        res.status(201).json({
-            success: true,
-            message: 'User registered successfully',
-            user,
-            token,
-        });
-    }
-    catch (error) {
-        console.error('[Auth] ❌ Registration error:', error);
-        next(error);
-    }
-};
-exports.register = register;
-// @desc    Login user with email and password
-// @route   POST /api/auth/login
-// @access  Public
-const login = async (req, res, next) => {
-    try {
-        const { email, password } = req.body;
-        // Validate required fields
-        if (!email || !password) {
-            return res.status(400).json({
-                success: false,
-                error: 'Email and password are required',
-            });
-        }
-        // Find user by email
-        const user = await database_1.prisma.user.findUnique({
-            where: { email: email.toLowerCase() },
-        });
-        if (!user) {
-            return res.status(401).json({
-                success: false,
-                error: 'Invalid credentials',
-            });
-        }
-        // Verify password
-        const isPasswordValid = await bcryptjs_1.default.compare(password, user.passwordHash);
-        if (!isPasswordValid) {
-            return res.status(401).json({
-                success: false,
-                error: 'Invalid credentials',
-            });
-        }
-        // Generate JWT token
-        const token = (0, jwt_1.generateToken)({ id: user.id, email: user.email, role: user.role });
-        const userResponse = {
-            id: user.id,
-            email: user.email,
-            fullName: user.fullName,
-            phone: user.phone,
-            role: user.role,
-            isVerified: user.isVerified,
-            createdAt: user.createdAt,
-        };
-        console.log(`[Auth] ✅ User logged in successfully: ${user.email}`);
-        res.json({
-            success: true,
-            message: 'Login successful',
-            user: userResponse,
-            token,
-        });
-    }
-    catch (error) {
-        console.error('[Auth] ❌ Login error:', error);
-        next(error);
-    }
-};
-exports.login = login;
-// @desc    Forgot password - send reset email
-// @route   POST /api/auth/forgot-password
-// @access  Public
-const forgotPassword = async (req, res, next) => {
+const otpLogin = async (req, res, next) => {
     try {
         const { email } = req.body;
         if (!email) {
@@ -152,114 +27,172 @@ const forgotPassword = async (req, res, next) => {
                 error: 'Email is required',
             });
         }
-        const user = await database_1.prisma.user.findUnique({
-            where: { email: email.toLowerCase() },
+        // Generate 8-digit OTP
+        const otp = generate8DigitOTP();
+        const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+        // Store OTP with email as key
+        otpStore.set(email.toLowerCase(), { otp, expiresAt });
+        // Send OTP via email
+        const emailSent = await (0, email_1.sendEmail)({
+            to: email.toLowerCase(),
+            subject: 'Your ORA Login Code',
+            html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { text-align: center; padding: 20px 0; }
+            .logo { font-size: 36px; font-weight: 300; color: #d97706; font-family: serif; }
+            .tagline { color: #9ca3af; font-size: 14px; }
+            .otp-box { background: linear-gradient(135deg, #fef3c7 0%, #fce7f3 100%); border-radius: 12px; padding: 30px; text-align: center; margin: 30px 0; }
+            .otp-code { font-size: 48px; font-weight: bold; letter-spacing: 8px; color: #78350f; font-family: monospace; }
+            .message { color: #6b7280; font-size: 16px; margin: 20px 0; }
+            .footer { text-align: center; color: #9ca3af; font-size: 12px; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">ORA</div>
+              <div class="tagline">own. radiate. adorn.</div>
+            </div>
+            
+            <p class="message">Hello,</p>
+            <p class="message">Here's your login code for ORA Jewellery:</p>
+            
+            <div class="otp-box">
+              <div class="otp-code">${otp}</div>
+            </div>
+            
+            <p class="message">This code will expire in <strong>5 minutes</strong>.</p>
+            <p class="message">If you didn't request this code, please ignore this email.</p>
+            
+            <div class="footer">
+              <p>© 2026 ORA Jewellery. Crafted with elegance.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
         });
-        // Always return success to prevent user enumeration
-        if (!user) {
-            return res.json({
-                success: true,
-                message: 'If an account with that email exists, a password reset link has been sent.',
-            });
-        }
-        // Generate secure reset token
-        const resetToken = crypto_1.default.randomBytes(32).toString('hex');
-        const tokenExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
-        // Store reset token in database
-        await database_1.prisma.passwordReset.create({
-            data: {
-                userId: user.id,
-                token: resetToken,
-                expiresAt: tokenExpiry,
-            },
-        });
-        // Send reset email
-        const resetUrl = `${process.env.FRONTEND_URL}/auth/reset-password?token=${resetToken}`;
-        await (0, email_1.sendEmail)({
-            to: user.email,
-            subject: 'Reset Your Password - ORA Jewelry',
-            html: getPasswordResetEmailTemplate(user.fullName, resetUrl),
-        });
-        console.log(`[Auth] ✅ Password reset email sent to: ${user.email}`);
-        res.json({
+        // For development/testing: Always log OTP to console
+        console.log('\n' + '='.repeat(60));
+        console.log('🔐 OTP LOGIN REQUEST');
+        console.log('='.repeat(60));
+        console.log(`📧 Email: ${email}`);
+        console.log(`🔢 OTP Code: ${otp}`);
+        console.log(`⏰ Expires: ${expiresAt.toLocaleString()}`);
+        console.log(`📬 Email Status: ${emailSent ? '✅ Sent' : '⚠️  Failed (check SMTP config)'}`);
+        console.log('='.repeat(60) + '\n');
+        // Allow login even if email fails (for testing)
+        return res.status(200).json({
             success: true,
-            message: 'If an account with that email exists, a password reset link has been sent.',
+            message: emailSent
+                ? 'OTP sent to your email. Please check your inbox.'
+                : 'OTP generated. Check server console for code (email service unavailable).',
         });
     }
     catch (error) {
-        console.error('[Auth] ❌ Forgot password error:', error);
+        console.error('[Auth] ❌ OTP login error:', error);
         next(error);
     }
 };
-exports.forgotPassword = forgotPassword;
-// @desc    Reset password with token
-// @route   POST /api/auth/reset-password
+exports.otpLogin = otpLogin;
+// @desc    Verify 8-digit OTP and create session
+// @route   POST /api/auth/verify-otp
 // @access  Public
-const resetPassword = async (req, res, next) => {
+const verifyOtp = async (req, res, next) => {
     try {
-        const { token, password, confirmPassword } = req.body;
-        if (!token || !password || !confirmPassword) {
+        const { email, otp } = req.body;
+        if (!email || !otp) {
             return res.status(400).json({
                 success: false,
-                error: 'Token, password, and password confirmation are required',
+                error: 'Email and OTP are required',
             });
         }
-        if (password !== confirmPassword) {
+        const emailLower = email.toLowerCase();
+        // Check if OTP exists for this email
+        const storedOtpData = otpStore.get(emailLower);
+        if (!storedOtpData) {
             return res.status(400).json({
                 success: false,
-                error: 'Passwords do not match',
+                error: 'OTP not found. Please request a new one.',
             });
         }
-        if (password.length < 6) {
+        // Check if OTP is expired
+        if (new Date() > storedOtpData.expiresAt) {
+            otpStore.delete(emailLower);
             return res.status(400).json({
                 success: false,
-                error: 'Password must be at least 6 characters long',
+                error: 'OTP has expired. Please request a new one.',
             });
         }
-        // Find valid reset token
-        const resetRecord = await database_1.prisma.passwordReset.findUnique({
-            where: { token },
-            include: { user: true },
+        // Verify OTP
+        if (storedOtpData.otp !== otp) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid OTP. Please try again.',
+            });
+        }
+        // OTP is valid - delete it
+        otpStore.delete(emailLower);
+        // Get or create user in Prisma
+        let user = await database_1.prisma.user.findUnique({
+            where: { email: emailLower },
         });
-        if (!resetRecord || resetRecord.expiresAt < new Date()) {
-            return res.status(400).json({
-                success: false,
-                error: 'Invalid or expired reset token',
+        if (!user) {
+            // First time user - create account
+            user = await database_1.prisma.user.create({
+                data: {
+                    email: emailLower,
+                    fullName: email.split('@')[0],
+                    role: 'CUSTOMER',
+                    isVerified: true,
+                },
             });
+            console.log(`[Auth] ✅ New user created: ${email}`);
         }
-        // Hash new password
-        const saltRounds = 12;
-        const passwordHash = await bcryptjs_1.default.hash(password, saltRounds);
-        // Update user password and delete reset token atomically
-        await database_1.prisma.$transaction([
-            database_1.prisma.user.update({
-                where: { id: resetRecord.userId },
-                data: { passwordHash },
-            }),
-            database_1.prisma.passwordReset.delete({
-                where: { token },
-            }),
-        ]);
-        console.log(`[Auth] ✅ Password reset successfully for: ${resetRecord.user.email}`);
-        res.json({
+        else {
+            // Mark as verified on successful OTP
+            if (!user.isVerified) {
+                user = await database_1.prisma.user.update({
+                    where: { email: emailLower },
+                    data: { isVerified: true },
+                });
+            }
+        }
+        // Generate JWT token for backend session
+        const token = (0, jwt_1.generateToken)({
+            id: user.id,
+            email: user.email,
+            role: user.role,
+        });
+        console.log(`[Auth] ✅ User logged in via OTP: ${email}`);
+        return res.status(200).json({
             success: true,
-            message: 'Password reset successfully. You can now log in with your new password.',
+            user: {
+                id: user.id,
+                email: user.email,
+                fullName: user.fullName,
+                role: user.role,
+                isVerified: user.isVerified,
+            },
+            token,
         });
     }
     catch (error) {
-        console.error('[Auth] ❌ Reset password error:', error);
+        console.error('[Auth] ❌ OTP verification error:', error);
         next(error);
     }
 };
-exports.resetPassword = resetPassword;
-// @desc    Get authenticated user profile
+exports.verifyOtp = verifyOtp;
+// @desc    Get current user
 // @route   GET /api/auth/me
 // @access  Private
 const getMe = async (req, res, next) => {
     try {
-        if (!req.user?.id) {
-            throw new errorHandler_1.AppError('Not authenticated', 401);
-        }
         const user = await database_1.prisma.user.findUnique({
             where: { id: req.user.id },
             select: {
@@ -270,13 +203,15 @@ const getMe = async (req, res, next) => {
                 role: true,
                 isVerified: true,
                 createdAt: true,
-                updatedAt: true,
             },
         });
         if (!user) {
-            throw new errorHandler_1.AppError('User not found', 404);
+            return res.status(404).json({
+                success: false,
+                error: 'User not found',
+            });
         }
-        res.json({
+        return res.status(200).json({
             success: true,
             user,
         });
@@ -287,152 +222,36 @@ const getMe = async (req, res, next) => {
     }
 };
 exports.getMe = getMe;
-// @desc    Update user profile
-// @route   PUT /api/auth/profile
+// @desc    Logout user
+// @route   POST /api/auth/logout
 // @access  Private
-const updateProfile = async (req, res, next) => {
+const logout = async (req, res, next) => {
     try {
-        if (!req.user?.id) {
-            throw new errorHandler_1.AppError('Not authenticated', 401);
-        }
-        const { fullName, phone } = req.body;
-        const updateData = {};
-        if (fullName !== undefined)
-            updateData.fullName = fullName;
-        if (phone !== undefined)
-            updateData.phone = phone;
-        if (Object.keys(updateData).length === 0) {
-            return res.status(400).json({
-                success: false,
-                error: 'No valid fields to update',
-            });
-        }
-        const updatedUser = await database_1.prisma.user.update({
-            where: { id: req.user.id },
-            data: updateData,
-            select: {
-                id: true,
-                email: true,
-                fullName: true,
-                phone: true,
-                role: true,
-                isVerified: true,
-                createdAt: true,
-                updatedAt: true,
-            },
-        });
-        res.json({
+        // Clear any backend sessions if needed
+        console.log(`[Auth] ✅ User logged out: ${req.user.email}`);
+        return res.status(200).json({
             success: true,
-            message: 'Profile updated successfully',
-            user: updatedUser,
+            message: 'Logged out successfully',
         });
     }
     catch (error) {
-        console.error('[Auth] ❌ Update profile error:', error);
+        console.error('[Auth] ❌ Logout error:', error);
         next(error);
     }
 };
-exports.updateProfile = updateProfile;
-// @desc    Change password
-// @route   PUT /api/auth/change-password
-// @access  Private
-const changePassword = async (req, res, next) => {
-    try {
-        if (!req.user?.id) {
-            throw new errorHandler_1.AppError('Not authenticated', 401);
-        }
-        const { currentPassword, newPassword, confirmPassword } = req.body;
-        if (!currentPassword || !newPassword || !confirmPassword) {
-            return res.status(400).json({
-                success: false,
-                error: 'Current password, new password, and confirmation are required',
-            });
-        }
-        if (newPassword !== confirmPassword) {
-            return res.status(400).json({
-                success: false,
-                error: 'New passwords do not match',
-            });
-        }
-        if (newPassword.length < 6) {
-            return res.status(400).json({
-                success: false,
-                error: 'New password must be at least 6 characters long',
-            });
-        }
-        // Get user with current password
-        const user = await database_1.prisma.user.findUnique({
-            where: { id: req.user.id },
-            select: { id: true, email: true, passwordHash: true },
-        });
-        if (!user) {
-            throw new errorHandler_1.AppError('User not found', 404);
-        }
-        // Verify current password
-        const isCurrentPasswordValid = await bcryptjs_1.default.compare(currentPassword, user.passwordHash);
-        if (!isCurrentPasswordValid) {
-            return res.status(400).json({
-                success: false,
-                error: 'Current password is incorrect',
-            });
-        }
-        // Hash new password
-        const saltRounds = 12;
-        const newPasswordHash = await bcryptjs_1.default.hash(newPassword, saltRounds);
-        // Update password
-        await database_1.prisma.user.update({
-            where: { id: user.id },
-            data: { passwordHash: newPasswordHash },
-        });
-        console.log(`[Auth] ✅ Password changed successfully for: ${user.email}`);
-        res.json({
-            success: true,
-            message: 'Password changed successfully',
-        });
-    }
-    catch (error) {
-        console.error('[Auth] ❌ Change password error:', error);
-        next(error);
-    }
-};
-exports.changePassword = changePassword;
-// @desc    Delete user account
+exports.logout = logout;
+// @desc    Delete account
 // @route   DELETE /api/auth/account
 // @access  Private
 const deleteAccount = async (req, res, next) => {
     try {
-        if (!req.user?.id) {
-            throw new errorHandler_1.AppError('Not authenticated', 401);
-        }
-        const { password } = req.body;
-        if (!password) {
-            return res.status(400).json({
-                success: false,
-                error: 'Password is required to delete account',
-            });
-        }
-        // Get user with password
-        const user = await database_1.prisma.user.findUnique({
-            where: { id: req.user.id },
-            select: { id: true, email: true, passwordHash: true },
-        });
-        if (!user) {
-            throw new errorHandler_1.AppError('User not found', 404);
-        }
-        // Verify password
-        const isPasswordValid = await bcryptjs_1.default.compare(password, user.passwordHash);
-        if (!isPasswordValid) {
-            return res.status(400).json({
-                success: false,
-                error: 'Password is incorrect',
-            });
-        }
-        // Delete user (cascade will handle related records)
+        const userId = req.user.id;
+        // Delete user from Prisma
         await database_1.prisma.user.delete({
-            where: { id: user.id },
+            where: { id: userId },
         });
-        console.log(`[Auth] ✅ Account deleted successfully for: ${user.email}`);
-        res.json({
+        console.log(`[Auth] ✅ Account deleted: ${req.user.email}`);
+        return res.status(200).json({
             success: true,
             message: 'Account deleted successfully',
         });
@@ -443,133 +262,4 @@ const deleteAccount = async (req, res, next) => {
     }
 };
 exports.deleteAccount = deleteAccount;
-// ============================================
-// ADMIN-ONLY AUTHENTICATION
-// ============================================
-// @desc    Admin login (separate from customer login)
-// @route   POST /api/auth/admin/login
-// @access  Public (but only for admin role)
-const adminLogin = async (req, res, next) => {
-    try {
-        const { email, password } = req.body;
-        if (!email || !password) {
-            return res.status(400).json({
-                success: false,
-                error: 'Email and password are required',
-            });
-        }
-        // Find user by email
-        const user = await database_1.prisma.user.findUnique({
-            where: { email: email.toLowerCase() },
-        });
-        if (!user || user.role !== 'ADMIN') {
-            return res.status(401).json({
-                success: false,
-                error: 'Invalid admin credentials',
-            });
-        }
-        // Verify password
-        const isPasswordValid = await bcryptjs_1.default.compare(password, user.passwordHash);
-        if (!isPasswordValid) {
-            return res.status(401).json({
-                success: false,
-                error: 'Invalid admin credentials',
-            });
-        }
-        // Generate JWT token
-        const token = (0, jwt_1.generateToken)({ id: user.id, email: user.email, role: user.role });
-        const userResponse = {
-            id: user.id,
-            email: user.email,
-            fullName: user.fullName,
-            phone: user.phone,
-            role: user.role,
-            isVerified: user.isVerified,
-            createdAt: user.createdAt,
-        };
-        console.log(`[Auth] ✅ Admin logged in successfully: ${user.email}`);
-        res.json({
-            success: true,
-            message: 'Admin login successful',
-            user: userResponse,
-            token,
-        });
-    }
-    catch (error) {
-        console.error('[Auth] ❌ Admin login error:', error);
-        next(error);
-    }
-};
-exports.adminLogin = adminLogin;
-// ============================================
-// EMAIL TEMPLATES
-// ============================================
-function getPasswordResetEmailTemplate(fullName, resetUrl) {
-    return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Reset Your Password - ORA Jewelry</title>
-    </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="color: #8B5A3C; margin: 0;">ORA Jewelry</h1>
-            <p style="color: #666; margin: 5px 0 0 0;">Premium Fashion Jewelry</p>
-        </div>
-        
-        <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-            <h2 style="color: #333; margin-top: 0;">Reset Your Password</h2>
-            <p>Hello ${fullName},</p>
-            <p>We received a request to reset your password for your ORA Jewelry account. Click the button below to set a new password:</p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="${resetUrl}" style="display: inline-block; background: #8B5A3C; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">Reset Password</a>
-            </div>
-            
-            <p>Or copy and paste this link in your browser:</p>
-            <p style="word-break: break-all; background: #eee; padding: 10px; border-radius: 4px; font-family: monospace;">${resetUrl}</p>
-            
-            <div style="border-top: 2px solid #8B5A3C; margin: 20px 0; padding-top: 20px;">
-                <p style="margin: 0;"><strong>Important:</strong></p>
-                <ul>
-                    <li>This link will expire in 15 minutes</li>
-                    <li>If you didn't request this password reset, you can ignore this email</li>
-                    <li>For security, only use this link once</li>
-                </ul>
-            </div>
-        </div>
-        
-        <div style="text-align: center; color: #666; font-size: 12px;">
-            <p>&copy; 2026 ORA Jewelry. All rights reserved.</p>
-            <p>This email was sent to ${fullName}</p>
-        </div>
-    </body>
-    </html>
-  `;
-}
-// ============================================
-// CLEANUP UTILITIES
-// ============================================
-// @desc    Clean up expired password reset tokens
-// @note    This should be called periodically by a cron job
-const cleanupExpiredTokens = async () => {
-    try {
-        const result = await database_1.prisma.passwordReset.deleteMany({
-            where: {
-                expiresAt: {
-                    lt: new Date(),
-                },
-            },
-        });
-        console.log(`[Auth] 🧹 Cleaned up ${result.count} expired password reset tokens`);
-        return result.count;
-    }
-    catch (error) {
-        console.error('[Auth] ❌ Failed to cleanup expired tokens:', error);
-        return 0;
-    }
-};
-exports.cleanupExpiredTokens = cleanupExpiredTokens;
 //# sourceMappingURL=auth.controller.js.map

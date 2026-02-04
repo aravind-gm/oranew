@@ -1,8 +1,21 @@
-import sgMail from '@sendgrid/mail';
+import * as nodemailer from 'nodemailer';
 
-// Initialize SendGrid
-if (process.env.SENDGRID_API_KEY) {
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+// Create transporter with environment config (lazy initialization)
+let transporter: nodemailer.Transporter | null = null;
+
+function getTransporter() {
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST,
+      port: parseInt(process.env.EMAIL_PORT || '587'),
+      secure: process.env.EMAIL_SECURE === 'true',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+  }
+  return transporter;
 }
 
 export interface EmailOptions {
@@ -11,25 +24,27 @@ export interface EmailOptions {
   html: string;
 }
 
-export const sendEmail = async (options: EmailOptions): Promise<void> => {
+export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
   try {
-    if (!process.env.SENDGRID_API_KEY || !process.env.FROM_EMAIL) {
-      console.warn('⚠️ SendGrid not configured. Skipping email to:', options.to);
-      return;
+    if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.warn('⚠️ Email not configured. Skipping email to:', options.to);
+      console.log('📧 OTP would have been sent:', options.subject);
+      return false;
     }
 
-    const msg = {
+    const mailOptions = {
+      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
       to: options.to,
-      from: process.env.FROM_EMAIL,
       subject: options.subject,
       html: options.html,
     };
 
-    const response = await sgMail.send(msg);
-    console.log(`✅ Email sent to ${options.to}. Message ID: ${response[0].headers['x-message-id']}`);
+    const info = await getTransporter().sendMail(mailOptions);
+    console.log(`✅ Email sent to ${options.to}. Message ID: ${info.messageId}`);
+    return true;
   } catch (error) {
     console.error('❌ Email error:', error);
-    // Don't throw - allow app to continue even if email fails
+    return false;
   }
 };
 
