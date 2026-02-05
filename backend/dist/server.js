@@ -107,7 +107,7 @@ app.use((req, res, next) => {
 // ============================================
 // Razorpay webhook signature verification requires the raw body
 // We use express.raw() specifically for the webhook endpoint
-app.use('/api/payments/webhook', express_1.default.raw({ type: 'application/json' }));
+// CRITICAL: This MUST be before express.json() middleware
 app.use('/api/payments/webhook', express_1.default.raw({ type: 'application/json' }));
 // ============================================
 // UPLOAD ROUTES - MUST BE BEFORE express.json()

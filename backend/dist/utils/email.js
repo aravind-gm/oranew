@@ -47,6 +47,17 @@ function getTransporter() {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS,
             },
+            // Connection timeout settings for production stability
+            connectionTimeout: 5000, // 5 seconds
+            socketTimeout: 5000, // 5 seconds for socket operations
+            pool: {
+                maxConnections: 5,
+                maxMessages: 100,
+                rateDelta: 1000,
+                rateLimit: 14, // max 14 messages per second
+            },
+            logger: true, // Enable connection logging
+            debug: process.env.NODE_ENV === 'development', // Debug in dev only
         });
     }
     return transporter;

@@ -142,19 +142,24 @@ const verifyOtp = async (req, res, next) => {
         let user = await database_1.prisma.user.findUnique({
             where: { email: emailLower },
         });
+        let isNewUser = false;
         if (!user) {
             // First time user - create account
+            isNewUser = true;
             user = await database_1.prisma.user.create({
                 data: {
                     email: emailLower,
-                    fullName: email.split('@')[0],
+                    fullName: '', // Empty - new user must complete profile
                     role: 'CUSTOMER',
                     isVerified: true,
+                    profileCompleted: false,
                 },
             });
             console.log(`[Auth] ✅ New user created: ${email}`);
         }
         else {
+            // Check if profile is incomplete (name is empty or profileCompleted is false)
+            isNewUser = !user.fullName || user.fullName === '' || user.profileCompleted === false;
             // Mark as verified on successful OTP
             if (!user.isVerified) {
                 user = await database_1.prisma.user.update({
@@ -169,17 +174,20 @@ const verifyOtp = async (req, res, next) => {
             email: user.email,
             role: user.role,
         });
-        console.log(`[Auth] ✅ User logged in via OTP: ${email}`);
+        console.log(`[Auth] ✅ User logged in via OTP: ${email} (isNewUser: ${isNewUser})`);
         return res.status(200).json({
             success: true,
             user: {
                 id: user.id,
                 email: user.email,
                 fullName: user.fullName,
+                phone: user.phone,
                 role: user.role,
                 isVerified: user.isVerified,
+                profileCompleted: user.profileCompleted,
             },
             token,
+            isNewUser,
         });
     }
     catch (error) {

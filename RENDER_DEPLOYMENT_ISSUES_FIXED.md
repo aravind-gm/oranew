@@ -7,6 +7,61 @@
 
 ## 📊 Issues Identified & Fixed
 
+### Issue 3: Database Authentication Error ⚠️ (NEW)
+
+**Problem:**
+```
+Error querying the database: FATAL: Tenant or user not found
+[DB Health Check] ❌ Failed
+```
+
+**Root Cause:**
+- DATABASE_URL in Render environment variables has incorrect credentials
+- Possible reasons:
+  1. Username/password is wrong
+  2. Supabase project ID is incorrect in the URL
+  3. Placeholder values (YOUR_PROJECT_ID, YOUR_PASSWORD) not replaced with actual values
+  4. Postgres user doesn't exist in Supabase
+
+**How to Fix:**
+
+**Step 1: Get Correct Credentials from Supabase**
+1. Go to [Supabase Dashboard](https://app.supabase.com)
+2. Select your project
+3. Go to **Settings** → **Database**
+4. Find the connection string section
+5. Copy the **PgBouncer** connection URL (for Render/serverless)
+6. It should look like:
+   ```
+   postgresql://postgres.YOUR_ID:YOUR_PASSWORD@aws-0-ap-south-1.pooler.supabase.com:6543/postgres?schema=public&pgbouncer=true&sslmode=require
+   ```
+
+**Step 2: Update Render Environment Variables**
+1. Go to **Render Dashboard** → Your backend service
+2. Click **Environment** tab
+3. Find `DATABASE_URL` - **Delete the old one**
+4. Add the exact URL from Supabase with parameters:
+   ```
+   postgresql://postgres.YOUR_ID:YOUR_PASSWORD@aws-0-ap-south-1.pooler.supabase.com:6543/postgres?schema=public&pgbouncer=true&sslmode=require&connect_timeout=10&statement_timeout=30000
+   ```
+5. Click **Save Changes**
+
+**Step 3: Update DIRECT_URL**
+Also update `DIRECT_URL`:
+```
+postgresql://postgres.YOUR_ID:YOUR_PASSWORD@db.YOUR_PROJECT_ID.supabase.co:5432/postgres?schema=public&sslmode=require&connect_timeout=10&statement_timeout=30000
+```
+
+**Step 4: Redeploy**
+Click **Deploy** on the Render service
+
+**Verification:** Logs should show:
+```
+✅ [DB Warmup] ✅ Database ready in 2933ms
+```
+
+---
+
 ### Issue 1: SMTP Connection Timeout ❌ → ✅
 
 **Problem:**
@@ -88,19 +143,25 @@ prisma.$on('error', async (e) => {
 
 ## 📋 ACTION ITEMS FOR DEPLOYMENT
 
-### Step 1: Update Render Environment Variables
+### ⚠️ CRITICAL: Step 1: Fix Database Credentials First
 
-Go to **Render Dashboard** → Your Backend Service → **Environment**
+**This is blocking the deployment!** The error `FATAL: Tenant or user not found` means the DATABASE_URL credentials are incorrect.
 
-Add/Update these variables:
-
-```
-DATABASE_URL=postgresql://YOUR_USER:YOUR_PASSWORD@aws-0-ap-south-1.pooler.supabase.com:6543/postgres?schema=public&pgbouncer=true&connect_timeout=10&statement_timeout=30000
-
-DIRECT_URL=s
-```
-
-**Note:** Replace placeholders with your actual credentials
+1. Open [Supabase Dashboard](https://app.supabase.com) → Your Project
+2. Go to **Settings** → **Database**
+3. Copy the **PgBouncer Connection String** (not the direct connection)
+4. Go to **Render Dashboard** → Backend Service → **Environment**
+5. Find `DATABASE_URL` and **replace it completely** with the Supabase URL
+6. Add these parameters to the end:
+   ```
+   ?schema=public&pgbouncer=true&sslmode=require&connect_timeout=10&statement_timeout=30000
+   ```
+7. Also update `DIRECT_URL` with the direct connection string from Supabase:
+   ```
+   ?schema=public&sslmode=require&connect_timeout=10&statement_timeout=30000
+   ```
+8. Click **Save Changes**
+9. Click **Deploy** to restart with new credentials
 
 ### Step 2: Verify Email Configuration
 
@@ -124,45 +185,58 @@ EMAIL_SECURE=false
 Or trigger via git:
 ```bash
 git add .
-git commit -m "fix: SMTP timeout and database connection pool issues"
+git commit -m "fix: Database credentials and SMTP timeout configuration"
 git push
 ```
 
 ### Step 4: Monitor Logs
 
-Watch the deployment logs for:
+Watch the deployment logs for (in order):
 
+**✅ Expected Success Logs:**
 ```
-✅ [Startup] ✅ Database: READY
+[Startup] 🔥 Warming up database connection...
+[DB Warmup] 🔥 Starting database warmup...
+[DB Warmup] ✅ Database ready in 2933ms
+[Startup] ✅ Database: READY
 ✅ [Startup] ✅ Server ready for requests
 ```
+
+**❌ If you still see this error:**
+```
+Error querying the database: FATAL: Tenant or user not found
+[DB Health Check] ❌ Failed
+```
+
+**Then:** Your DATABASE_URL credentials are still wrong. Go back to Step 1 and verify the credentials from Supabase.
 
 ---
 
 ## 🧪 Testing Checklist
 
-After deployment, test these:
+After deployment, test these in order:
 
-### Email Test
+### 1. Database Authentication Test (Critical First)
 ```bash
-# Try to request OTP login
+Monitor Render logs for:
+✅ [DB Warmup] ✅ Database ready in XXms
+OR
+❌ Error querying the database: FATAL: Tenant or user not found
+```
+
+If you see the ❌ error, the DATABASE_URL credentials are still wrong. Go back to Render Environment and fix the credentials from Supabase.
+
+### 2. Email Test
+```bash
 1. Go to https://oranew.onrender.com
-2. Login page → "Send OTP" button
+2. Click Login → "Send OTP" button
 3. Enter test email
-4. Check logs for: ✅ Email sent to [email]
+4. Check Render logs for: ✅ Email sent to [email]
 ```
 
-### Database Connectivity Test
+### 3. Product Fetching
 ```bash
-# Monitor for connection errors
-1. Watch Render logs
-2. Look for: "connection pool" errors
-3. Should see: ✅ Database ready in XXms
-```
-
-### Product Fetching
-```bash
-1. Go to homepage
+1. Go to https://oranew.onrender.com homepage
 2. Products should load from API
 3. Check logs: [Product Controller] ✅ Products fetched
 ```
@@ -171,7 +245,7 @@ After deployment, test these:
 
 ## 📊 Expected Log Output (After Fix)
 
-### Good Logs:
+### ✅ Good Logs (Everything Working):
 ```
 [Startup] 🔥 Warming up database connection...
 [DB Warmup] 🔥 Starting database warmup...
@@ -187,17 +261,17 @@ After deployment, test these:
 ✅ Email sent to user@example.com. Message ID: xxx@google.com
 ```
 
-### Bad Logs (Still seeing these?):
+### ❌ Bad Logs (Still Seeing Issues?):
 ```
-❌ Timed out fetching a new connection from the connection pool
-❌ Email error: Error: Connection timeout
-❌ Invalid `prisma.product.count()` invocation
-```
+Error querying the database: FATAL: Tenant or user not found
+→ FIX: Database credentials are wrong in Render environment variables
 
-If you still see bad logs, check:
-1. DATABASE_URL parameters are correct
-2. EMAIL_HOST credentials are correct
-3. Render has restarted after environment changes
+❌ Timed out fetching a new connection from the connection pool
+→ FIX: Statement timeout parameters not in DATABASE_URL
+
+❌ Email error: Error: Connection timeout
+→ FIX: SMTP_HOST credentials are wrong or server is unreachable
+```
 
 ---
 

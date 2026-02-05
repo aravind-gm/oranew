@@ -38,14 +38,16 @@ export declare const verifyPayment: (req: Request, res: Response, next: import("
  * POST /api/payments/webhook
  *
  * Receives Razorpay webhook events and processes them atomically:
- * 1. Verifies signature using raw body + webhook secret
- * 2. Updates Payment → status = CONFIRMED
- * 3. Updates Order → status = CONFIRMED, paymentStatus = PAID
- * 4. Reduces inventory stock for each order item
- * 5. Clears user's cart
  *
- * All operations happen in a SINGLE Prisma transaction.
- * This ensures no partial updates if any step fails.
+ * HANDLES:
+ * - payment.captured → SUCCESS flow (confirms order, deducts inventory)
+ * - payment.failed → FAILURE flow (cancels order)
+ *
+ * SECURITY:
+ * 1. Uses raw body for signature verification
+ * 2. Verifies HMAC-SHA256 signature using webhook secret
+ * 3. Idempotent - safe to receive same webhook multiple times
+ * 4. Atomic transaction - all or nothing
  *
  * IMPORTANT: This endpoint uses express.raw() middleware
  * configured in server.ts to receive raw body for signature verification.
@@ -55,7 +57,10 @@ export declare const webhook: (req: Request, res: Response) => Promise<Response<
  * GET /api/payments/:orderId/status
  *
  * Frontend uses this to poll payment status after verification
- * Returns current order and payment status
+ * Returns current order and payment status with clear flags
+ *
+ * CRITICAL: This endpoint is polled by success page
+ * Must return clear isConfirmed/isFailed flags for frontend
  */
 export declare const getPaymentStatus: (req: Request, res: Response, next: import("express").NextFunction) => void;
 /**
