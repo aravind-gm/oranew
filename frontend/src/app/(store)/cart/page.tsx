@@ -2,35 +2,28 @@
 
 /**
  * ============================================================================
- * ORA JEWELLERY — LIVE ORDER INVOICE
+ * ORA JEWELLERY — PREMIUM CART PAGE
  * ============================================================================
  * 
  * DESIGN PHILOSOPHY:
- * This is NOT a shopping cart. This is a live invoice being prepared.
- * Think: Apple order receipt, Stripe checkout summary, Linear billing UI
+ * Inspired by GIVA, Tanishq, and premium e-commerce experiences.
+ * Clean, luxurious feel with focus on trust and conversion.
  * 
- * CORE PRINCIPLES:
- * ✓ Live invoice rows (not product cards)
- * ✓ Inline quantity editing (text input + subtle steppers)
- * ✓ Receipt-style price breakdown (no boxes)
- * ✓ System stepper (Cart → Address → Payment)
- * ✓ Calm, editorial, premium feel
- * 
- * FORBIDDEN PATTERNS:
- * ✗ Traditional cart cards
- * ✗ Boxed order summaries
- * ✗ Left/right split layouts
- * ✗ Loud animations
- * ✗ Old e-commerce patterns
- * 
- * This is a complete rebuild from first principles.
+ * KEY FEATURES:
+ * ✓ Two-column layout (desktop) with sticky summary
+ * ✓ Premium product cards with larger images
+ * ✓ Smooth quantity animations
+ * ✓ "You may also like" recommendations
+ * ✓ Illustrated empty state
+ * ✓ Mobile-first responsive design
+ * ✓ Sticky mobile checkout bar
  */
 
 import { useAuth } from '@/context/AuthContext';
 import { useCartStore } from '@/store/cartStore';
 import RelatedProductsCart from '@/components/RelatedProductsCart';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, Minus, Plus, ShoppingBag, X } from 'lucide-react';
+import { ChevronRight, Minus, Plus, ShoppingBag, Trash2, Shield, Truck, Package, Heart } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -41,10 +34,10 @@ import { useEffect, useMemo, useState } from 'react';
 // ============================================================================
 
 const SHIPPING_THRESHOLD = 999;
-const TAX_INCLUDED = true; // Tax is included in price
+const TAX_INCLUDED = true;
 
 // ============================================================================
-// COMPONENTS — INLINE QUANTITY EDITOR
+// QUANTITY EDITOR COMPONENT
 // ============================================================================
 
 interface QuantityEditorProps {
@@ -54,140 +47,250 @@ interface QuantityEditorProps {
   maxQuantity?: number;
 }
 
-/**
- * Inline quantity editor with subtle stepper controls
- * Designed to look like an editable invoice line, not a shopping UI
- */
 function QuantityEditor({ quantity, productId, onUpdate, maxQuantity = 10 }: QuantityEditorProps) {
-  const [localValue, setLocalValue] = useState(quantity.toString());
-  const [isFocused, setIsFocused] = useState(false);
-
   const handleIncrement = () => {
     const newQty = Math.min(quantity + 1, maxQuantity);
     onUpdate(productId, newQty);
-    setLocalValue(newQty.toString());
   };
 
   const handleDecrement = () => {
     const newQty = Math.max(quantity - 1, 1);
     onUpdate(productId, newQty);
-    setLocalValue(newQty.toString());
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setLocalValue(e.target.value);
-  };
-
-  const handleInputBlur = () => {
-    setIsFocused(false);
-    const parsed = parseInt(localValue);
-    if (!isNaN(parsed) && parsed >= 1 && parsed <= maxQuantity) {
-      onUpdate(productId, parsed);
-    } else {
-      setLocalValue(quantity.toString());
-    }
   };
 
   return (
-    <div className="flex items-center gap-1 sm:gap-2">
-      <button
+    <div className="flex items-center border-2 border-gray-200 rounded-full overflow-hidden bg-white">
+      <motion.button
+        whileTap={{ scale: 0.9 }}
         onClick={handleDecrement}
         disabled={quantity <= 1}
-        className="w-8 h-8 sm:w-6 sm:h-6 flex items-center justify-center text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors rounded-full hover:bg-primary/10"
+        className="w-10 h-10 flex items-center justify-center text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         aria-label="Decrease quantity"
       >
-        <Minus className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
-      </button>
+        <Minus className="w-4 h-4" />
+      </motion.button>
       
-      <input
-        type="text"
-        value={localValue}
-        onChange={handleInputChange}
-        onFocus={() => setIsFocused(true)}
-        onBlur={handleInputBlur}
-        className={`w-10 sm:w-12 text-center text-sm bg-transparent border-b transition-all ${
-          isFocused ? 'border-text-primary' : 'border-transparent'
-        } focus:outline-none`}
-      />
+      <motion.span 
+        key={quantity}
+        initial={{ scale: 1.2, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="w-12 text-center font-semibold text-gray-900"
+      >
+        {quantity}
+      </motion.span>
       
-      <button
+      <motion.button
+        whileTap={{ scale: 0.9 }}
         onClick={handleIncrement}
         disabled={quantity >= maxQuantity}
-        className="w-8 h-8 sm:w-6 sm:h-6 flex items-center justify-center text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors rounded-full hover:bg-primary/10"
+        className="w-10 h-10 flex items-center justify-center text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         aria-label="Increase quantity"
       >
-        <Plus className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
-      </button>
+        <Plus className="w-4 h-4" />
+      </motion.button>
     </div>
   );
 }
 
 // ============================================================================
-// COMPONENTS — ANIMATED PRICE
+// CART ITEM CARD COMPONENT
 // ============================================================================
 
-interface AnimatedPriceProps {
-  value: number;
-  className?: string;
+interface CartItemCardProps {
+  item: {
+    id: string;
+    productId: string;
+    name: string;
+    image: string;
+    price: number;
+    quantity: number;
+    stockQuantity?: number;
+  };
+  onQuantityUpdate: (productId: string, newQuantity: number) => void;
+  onRemove: (productId: string) => void;
+  index: number;
 }
 
-/**
- * Animated price component for smooth transitions
- * When price changes, the number animates subtly
- */
-function AnimatedPrice({ value, className = '' }: AnimatedPriceProps) {
+function CartItemCard({ item, onQuantityUpdate, onRemove, index }: CartItemCardProps) {
   return (
-    <motion.span
-      key={value}
-      initial={{ opacity: 0, y: -4 }}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: 'easeOut' }}
-      className={className}
+      exit={{ opacity: 0, x: -100 }}
+      transition={{ duration: 0.3, delay: index * 0.05 }}
+      className="group bg-white rounded-2xl border border-gray-100 hover:border-pink-200 hover:shadow-lg transition-all duration-300 overflow-hidden"
     >
-      ₹{value.toLocaleString('en-IN')}
-    </motion.span>
+      <div className="flex gap-4 p-4 sm:p-5">
+        {/* Product Image */}
+        <Link 
+          href={`/products/${item.productId}`}
+          className="relative w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0 rounded-xl overflow-hidden bg-gradient-to-br from-pink-50 to-rose-50"
+        >
+          <Image
+            src={item.image}
+            alt={item.name}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
+            sizes="(max-width: 640px) 96px, 128px"
+          />
+        </Link>
+
+        {/* Product Details */}
+        <div className="flex-1 min-w-0 flex flex-col">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <Link 
+                href={`/products/${item.productId}`}
+                className="font-semibold text-gray-900 hover:text-pink-600 transition-colors line-clamp-2 text-sm sm:text-base"
+              >
+                {item.name}
+              </Link>
+              
+              {/* Stock Status */}
+              {item.stockQuantity !== undefined && (
+                <p className={`text-xs mt-1 ${item.stockQuantity > 5 ? 'text-emerald-600' : item.stockQuantity > 0 ? 'text-amber-600' : 'text-red-600'}`}>
+                  {item.stockQuantity > 5 
+                    ? '✓ In Stock' 
+                    : item.stockQuantity > 0 
+                      ? `Only ${item.stockQuantity} left!`
+                      : '✕ Out of Stock'}
+                </p>
+              )}
+            </div>
+
+            {/* Remove Button */}
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => onRemove(item.productId)}
+              className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
+              aria-label="Remove item"
+            >
+              <Trash2 className="w-4 h-4" />
+            </motion.button>
+          </div>
+
+          {/* Price & Quantity Row */}
+          <div className="mt-auto pt-3 flex items-center justify-between gap-3">
+            <QuantityEditor
+              quantity={item.quantity}
+              productId={item.productId}
+              onUpdate={onQuantityUpdate}
+              maxQuantity={item.stockQuantity || 10}
+            />
+            
+            <motion.div 
+              key={item.price * item.quantity}
+              initial={{ scale: 1.1 }}
+              animate={{ scale: 1 }}
+              className="text-right"
+            >
+              <p className="font-bold text-lg sm:text-xl text-gray-900">
+                ₹{(item.price * item.quantity).toLocaleString('en-IN')}
+              </p>
+              {item.quantity > 1 && (
+                <p className="text-xs text-gray-500">
+                  ₹{item.price.toLocaleString('en-IN')} each
+                </p>
+              )}
+            </motion.div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
   );
 }
 
 // ============================================================================
-// COMPONENTS — SYSTEM STEPPER
+// EMPTY CART COMPONENT
 // ============================================================================
 
-const CHECKOUT_STEPS = [
-  { id: 'cart', label: 'Cart' },
-  { id: 'address', label: 'Address' },
-  { id: 'payment', label: 'Payment' },
-];
-
-function SystemStepper({ currentStep = 'cart' }: { currentStep?: string }) {
-  const currentIndex = CHECKOUT_STEPS.findIndex(s => s.id === currentStep);
-
+function EmptyCart() {
   return (
-    <div className="flex items-center gap-2 mb-12">
-      {CHECKOUT_STEPS.map((step, index) => (
-        <div key={step.id} className="flex items-center">
-          <span
-            className={`text-xs tracking-wider transition-colors ${
-              index === currentIndex
-                ? 'text-text-primary font-medium'
-                : index < currentIndex
-                ? 'text-text-secondary'
-                : 'text-text-muted'
-            }`}
-          >
-            {step.label}
-          </span>
-          {index < CHECKOUT_STEPS.length - 1 && (
-            <span className="mx-3 text-text-muted">—</span>
-          )}
+    <main className="bg-gradient-to-b from-white to-pink-50/30 min-h-screen">
+      <div className="max-w-2xl mx-auto px-6 py-16 lg:py-24">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-center"
+        >
+          {/* Illustrated Empty State */}
+          <div className="relative w-40 h-40 mx-auto mb-8">
+            <div className="absolute inset-0 bg-gradient-to-br from-pink-100 to-rose-100 rounded-full animate-pulse" />
+            <div className="absolute inset-4 bg-white rounded-full flex items-center justify-center shadow-lg">
+              <ShoppingBag className="w-16 h-16 text-pink-300" strokeWidth={1.5} />
+            </div>
+            {/* Decorative Elements */}
+            <motion.div 
+              animate={{ y: [-5, 5, -5] }}
+              transition={{ duration: 3, repeat: Infinity }}
+              className="absolute -top-2 -right-2 w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center"
+            >
+              <Heart className="w-4 h-4 text-amber-500" />
+            </motion.div>
+          </div>
+
+          <h1 className="font-serif text-3xl lg:text-4xl text-gray-900 mb-4">
+            Your Cart is Empty
+          </h1>
+          <p className="text-gray-600 mb-8 max-w-md mx-auto">
+            Looks like you haven&apos;t added any beautiful pieces yet. Explore our curated collections and find something special.
+          </p>
+          
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              href="/collections"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-full font-semibold hover:from-pink-700 hover:to-rose-700 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+            >
+              <span>Explore Collection</span>
+              <ChevronRight className="w-5 h-5" />
+            </Link>
+            <Link
+              href="/wishlist"
+              className="inline-flex items-center gap-2 px-8 py-4 border-2 border-gray-200 text-gray-700 rounded-full font-semibold hover:border-pink-300 hover:bg-pink-50 transition-all"
+            >
+              <Heart className="w-5 h-5" />
+              <span>View Wishlist</span>
+            </Link>
+          </div>
+        </motion.div>
+      </div>
+    </main>
+  );
+}
+
+// ============================================================================
+// TRUST BADGES COMPONENT
+// ============================================================================
+
+function TrustBadges() {
+  return (
+    <div className="grid grid-cols-3 gap-3 mt-6 pt-6 border-t border-gray-100">
+      <div className="text-center">
+        <div className="w-10 h-10 mx-auto mb-2 bg-emerald-50 rounded-full flex items-center justify-center">
+          <Truck className="w-5 h-5 text-emerald-600" />
         </div>
-      ))}
+        <p className="text-xs text-gray-600 font-medium">Free Delivery</p>
+      </div>
+      <div className="text-center">
+        <div className="w-10 h-10 mx-auto mb-2 bg-blue-50 rounded-full flex items-center justify-center">
+          <Package className="w-5 h-5 text-blue-600" />
+        </div>
+        <p className="text-xs text-gray-600 font-medium">Easy Returns</p>
+      </div>
+      <div className="text-center">
+        <div className="w-10 h-10 mx-auto mb-2 bg-amber-50 rounded-full flex items-center justify-center">
+          <Shield className="w-5 h-5 text-amber-600" />
+        </div>
+        <p className="text-xs text-gray-600 font-medium">Secure Payment</p>
+      </div>
     </div>
   );
 }
 
 // ============================================================================
-// MAIN COMPONENT
+// MAIN CART PAGE COMPONENT
 // ============================================================================
 
 export default function CartPage() {
@@ -196,7 +299,6 @@ export default function CartPage() {
   const { isAuthenticated } = useAuth();
 
   const [isCheckingOut, setIsCheckingOut] = useState(false);
-  const [highlightedItem, setHighlightedItem] = useState<string | null>(null);
 
   // ====== PRICING CALCULATIONS ======
   const subtotal = useMemo(() => {
@@ -222,21 +324,15 @@ export default function CartPage() {
     }
   }, [items.length, validateStock]);
 
-  // ====== QUANTITY UPDATE HANDLER ======
+  // ====== HANDLERS ======
   const handleQuantityUpdate = (productId: string, newQuantity: number) => {
     updateQuantity(productId, newQuantity);
-    
-    // Brief highlight effect on the updated row
-    setHighlightedItem(productId);
-    setTimeout(() => setHighlightedItem(null), 800);
   };
 
-  // ====== REMOVE ITEM HANDLER ======
   const handleRemoveItem = (productId: string) => {
     removeItem(productId);
   };
 
-  // ====== CHECKOUT HANDLER ======
   const handleCheckout = async () => {
     setIsCheckingOut(true);
     
@@ -249,13 +345,11 @@ export default function CartPage() {
         return;
       }
 
-      // Check authentication - redirect to login if not authenticated
       if (!isAuthenticated) {
         router.push('/auth/login?redirect=/checkout');
         return;
       }
       
-      // Proceed to checkout
       router.push('/checkout');
     } catch (error) {
       console.error('Checkout error:', error);
@@ -265,62 +359,38 @@ export default function CartPage() {
 
   // ====== EMPTY STATE ======
   if (items.length === 0) {
-    return (
-      <main className="bg-background min-h-screen">
-        <div className="max-w-2xl mx-auto px-6 py-24 lg:py-32">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-center"
-          >
-            <ShoppingBag className="w-12 h-12 text-text-muted/40 mx-auto mb-6" />
-            <h1 className="font-serif text-3xl lg:text-4xl text-text-primary mb-3">
-              Your cart is empty
-            </h1>
-            <p className="text-text-secondary mb-10">
-              Discover our curated collections
-            </p>
-            <Link
-              href="/collections"
-              className="inline-flex items-center gap-2 px-8 py-3 bg-text-primary text-background rounded-full hover:bg-text-secondary transition-colors"
-            >
-              <span>Browse Collections</span>
-              <ChevronRight className="w-4 h-4" />
-            </Link>
-          </motion.div>
-        </div>
-      </main>
-    );
+    return <EmptyCart />;
   }
 
   // ====== MAIN RENDER ======
   return (
-    <main className="bg-background min-h-screen pb-32 sm:pb-0">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-12 lg:py-16">
+    <main className="bg-gradient-to-b from-white to-gray-50/50 min-h-screen pb-32 lg:pb-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-10">
         
         {/* ============================================================
-            HEADER - Mobile Optimized
+            PAGE HEADER
             ============================================================ */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6 sm:mb-8"
+          className="mb-6 lg:mb-10"
         >
-          <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-text-primary mb-1">
-            Your Order
-          </h1>
-          <p className="text-xs sm:text-sm text-text-secondary">
-            Review before checkout
-          </p>
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
+            <Link href="/" className="hover:text-pink-600 transition-colors">Home</Link>
+            <span>/</span>
+            <span className="text-gray-900 font-medium">Shopping Cart</span>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-gray-900">
+              Shopping Cart
+            </h1>
+            <span className="text-gray-500 text-sm sm:text-base">
+              {itemCount} {itemCount === 1 ? 'item' : 'items'}
+            </span>
+          </div>
         </motion.div>
-
-        {/* ============================================================
-            SYSTEM STEPPER - Compact on mobile
-            ============================================================ */}
-        <div className="mb-6 sm:mb-12">
-          <SystemStepper currentStep="cart" />
-        </div>
 
         {/* ============================================================
             STOCK ERRORS (if any)
@@ -331,220 +401,159 @@ export default function CartPage() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="mb-8 p-4 bg-error/10 border border-error/20 rounded-lg"
+              className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl"
             >
-              <p className="text-xs font-medium text-error uppercase tracking-wide mb-2">
-                Stock Issue
-              </p>
+              <p className="text-sm font-semibold text-red-800 mb-1">Stock Issue</p>
               {stockErrors.map((error, i) => (
-                <p key={i} className="text-sm text-error/80">
-                  {error}
-                </p>
+                <p key={i} className="text-sm text-red-600">{error}</p>
               ))}
             </motion.div>
           )}
         </AnimatePresence>
 
         {/* ============================================================
-            LIVE INVOICE ROWS - Mobile Optimized
+            MAIN CONTENT - Two Column Layout
             ============================================================ */}
-        <div className="mb-8 sm:mb-12">
-          <div className="mb-3 sm:mb-4">
-            <p className="text-[10px] sm:text-xs uppercase tracking-widest text-text-muted">
-              Items ({itemCount})
-            </p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* LEFT: Cart Items */}
+          <div className="lg:col-span-2 space-y-4">
+            <AnimatePresence>
+              {items.map((item, index) => (
+                <CartItemCard
+                  key={item.productId}
+                  item={item}
+                  onQuantityUpdate={handleQuantityUpdate}
+                  onRemove={handleRemoveItem}
+                  index={index}
+                />
+              ))}
+            </AnimatePresence>
+
+            {/* Continue Shopping Link */}
+            <Link 
+              href="/collections"
+              className="inline-flex items-center gap-2 text-pink-600 hover:text-pink-700 font-medium mt-4 transition-colors"
+            >
+              <ChevronRight className="w-4 h-4 rotate-180" />
+              Continue Shopping
+            </Link>
           </div>
 
-          {/* Invoice table header - Hidden on mobile, card layout instead */}
-          <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto] gap-4 pb-2 border-b border-border/40 mb-2">
-            <p className="text-xs text-text-muted uppercase tracking-wide">Product</p>
-            <p className="text-xs text-text-muted uppercase tracking-wide text-center">Qty</p>
-            <p className="text-xs text-text-muted uppercase tracking-wide text-right">Price</p>
-            <div className="w-6" /> {/* Spacer for remove button */}
-          </div>
-
-          {/* Invoice rows - Card layout on mobile */}
-          <div className="space-y-3 sm:space-y-0">
-            {items.map((item, index) => (
+          {/* RIGHT: Order Summary - Sticky */}
+          <div className="lg:col-span-1">
+            <div className="lg:sticky lg:top-28">
               <motion.div
-                key={item.productId}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ 
-                  opacity: 1, 
-                  x: 0,
-                  backgroundColor: highlightedItem === item.productId 
-                    ? 'rgba(255, 214, 232, 0.15)' 
-                    : 'transparent'
-                }}
-                transition={{ 
-                  duration: 0.3,
-                  delay: index * 0.03,
-                }}
-                className="
-                  sm:grid sm:grid-cols-[1fr_auto_auto_auto] sm:gap-4 sm:py-4 sm:border-b sm:border-border/20 sm:items-center 
-                  bg-white sm:bg-transparent rounded-xl sm:rounded-none p-3 sm:p-0 border sm:border-0 border-border/30
-                  hover:bg-primary/5 transition-colors
-                "
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6"
               >
-                {/* Product Info */}
-                <div className="flex items-start sm:items-center gap-3">
-                  <div className="relative w-16 h-16 sm:w-14 sm:h-14 flex-shrink-0 rounded-lg sm:rounded overflow-hidden bg-background-white border border-border/30">
-                    <Image
-                      src={item.image}
-                      alt={item.name}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 640px) 64px, 56px"
-                    />
+                <h2 className="font-semibold text-lg text-gray-900 mb-6">Order Summary</h2>
+
+                {/* Price Breakdown */}
+                <div className="space-y-4">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Subtotal ({itemCount} items)</span>
+                    <span className="font-medium text-gray-900">₹{subtotal.toLocaleString('en-IN')}</span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-text-primary font-medium line-clamp-2 sm:truncate">
-                      {item.name}
-                    </p>
-                    {/* Mobile: Show price inline */}
-                    <p className="sm:hidden text-sm text-text-primary font-medium mt-1">
-                      ₹{(item.price * item.quantity).toLocaleString('en-IN')}
-                    </p>
-                    {item.stockQuantity !== undefined && (
-                      <p className="text-[10px] sm:text-xs text-text-muted mt-0.5">
-                        {item.stockQuantity > 0 
-                          ? `${item.stockQuantity} in stock` 
-                          : 'Out of stock'}
-                      </p>
-                    )}
+                  
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Shipping</span>
+                    <span className="text-emerald-600 font-medium">FREE</span>
                   </div>
-                  {/* Mobile: Remove button at top right */}
-                  <button
-                    onClick={() => handleRemoveItem(item.productId)}
-                    className="sm:hidden w-8 h-8 flex items-center justify-center text-text-muted hover:text-error transition-colors -mt-1 -mr-1"
-                    aria-label="Remove item"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                  
+                  {TAX_INCLUDED && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Tax</span>
+                      <span className="text-gray-500 text-xs">Included</span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Mobile: Quantity controls below */}
-                <div className="flex items-center justify-between sm:justify-center mt-3 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-0 border-border/20">
-                  <span className="sm:hidden text-xs text-text-muted">Quantity</span>
-                  <QuantityEditor
-                    quantity={item.quantity}
-                    productId={item.productId}
-                    onUpdate={handleQuantityUpdate}
-                    maxQuantity={item.stockQuantity || 10}
-                  />
+                {/* Total */}
+                <div className="border-t border-gray-100 mt-6 pt-6">
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-gray-900 font-semibold">Total</span>
+                    <motion.span 
+                      key={total}
+                      initial={{ scale: 1.1 }}
+                      animate={{ scale: 1 }}
+                      className="text-2xl font-bold text-gray-900"
+                    >
+                      ₹{total.toLocaleString('en-IN')}
+                    </motion.span>
+                  </div>
                 </div>
 
-                {/* Desktop: Price */}
-                <div className="hidden sm:block text-right min-w-[80px]">
-                  <AnimatedPrice 
-                    value={item.price * item.quantity}
-                    className="text-sm text-text-primary font-medium"
-                  />
-                </div>
-
-                {/* Desktop: Remove Button */}
-                <button
-                  onClick={() => handleRemoveItem(item.productId)}
-                  className="hidden sm:flex w-6 h-6 items-center justify-center text-text-muted hover:text-error transition-colors"
-                  aria-label="Remove item"
+                {/* Checkout Button - Desktop */}
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleCheckout}
+                  disabled={isCheckingOut || stockErrors.length > 0 || stockValidating}
+                  className="hidden lg:flex w-full mt-6 py-4 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-full font-semibold hover:from-pink-700 hover:to-rose-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed items-center justify-center gap-2 shadow-lg hover:shadow-xl"
                 >
-                  <X className="w-4 h-4" />
-                </button>
+                  {isCheckingOut ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Shield className="w-5 h-5" />
+                      Secure Checkout
+                    </>
+                  )}
+                </motion.button>
+
+                {/* Trust Badges */}
+                <TrustBadges />
               </motion.div>
-            ))}
-          </div>
-        </div>
-
-        {/* Valentine's Day add-ons removed - Gift Box and Pouch products don't exist in inventory */}
-
-        {/* ============================================================
-            SMART BILL BREAKDOWN - Mobile Optimized
-            ============================================================ */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="mb-8 sm:mb-12 sm:max-w-sm sm:ml-auto"
-        >
-          {/* Subtotal */}
-          <div className="flex justify-between items-baseline py-2 text-sm">
-            <span className="text-text-secondary">Subtotal</span>
-            <AnimatedPrice value={subtotal} className="text-text-primary" />
-          </div>
-
-          {/* Shipping */}
-          <div className="flex justify-between items-baseline py-2 text-sm">
-            <span className="text-text-secondary">Shipping</span>
-            <span className="text-text-muted text-xs">Free</span>
-          </div>
-
-          {/* Tax */}
-          {TAX_INCLUDED && (
-            <div className="flex justify-between items-baseline py-2 text-sm">
-              <span className="text-text-secondary">Tax</span>
-              <span className="text-text-muted text-xs">Included</span>
             </div>
-          )}
-
-          {/* Divider */}
-          <div className="border-t border-text-primary/40 my-3" />
-
-          {/* Total */}
-          <div className="flex justify-between items-baseline py-1">
-            <span className="text-text-primary font-medium">Total</span>
-            <AnimatedPrice 
-              value={total}
-              className="text-lg sm:text-xl font-medium text-text-primary"
-            />
           </div>
-        </motion.div>
-
-        {/* ============================================================
-            PRIMARY ACTION - Hidden on mobile (moved to sticky bar)
-            ============================================================ */}
-        <div className="hidden sm:block space-y-4">
-          <button
-            onClick={handleCheckout}
-            disabled={isCheckingOut || stockErrors.length > 0 || stockValidating}
-            className="w-full py-4 bg-text-primary text-background rounded-full font-medium hover:bg-text-secondary transition-all disabled:opacity-50 disabled:cursor-not-allowed min-h-[52px]"
-          >
-            {isCheckingOut ? 'Preparing...' : 'Continue to Secure Checkout'}
-          </button>
-
-          {/* Micro Trust Line */}
-          <p className="text-center text-xs text-text-muted">
-            Secure checkout • Free shipping above ₹{SHIPPING_THRESHOLD.toLocaleString('en-IN')}
-          </p>
         </div>
-
       </div>
 
       {/* ============================================================
-          RELATED PRODUCTS - YOU MAY ALSO LIKE SECTION
+          RELATED PRODUCTS - "You May Also Like"
           ============================================================ */}
-      <RelatedProductsCart />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <RelatedProductsCart />
+      </div>
 
       {/* ============================================================
           MOBILE STICKY CHECKOUT BAR
           ============================================================ */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-50 safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
-        <div className="flex items-center gap-3">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-4 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+        <div className="flex items-center gap-4">
           {/* Total Display */}
           <div className="flex-1">
-            <p className="text-xs text-text-muted">Total</p>
-            <p className="text-lg font-bold text-text-primary">
+            <p className="text-xs text-gray-500 uppercase tracking-wide">Total</p>
+            <p className="text-xl font-bold text-gray-900">
               ₹{total.toLocaleString('en-IN')}
             </p>
           </div>
           
           {/* Checkout Button */}
-          <button
+          <motion.button
+            whileTap={{ scale: 0.98 }}
             onClick={handleCheckout}
             disabled={isCheckingOut || stockErrors.length > 0 || stockValidating}
-            className="flex-1 py-3.5 bg-text-primary text-background rounded-full font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            className="flex-1 py-4 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-full font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            {isCheckingOut ? 'Preparing...' : 'Checkout'}
-          </button>
+            {isCheckingOut ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span>Processing</span>
+              </>
+            ) : (
+              <>
+                <Shield className="w-4 h-4" />
+                <span>Checkout</span>
+              </>
+            )}
+          </motion.button>
         </div>
       </div>
     </main>
