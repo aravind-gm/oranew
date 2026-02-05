@@ -6,13 +6,15 @@ let transporter: nodemailer.Transporter | null = null;
 function getTransporter() {
   if (!transporter) {
     transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || 'smtpout.secureserver.net',
-      port: parseInt(process.env.EMAIL_PORT || '465'),
-      secure: process.env.EMAIL_SECURE === 'true' || true,
+      host: process.env.EMAIL_HOST || 'smtp.godaddy.com',
+      port: parseInt(process.env.EMAIL_PORT || '587'),
+      secure: process.env.EMAIL_SECURE === 'true' ? true : false,
       auth: {
         user: process.env.EMAIL_USER || 'admin@orashop.in',
         pass: process.env.EMAIL_PASS || 'ORAglobal',
       },
+      connectionTimeout: 10000,
+      socketTimeout: 10000,
     } as nodemailer.TransportOptions);
   }
   return transporter;
