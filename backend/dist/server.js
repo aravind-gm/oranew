@@ -115,8 +115,19 @@ app.use('/api/payments/webhook', express_1.default.raw({ type: 'application/json
 // Multer needs to handle multipart/form-data directly
 // Applying express.json() before upload routes will cause 400 errors
 app.use('/api/upload', upload_routes_1.default);
-// Body parser middleware for all other routes
-app.use(express_1.default.json());
+// ============================================
+// BODY PARSER - SKIP WEBHOOK ROUTE
+// ============================================
+// CRITICAL: express.json() must NOT process webhook requests
+// Razorpay webhook needs raw body for HMAC signature verification
+// If express.json() parses the body, the signature verification fails
+app.use((req, res, next) => {
+    // Skip JSON parsing for webhook - already handled by express.raw()
+    if (req.originalUrl === '/api/payments/webhook' || req.path === '/api/payments/webhook') {
+        return next();
+    }
+    express_1.default.json()(req, res, next);
+});
 app.use(express_1.default.urlencoded({ extended: true }));
 // Static files (uploads)
 app.use('/uploads', express_1.default.static(path_1.default.join(__dirname, '../uploads')));

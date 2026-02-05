@@ -94,8 +94,19 @@ app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 // Applying express.json() before upload routes will cause 400 errors
 app.use('/api/upload', uploadRoutes);
 
-// Body parser middleware for all other routes
-app.use(express.json());
+// ============================================
+// BODY PARSER - SKIP WEBHOOK ROUTE
+// ============================================
+// CRITICAL: express.json() must NOT process webhook requests
+// Razorpay webhook needs raw body for HMAC signature verification
+// If express.json() parses the body, the signature verification fails
+app.use((req: Request, res: Response, next: NextFunction) => {
+  // Skip JSON parsing for webhook - already handled by express.raw()
+  if (req.originalUrl === '/api/payments/webhook' || req.path === '/api/payments/webhook') {
+    return next();
+  }
+  express.json()(req, res, next);
+});
 app.use(express.urlencoded({ extended: true }));
 
 // Static files (uploads)

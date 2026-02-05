@@ -370,15 +370,33 @@ export const webhook = async (req: Request, res: Response) => {
   console.log('[Webhook] Webhook received at:', new Date().toISOString());
   
   // ────────────────────────────────────────────
+  // DEBUG: Log request info for troubleshooting
+  // ────────────────────────────────────────────
+  console.log('[Webhook] Request path:', req.originalUrl);
+  console.log('[Webhook] Content-Type:', req.headers['content-type']);
+  console.log('[Webhook] Body type:', typeof req.body, Buffer.isBuffer(req.body) ? '(Buffer)' : '');
+  
+  // Log all headers containing 'razorpay' for debugging
+  const razorpayHeaders = Object.keys(req.headers).filter(h => h.toLowerCase().includes('razorpay'));
+  console.log('[Webhook] Razorpay headers found:', razorpayHeaders.length > 0 ? razorpayHeaders : 'NONE');
+  
+  // ────────────────────────────────────────────
   // STEP 1: Extract raw body (CRITICAL for signature)
   // ────────────────────────────────────────────
   let rawBody: Buffer;
   if (Buffer.isBuffer(req.body)) {
     rawBody = req.body;
+    console.log('[Webhook] ✓ Body is Buffer (correct)');
   } else if ((req as any).rawBody && Buffer.isBuffer((req as any).rawBody)) {
     rawBody = (req as any).rawBody;
+    console.log('[Webhook] ✓ Using rawBody attachment');
+  } else if (typeof req.body === 'object' && req.body !== null) {
+    // Body was parsed by express.json() - this is a problem!
+    console.log('[Webhook] ⚠️ Body was parsed as JSON object - express.json() ran before webhook!');
+    rawBody = Buffer.from(JSON.stringify(req.body));
   } else {
     rawBody = Buffer.from('');
+    console.log('[Webhook] ⚠️ No body found');
   }
   console.log('[Webhook] Raw body length:', rawBody.length);
 
@@ -387,9 +405,12 @@ export const webhook = async (req: Request, res: Response) => {
   // ────────────────────────────────────────────
   const signature = req.headers['x-razorpay-signature'] as string;
   if (!signature) {
-    console.log('[Webhook] ❌ Signature missing');
+    console.log('[Webhook] ❌ Signature missing from headers');
+    console.log('[Webhook] Available headers:', Object.keys(req.headers).join(', '));
     return res.status(400).json({ success: false, reason: 'Signature missing' });
   }
+  console.log('[Webhook] ✓ Signature present:', signature.substring(0, 20) + '...');
+  
   if (!rawBody || !rawBody.length) {
     console.log('[Webhook] ❌ Raw body missing');
     return res.status(400).json({ success: false, reason: 'Raw body missing' });
