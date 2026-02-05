@@ -4,6 +4,7 @@ import api from '@/lib/api';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
+import { useCartStore } from '@/store/cartStore';
 
 interface PaymentStatus {
   paymentStatus: 'PENDING' | 'VERIFIED' | 'CONFIRMED' | 'FAILED' | 'REFUNDED';
@@ -24,6 +25,7 @@ function SuccessContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showConfetti, setShowConfetti] = useState(false);
+  const clearCart = useCartStore((state) => state.clearCart);
 
   // Poll for payment confirmation - CRITICAL: Only webhook decides truth
   useEffect(() => {
@@ -60,6 +62,9 @@ function SuccessContent() {
         // SUCCESS: Payment confirmed by webhook
         if (status.isConfirmed && !status.isFailed) {
           console.log('[Success] ✅ Payment CONFIRMED - showing success UI');
+          // Clear the local cart state since backend already cleared the database cart
+          clearCart();
+          console.log('[Success] ✅ Cart cleared');
           setLoading(false);
           setShowConfetti(true);
           clearInterval(pollInterval);
