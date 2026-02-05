@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '@/context/AuthContext';
+import { useAuthStore } from '@/store/authStore';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -20,6 +21,7 @@ interface UserProfile {
 export default function AccountPage() {
   const router = useRouter();
   const { isAuthenticated, user, isLoading, logout } = useAuth();
+  const authStore = useAuthStore();
   const [orderStats, setOrderStats] = useState<OrderStats>({ total: 0, pending: 0, delivered: 0 });
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
@@ -88,6 +90,8 @@ export default function AccountPage() {
 
   const handleLogout = () => {
     logout();
+    // CRITICAL: Also update AuthStore for Header to detect logout
+    authStore.logout();
     router.push('/');
     router.refresh();
   };

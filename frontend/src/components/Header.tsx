@@ -12,12 +12,13 @@ const emptySubscribe = () => () => {};
 
 export default function Header() {
   const router = useRouter();
-  const { token, user, logout } = useAuthStore();
+  const { token, user, logout, isHydrated } = useAuthStore();
   const { items } = useCartStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [mounted, setMounted] = useState(false);
   
   // Use useSyncExternalStore to safely handle hydration
   const isClient = useSyncExternalStore(
@@ -25,6 +26,11 @@ export default function Header() {
     () => true,
     () => false
   );
+
+  // Ensure component is mounted and auth store is hydrated
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -77,9 +83,10 @@ export default function Header() {
   }, [isMobileMenuOpen]);
 
   // Prevent hydration mismatch by using consistent values during SSR
-  const isLoggedIn = isClient && token && user;
-  const isAdmin = isClient && user?.role === 'ADMIN';
-  const cartCount = isClient ? items.length : 0;
+  // Wait for both client-side mount AND auth store hydration
+  const isLoggedIn = mounted && isHydrated && token && user;
+  const isAdmin = mounted && isHydrated && user?.role === 'ADMIN';
+  const cartCount = mounted && isHydrated ? items.length : 0;
 
   const menuItems = [
     { label: 'Shop All', href: '/collections' },
@@ -106,8 +113,8 @@ export default function Header() {
       </div>
 
       {/* Main Header */}
-      <div className="bg-[#FFF7FA] border-b border-[#FFE4EC] px-4 lg:px-6">
-        <div className="max-w-7xl mx-auto flex items-center justify-between h-16 lg:h-20">
+      <div className="bg-[#FFF7FA] border-b border-[#FFE4EC] px-4 lg:px-6 relative overflow-visible">
+        <div className="max-w-7xl mx-auto flex items-center justify-between h-16 lg:h-20 relative overflow-visible">
           {/* Logo - Brand Dominant */}
           <Link href="/" className="flex-shrink-0 group">
             <Image
@@ -143,7 +150,7 @@ export default function Header() {
           </div>
 
           {/* Right Side Icons */}
-          <div className="flex items-center gap-3 lg:gap-5">
+          <div className="flex items-center gap-3 lg:gap-5 overflow-visible">
             {/* Mobile Search */}
             <Link
               href="/search"
@@ -191,12 +198,12 @@ export default function Header() {
                     <span className="text-xs font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded">ADMIN</span>
                   )}
                 </button>
-                <div className="hidden group-hover:block absolute right-0 top-full pt-2 w-48 z-50">
-                  <div className="bg-white rounded-lg shadow-lg border border-[#FFE4EC] py-2">
-                    <Link href="/account" className="block px-4 py-2 text-sm text-[#1A1A1A] hover:bg-[#FFE4EC]">My Account</Link>
-                    <Link href="/account/orders" className="block px-4 py-2 text-sm text-[#1A1A1A] hover:bg-[#FFE4EC]">Orders</Link>
-                    {isAdmin && <Link href="/admin" className="block px-4 py-2 text-sm text-[#9B2C46] hover:bg-[#FFE4EC]">Admin</Link>}
-                    <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-[#FFE4EC]">Sign Out</button>
+                <div className="hidden group-hover:block absolute right-0 top-full pt-2 w-48 z-[9999] origin-top-right transition-all opacity-100 scale-100">
+                  <div className="bg-white rounded-lg shadow-2xl border border-[#FFE4EC] py-2 overflow-visible">
+                    <Link href="/account" className="block px-4 py-2 text-sm text-[#1A1A1A] hover:bg-[#FFE4EC] transition-colors">My Account</Link>
+                    <Link href="/account/orders" className="block px-4 py-2 text-sm text-[#1A1A1A] hover:bg-[#FFE4EC] transition-colors">Orders</Link>
+                    {isAdmin && <Link href="/admin" className="block px-4 py-2 text-sm text-[#9B2C46] hover:bg-[#FFE4EC] transition-colors">Admin</Link>}
+                    <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-[#FFE4EC] transition-colors">Sign Out</button>
                   </div>
                 </div>
               </div>
@@ -206,6 +213,19 @@ export default function Header() {
                   Login / Sign Up
                 </Link>
               </div>
+            )}
+
+            {/* Mobile Login Button (show when logged out) */}
+            {!isLoggedIn && (
+              <Link
+                href="/auth/login"
+                className="md:hidden text-[#1A1A1A] hover:text-[#9B2C46] transition-colors p-2"
+                title="Login"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </Link>
             )}
 
             {/* Mobile Menu Button */}
@@ -294,9 +314,25 @@ export default function Header() {
               </button>
             </form>
 
-            {!isLoggedIn && (
+            {/* Mobile Auth Actions */}
+            {isLoggedIn ? (
               <div className="space-y-3 pt-2">
-                <Link href="/auth/login" onClick={() => setIsMobileMenuOpen(false)} className="block text-center py-2 bg-[#9B2C46] text-white rounded-lg text-sm font-medium">Login / Sign Up</Link>
+                <Link href="/account" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-2 text-[#1A1A1A] hover:bg-[#FFE4EC] rounded-lg text-sm font-medium">My Account</Link>
+                <Link href="/account/orders" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-2 text-[#1A1A1A] hover:bg-[#FFE4EC] rounded-lg text-sm font-medium">Orders</Link>
+                {isAdmin && <Link href="/admin" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-2 text-[#9B2C46] hover:bg-[#FFE4EC] rounded-lg text-sm font-medium">Admin</Link>}
+                <button 
+                  onClick={() => {
+                    handleLogout();
+                    setIsMobileMenuOpen(false);
+                  }} 
+                  className="w-full text-left px-4 py-2 text-red-600 hover:bg-[#FFE4EC] rounded-lg text-sm font-medium"
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3 pt-2">
+                <Link href="/auth/login" onClick={() => setIsMobileMenuOpen(false)} className="block text-center py-3 px-4 bg-[#9B2C46] text-white rounded-lg text-sm font-bold hover:bg-opacity-90 transition-all">Login / Sign Up</Link>
               </div>
             )}
           </div>

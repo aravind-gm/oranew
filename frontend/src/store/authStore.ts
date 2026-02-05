@@ -42,7 +42,7 @@ export const useAuthStore = create<AuthState>()(
       login: (user, token) => {
         console.log('[AuthStore] 🔐 Logging in user:', { email: user.email, role: user.role });
         localStorage.setItem('ora_token', token);
-        set({ user, token, isAuthenticated: true });
+        set({ user, token, isAuthenticated: true, isHydrated: true });
       },
       
       logout: () => {
@@ -57,7 +57,7 @@ export const useAuthStore = create<AuthState>()(
         } catch (err) {
           // Supabase client may not be available
         }
-        set({ user: null, token: null, isAuthenticated: false });
+        set({ user: null, token: null, isAuthenticated: false, isHydrated: true });
       },
       
       updateUser: (user) => {

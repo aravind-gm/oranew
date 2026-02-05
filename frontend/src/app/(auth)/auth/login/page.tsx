@@ -5,6 +5,7 @@
 // Deploy: 2026-02-05
 
 import { useAuth } from '@/context/AuthContext';
+import { useAuthStore } from '@/store/authStore';
 import api from '@/lib/api';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -18,6 +19,7 @@ type LoginStep = 'form' | 'otp-verify';
 export default function LoginPage() {
   const router = useRouter();
   const { login, user, token, isAuthenticated, isLoading: authLoading } = useAuth();
+  const authStore = useAuthStore();
 
   // Mode: Login or Signup
   const [authMode, setAuthMode] = useState<AuthMode>('login');
@@ -107,15 +109,20 @@ export default function LoginPage() {
 
       console.log('[Auth] ✅ Password login successful:', userData.email);
 
-      // Store in AuthContext (this syncs to localStorage)
-      login({
+      const userPayload = {
         id: userData.id,
         email: userData.email,
         fullName: userData.fullName,
         role: userData.role || 'CUSTOMER',
         phone: userData.phone,
         profileCompleted: userData.profileCompleted,
-      }, jwtToken);
+      };
+
+      // Store in AuthContext (this syncs to localStorage)
+      login(userPayload, jwtToken);
+
+      // CRITICAL: Also update AuthStore for Header to detect login
+      authStore.login(userPayload, jwtToken);
 
       setMessage('Welcome back! ✨');
 
@@ -213,15 +220,20 @@ export default function LoginPage() {
 
       console.log('[Auth] ✅ OTP verified:', { userId: userData.id, isNewUser });
 
-      // Store in AuthContext
-      login({
+      const userPayload = {
         id: userData.id,
         email: userData.email,
         fullName: userData.fullName,
         role: userData.role || 'CUSTOMER',
         phone: userData.phone,
         profileCompleted: userData.profileCompleted,
-      }, jwtToken);
+      };
+
+      // Store in AuthContext
+      login(userPayload, jwtToken);
+
+      // CRITICAL: Also update AuthStore for Header to detect login
+      authStore.login(userPayload, jwtToken);
 
       setMessage('Welcome to ORA! ✨');
 
@@ -293,15 +305,20 @@ export default function LoginPage() {
 
       console.log('[Auth] ✅ Signup successful:', userData.email);
 
-      // Store in AuthContext
-      login({
+      const userPayload = {
         id: userData.id,
         email: userData.email,
         fullName: userData.fullName,
         role: userData.role || 'CUSTOMER',
         phone: userData.phone,
         profileCompleted: userData.profileCompleted,
-      }, jwtToken);
+      };
+
+      // Store in AuthContext
+      login(userPayload, jwtToken);
+
+      // CRITICAL: Also update AuthStore for Header to detect login
+      authStore.login(userPayload, jwtToken);
 
       setMessage('Account created successfully! Welcome to ORA! ✨');
 
