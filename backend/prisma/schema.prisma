@@ -33,6 +33,7 @@ model User {
   id               String          @id @default(uuid())
   email            String          @unique
   supabaseId       String?         @unique @map("supabase_id")
+  passwordHash     String?         @map("password_hash")
   fullName         String          @default("") @map("full_name")
   phone            String?
   gender           String?

@@ -5,9 +5,15 @@ const auth_controller_1 = require("../controllers/auth.controller");
 const auth_1 = require("../middleware/auth");
 const rateLimiter_1 = require("../middleware/rateLimiter");
 const router = (0, express_1.Router)();
-// OTP / Magic Link authentication (Supabase-based)
+// Unified login endpoint (hybrid OTP + password)
+router.post('/login', rateLimiter_1.authLimiter, auth_controller_1.login);
+// OTP / Magic Link authentication
 router.post('/otp-login', rateLimiter_1.authLimiter, auth_controller_1.otpLogin);
 router.post('/verify-otp', rateLimiter_1.authLimiter, auth_controller_1.verifyOtp);
+// Password authentication
+router.post('/register', rateLimiter_1.authLimiter, auth_controller_1.register);
+router.post('/password-login', rateLimiter_1.authLimiter, auth_controller_1.passwordLogin);
+router.post('/change-password', auth_1.protect, auth_controller_1.changePassword);
 // Protected routes (requires JWT token)
 router.get('/me', auth_1.protect, auth_controller_1.getMe);
 router.post('/logout', auth_1.protect, auth_controller_1.logout);

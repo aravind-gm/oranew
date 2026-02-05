@@ -1,6 +1,10 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteAccount = exports.logout = exports.getMe = exports.verifyOtp = exports.otpLogin = void 0;
+exports.deleteAccount = exports.logout = exports.getMe = exports.changePassword = exports.passwordLogin = exports.register = exports.login = exports.verifyOtp = exports.otpLogin = void 0;
+const bcrypt_1 = __importDefault(require("bcrypt"));
 const database_1 = require("../config/database");
 const email_1 = require("../utils/email");
 const jwt_1 = require("../utils/jwt");
@@ -196,6 +200,369 @@ const verifyOtp = async (req, res, next) => {
     }
 };
 exports.verifyOtp = verifyOtp;
+// ============================================
+// UNIFIED LOGIN ENDPOINT (HYBRID OTP + PASSWORD)
+// ============================================
+// @desc    Unified login - accepts either password or triggers OTP
+// @route   POST /api/auth/login
+// @access  Public
+const login = async (req, res, next) => {
+    try {
+        const { email, password } = req.body;
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                error: 'Email is required',
+            });
+        }
+        const emailLower = email.toLowerCase();
+        if (password) {
+            // PASSWORD LOGIN FLOW
+            console.log(`[Auth] 🔐 Password login attempt for: ${email}`);
+            // Find user by email
+            const user = await database_1.prisma.user.findUnique({
+                where: { email: emailLower },
+            });
+            if (!user) {
+                return res.status(401).json({
+                    success: false,
+                    error: 'Invalid email or password',
+                });
+            }
+            // Check if user has password set
+            if (!user.passwordHash) {
+                return res.status(401).json({
+                    success: false,
+                    error: 'This account uses OTP login. Please use the OTP option instead.',
+                });
+            }
+            // Verify password
+            const passwordMatch = await bcrypt_1.default.compare(password, user.passwordHash);
+            if (!passwordMatch) {
+                return res.status(401).json({
+                    success: false,
+                    error: 'Invalid email or password',
+                });
+            }
+            // Generate JWT token
+            const token = (0, jwt_1.generateToken)({
+                id: user.id,
+                email: user.email,
+                role: user.role,
+            });
+            console.log(`[Auth] ✅ User logged in with password: ${email}`);
+            return res.status(200).json({
+                success: true,
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    fullName: user.fullName,
+                    phone: user.phone,
+                    role: user.role,
+                    isVerified: user.isVerified,
+                    profileCompleted: user.profileCompleted,
+                },
+                token,
+                isNewUser: false,
+            });
+        }
+        else {
+            // OTP LOGIN FLOW (EXISTING LOGIC)
+            console.log(`[Auth] 📧 OTP login request for: ${email}`);
+            // Generate 8-digit OTP
+            const otp = generate8DigitOTP();
+            const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+            // Store OTP with email as key
+            otpStore.set(emailLower, { otp, expiresAt });
+            console.log(`[Auth] 🔢 Generated OTP for ${email}: ${otp} (expires at ${expiresAt})`);
+            // Try to send email with enhanced error handling
+            try {
+                await (0, email_1.sendEmail)({
+                    to: emailLower,
+                    subject: 'ORA Jewellery - Your Login Code',
+                    html: `
+            <div style="font-family: Arial, sans-serif; max-width: 400px; margin: 0 auto;">
+              <h2>ORA Jewellery</h2>
+              <p>Your login code is:</p>
+              <h1 style="font-size: 32px; letter-spacing: 4px; color: #2563eb;">${otp}</h1>
+              <p>This code expires in 5 minutes.</p>
+              <p style="color: #666; font-size: 14px;">If you didn't request this code, please ignore this email.</p>
+            </div>
+          `,
+                });
+                console.log(`[Auth] ✅ OTP email sent to: ${email}`);
+            }
+            catch (emailError) {
+                // SMTP FAILURE HANDLING - Don't crash, just log warning
+                console.warn(`[Auth] ⚠️ SMTP failed for ${email}:`, emailError);
+                // Don't return error - continue with success response
+                // This is the "temporary hybrid" solution for unreliable SMTP
+            }
+            return res.status(200).json({
+                success: true,
+                message: 'Login code sent to your email',
+                requiresOTP: true,
+            });
+        }
+    }
+    catch (error) {
+        console.error('[Auth] ❌ Login error:', error);
+        next(error);
+    }
+};
+exports.login = login;
+// ============================================
+// PASSWORD AUTHENTICATION SYSTEM
+// ============================================
+// @desc    Register (hybrid: with password or OTP-only)
+// @route   POST /api/auth/register
+// @access  Public
+const register = async (req, res, next) => {
+    try {
+        const { email, password, fullName, phone } = req.body;
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                error: 'Email is required',
+            });
+        }
+        const emailLower = email.toLowerCase();
+        // Check if user already exists
+        const existingUser = await database_1.prisma.user.findUnique({
+            where: { email: emailLower },
+        });
+        if (existingUser) {
+            return res.status(400).json({
+                success: false,
+                error: 'Email already registered. Please login instead.',
+            });
+        }
+        if (password) {
+            // PASSWORD REGISTRATION
+            console.log(`[Auth] 🔐 Password registration for: ${email}`);
+            // Hash password
+            const passwordHash = await bcrypt_1.default.hash(password, 10);
+            // Create user with password
+            const user = await database_1.prisma.user.create({
+                data: {
+                    email: emailLower,
+                    passwordHash,
+                    fullName: fullName || '',
+                    phone: phone || null,
+                    role: 'CUSTOMER',
+                    isVerified: true, // Auto-verify for password registration
+                    profileCompleted: !!fullName,
+                },
+            });
+            // Generate JWT token
+            const token = (0, jwt_1.generateToken)({
+                id: user.id,
+                email: user.email,
+                role: user.role,
+            });
+            console.log(`[Auth] ✅ User registered with password: ${email}`);
+            return res.status(201).json({
+                success: true,
+                message: 'Registration successful',
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    fullName: user.fullName,
+                    phone: user.phone,
+                    role: user.role,
+                    isVerified: user.isVerified,
+                    profileCompleted: user.profileCompleted,
+                },
+                token,
+                isNewUser: true,
+            });
+        }
+        else {
+            // OTP REGISTRATION (CREATE UNVERIFIED USER)
+            console.log(`[Auth] 📧 OTP registration for: ${email}`);
+            // Create unverified user without password
+            const user = await database_1.prisma.user.create({
+                data: {
+                    email: emailLower,
+                    passwordHash: null, // No password for OTP users
+                    fullName: fullName || '',
+                    phone: phone || null,
+                    role: 'CUSTOMER',
+                    isVerified: false, // Must verify via OTP
+                    profileCompleted: false,
+                },
+            });
+            // Generate and send OTP
+            const otp = generate8DigitOTP();
+            const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+            otpStore.set(emailLower, { otp, expiresAt });
+            console.log(`[Auth] 🔢 Generated registration OTP for ${email}: ${otp}`);
+            // Try to send welcome email with OTP
+            try {
+                await (0, email_1.sendEmail)({
+                    to: emailLower,
+                    subject: 'Welcome to ORA Jewellery - Verify Your Account',
+                    html: `
+            <div style="font-family: Arial, sans-serif; max-width: 400px; margin: 0 auto;">
+              <h2>Welcome to ORA Jewellery! ✨</h2>
+              <p>Thank you for signing up. Your verification code is:</p>
+              <h1 style="font-size: 32px; letter-spacing: 4px; color: #2563eb;">${otp}</h1>
+              <p>This code expires in 5 minutes.</p>
+              <p style="color: #666; font-size: 14px;">If you didn't create this account, please ignore this email.</p>
+            </div>
+          `,
+                });
+                console.log(`[Auth] ✅ Welcome email sent to: ${email}`);
+            }
+            catch (emailError) {
+                // SMTP FAILURE HANDLING - Don't crash, just log warning
+                console.warn(`[Auth] ⚠️ SMTP failed for registration ${email}:`, emailError);
+                // Don't return error - user is created, they can still verify later
+            }
+            return res.status(201).json({
+                success: true,
+                message: 'Registration successful. Check your email for verification code.',
+                requiresOTP: true,
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    fullName: user.fullName,
+                    role: user.role,
+                    isVerified: user.isVerified,
+                    profileCompleted: user.profileCompleted,
+                },
+            });
+        }
+    }
+    catch (error) {
+        console.error('[Auth] ❌ Registration error:', error);
+        next(error);
+    }
+};
+exports.register = register;
+// @desc    Login with password
+// @route   POST /api/auth/password-login
+// @access  Public
+const passwordLogin = async (req, res, next) => {
+    try {
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({
+                success: false,
+                error: 'Email and password are required',
+            });
+        }
+        const emailLower = email.toLowerCase();
+        // Find user by email
+        const user = await database_1.prisma.user.findUnique({
+            where: { email: emailLower },
+        });
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                error: 'Invalid email or password',
+            });
+        }
+        // Check if user has password set
+        if (!user.passwordHash) {
+            return res.status(401).json({
+                success: false,
+                error: 'This account uses OTP login. Please use the OTP option instead.',
+            });
+        }
+        // Verify password
+        const passwordMatch = await bcrypt_1.default.compare(password, user.passwordHash);
+        if (!passwordMatch) {
+            return res.status(401).json({
+                success: false,
+                error: 'Invalid email or password',
+            });
+        }
+        // Generate JWT token
+        const token = (0, jwt_1.generateToken)({
+            id: user.id,
+            email: user.email,
+            role: user.role,
+        });
+        console.log(`[Auth] ✅ User logged in with password: ${email}`);
+        return res.status(200).json({
+            success: true,
+            user: {
+                id: user.id,
+                email: user.email,
+                fullName: user.fullName,
+                phone: user.phone,
+                role: user.role,
+                isVerified: user.isVerified,
+                profileCompleted: user.profileCompleted,
+            },
+            token,
+            isNewUser: false,
+        });
+    }
+    catch (error) {
+        console.error('[Auth] ❌ Password login error:', error);
+        next(error);
+    }
+};
+exports.passwordLogin = passwordLogin;
+// @desc    Change password
+// @route   POST /api/auth/change-password
+// @access  Private
+const changePassword = async (req, res, next) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const userId = req.user.id;
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                error: 'Current password and new password are required',
+            });
+        }
+        // Get user from database
+        const user = await database_1.prisma.user.findUnique({
+            where: { id: userId },
+        });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                error: 'User not found',
+            });
+        }
+        // If user has no password, they can't change it
+        if (!user.passwordHash) {
+            return res.status(400).json({
+                success: false,
+                error: 'This account uses OTP login. Cannot change password.',
+            });
+        }
+        // Verify current password
+        const passwordMatch = await bcrypt_1.default.compare(currentPassword, user.passwordHash);
+        if (!passwordMatch) {
+            return res.status(401).json({
+                success: false,
+                error: 'Current password is incorrect',
+            });
+        }
+        // Hash new password
+        const newPasswordHash = await bcrypt_1.default.hash(newPassword, 10);
+        // Update password
+        await database_1.prisma.user.update({
+            where: { id: userId },
+            data: { passwordHash: newPasswordHash },
+        });
+        console.log(`[Auth] ✅ Password changed for user: ${user.email}`);
+        return res.status(200).json({
+            success: true,
+            message: 'Password changed successfully',
+        });
+    }
+    catch (error) {
+        console.error('[Auth] ❌ Change password error:', error);
+        next(error);
+    }
+};
+exports.changePassword = changePassword;
 // @desc    Get current user
 // @route   GET /api/auth/me
 // @access  Private
