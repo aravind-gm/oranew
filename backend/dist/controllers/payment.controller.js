@@ -352,9 +352,40 @@ const webhook = async (req, res) => {
     // STEP 2: Validate signature exists
     // ────────────────────────────────────────────
     const signature = req.headers['x-razorpay-signature'];
+    const isTestMode = process.env.RAZORPAY_KEY_ID?.startsWith('rzp_test_');
     if (!signature) {
-        console.log('[Webhook] ❌ Signature missing from headers');
+        console.log('[Webhook] ⚠️ Signature missing from headers');
         console.log('[Webhook] Available headers:', Object.keys(req.headers).join(', '));
+        // In TEST MODE ONLY: Allow webhooks without signature for development
+        // This happens when Razorpay webhook secret is not configured in dashboard
+        if (isTestMode) {
+            console.log('[Webhook] ⚠️ TEST MODE: Proceeding without signature verification');
+            console.log('[Webhook] ⚠️ ACTION REQUIRED: Configure webhook secret in Razorpay Dashboard');
+            console.log('[Webhook] ⚠️ Go to: Dashboard → Webhooks → Edit → Change Secret → Enter your RAZORPAY_WEBHOOK_SECRET');
+            // Parse and process the webhook without signature verification (TEST ONLY)
+            let event;
+            try {
+                event = JSON.parse(rawBody.toString());
+            }
+            catch (err) {
+                console.log('[Webhook] ❌ Invalid JSON:', err);
+                return res.status(400).json({ success: false, reason: 'Invalid JSON' });
+            }
+            const eventType = event?.event;
+            console.log('[Webhook] Event type (UNVERIFIED):', eventType);
+            if (eventType === 'payment.captured') {
+                return handlePaymentCaptured(event, res);
+            }
+            else if (eventType === 'payment.failed') {
+                return handlePaymentFailed(event, res);
+            }
+            else {
+                console.log('[Webhook] Ignoring event type:', eventType);
+                return res.status(200).json({ success: true, reason: 'Event ignored' });
+            }
+        }
+        // In LIVE MODE: Reject webhooks without signature
+        console.log('[Webhook] ❌ LIVE MODE: Signature required - rejecting webhook');
         return res.status(400).json({ success: false, reason: 'Signature missing' });
     }
     console.log('[Webhook] ✓ Signature present:', signature.substring(0, 20) + '...');
