@@ -6,25 +6,14 @@ let transporter: nodemailer.Transporter | null = null;
 function getTransporter() {
   if (!transporter) {
     transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
-      port: parseInt(process.env.EMAIL_PORT || '587'),
-      secure: process.env.EMAIL_SECURE === 'true',
+      host: process.env.EMAIL_HOST || 'smtpout.secureserver.net',
+      port: parseInt(process.env.EMAIL_PORT || '465'),
+      secure: process.env.EMAIL_SECURE === 'true' || true,
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: process.env.EMAIL_USER || 'admin@orashop.in',
+        pass: process.env.EMAIL_PASS || 'ORAglobal',
       },
-      // Connection timeout settings for production stability
-      connectionTimeout: 5000, // 5 seconds
-      socketTimeout: 5000, // 5 seconds for socket operations
-      pool: {
-        maxConnections: 5,
-        maxMessages: 100,
-        rateDelta: 1000,
-        rateLimit: 14, // max 14 messages per second
-      },
-      logger: true, // Enable connection logging
-      debug: process.env.NODE_ENV === 'development', // Debug in dev only
-    });
+    } as nodemailer.TransportOptions);
   }
   return transporter;
 }
