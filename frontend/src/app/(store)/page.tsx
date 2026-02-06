@@ -65,21 +65,21 @@ const FEATURED_COLLECTIONS = [
     id: 1,
     title: 'Necklaces',
     subtitle: 'Close to the heart',
-    image: '/necklace.png',
+    image: '/chain.jpeg',
     href: '/collections?category=necklace'
   },
   {
     id: 2,
     title: 'Rings',
     subtitle: 'Timeless elegance',
-    image: '/rings.png',
+    image: '/ring.jpeg',
     href: '/collections?category=rings'
   },
   {
     id: 3,
     title: 'Bracelets',
     subtitle: 'Wrapped in grace',
-    image: '/bracelet.png',
+    image: '/bracelets.jpeg',
     href: '/collections?category=bracelets'
   }
 ];
@@ -89,7 +89,7 @@ const PROMOTIONAL_BANNERS = [
     id: 1,
     title: 'Valentine Gifts',
     subtitle: 'Express Your Love',
-    image: '/val banner.png',
+    image: '/banners.png',
     href: '/valentine-drinkware',
     className: 'bg-gradient-to-br from-[#FFD6E5] to-[#FFF7FA]'
   },
@@ -97,7 +97,7 @@ const PROMOTIONAL_BANNERS = [
     id: 2,
     title: 'Combos for Her',
     subtitle: 'Perfect Gift Sets',
-    image: '/rings.png',
+    image: '/ring.jpeg',
     href: '/collections?type=combo',
     className: 'bg-gradient-to-br from-[#FFE4EC] to-[#FFF0F5]'
   },
@@ -105,7 +105,7 @@ const PROMOTIONAL_BANNERS = [
     id: 3,
     title: 'Bestsellers',
     subtitle: 'Customer Favorites',
-    image: '/necklace.png',
+    image: '/chain.jpeg',
     href: '/collections?sort=-sales',
     className: 'bg-gradient-to-br from-[#FFF7FA] to-[#FFD6E5]'
   }
@@ -176,7 +176,7 @@ export default function HomePage() {
       <section className="relative w-full h-[60vh] md:h-[70vh] lg:h-[80vh] overflow-hidden">
         <div className="absolute inset-0">
           <Image
-            src="/val banner.png"
+            src="/banners.png"
             alt="ORA Jewellery - Premium Collection"
             fill
             className="object-cover object-center"
@@ -369,116 +369,6 @@ export default function HomePage() {
       </section>
 
       {/* ================================================================
-          SECTION 4B: COLLECTION SPOTLIGHT - LARGE IMAGE SHOWCASE
-          ================================================================ */}
-      <section className="py-8 lg:py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 lg:px-6">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-8 lg:mb-12"
-          >
-            <h2 className="text-2xl lg:text-4xl font-serif font-light text-[#1A1A1A] mb-4">
-              Collection Highlights
-            </h2>
-            <p className="text-lg text-[#1A1A1A]/70 max-w-2xl mx-auto">
-              Explore our curated selections with premium styling
-            </p>
-          </motion.div>
-
-          {/* Featured Collection Banners - Large Images */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Left - Large featured banner */}
-            <motion.div
-              initial={{ opacity: 0, x: -30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-              className="group relative overflow-hidden rounded-2xl bg-[#FFF7FA] cursor-pointer h-[400px] lg:h-full"
-            >
-              <Link href="/collections?category=necklace" className="block absolute inset-0 z-10" />
-              <Image
-                src="/necklace.png"
-                alt="Necklace Collection"
-                fill
-                className="object-cover transition-transform duration-500 group-hover:scale-110"
-              />
-              <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors duration-300 z-5" />
-              <div className="absolute inset-0 flex items-end justify-start p-8 z-20">
-                <div>
-                  <h3 className="text-3xl lg:text-4xl font-serif font-light text-white mb-2">
-                    Necklace Collection
-                  </h3>
-                  <p className="text-white/90 mb-4">Premium designs for every occasion</p>
-                  <div className="inline-flex items-center gap-2 text-white font-medium group-hover:gap-3 transition-all">
-                    <span>Shop Now</span>
-                    <ArrowRight className="w-5 h-5" />
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Right - Two stacked smaller banners */}
-            <div className="space-y-6">
-              {/* Top banner */}
-              <motion.div
-                initial={{ opacity: 0, x: 30 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-                className="group relative overflow-hidden rounded-2xl bg-[#FFE4EC] cursor-pointer h-[190px]"
-              >
-                <Link href="/collections?category=rings" className="block absolute inset-0 z-10" />
-                <Image
-                  src="/rings.png"
-                  alt="Rings Collection"
-                  fill
-                  className="object-cover opacity-20 transition-opacity duration-500 group-hover:opacity-30"
-                />
-                <div className="absolute inset-0 flex items-center justify-between p-6 z-5">
-                  <div>
-                    <h3 className="text-2xl font-serif font-medium text-[#1A1A1A] mb-1">
-                      Rings
-                    </h3>
-                    <p className="text-[#1A1A1A]/70 text-sm">Timeless elegance</p>
-                  </div>
-                  <ArrowRight className="w-6 h-6 text-[#9B2C46] group-hover:translate-x-1 transition-transform" />
-                </div>
-              </motion.div>
-
-              {/* Bottom banner */}
-              <motion.div
-                initial={{ opacity: 0, x: 30 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-                className="group relative overflow-hidden rounded-2xl bg-[#FFD6E5] cursor-pointer h-[190px]"
-              >
-                <Link href="/collections?category=bracelets" className="block absolute inset-0 z-10" />
-                <Image
-                  src="/bracelet.png"
-                  alt="Bracelets Collection"
-                  fill
-                  className="object-cover opacity-20 transition-opacity duration-500 group-hover:opacity-30"
-                />
-                <div className="absolute inset-0 flex items-center justify-between p-6 z-5">
-                  <div>
-                    <h3 className="text-2xl font-serif font-medium text-[#1A1A1A] mb-1">
-                      Bracelets
-                    </h3>
-                    <p className="text-[#1A1A1A]/70 text-sm">Wrapped in grace</p>
-                  </div>
-                  <ArrowRight className="w-6 h-6 text-[#9B2C46] group-hover:translate-x-1 transition-transform" />
-                </div>
-              </motion.div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ================================================================
           SECTION 5: VALENTINE SPECIAL SECTION  
           ================================================================ */}
       <section className="py-8 lg:py-16 bg-gradient-to-r from-[#FFD6E5] to-[#FFE4EC]">
@@ -526,7 +416,7 @@ export default function HomePage() {
             >
               <div className="relative aspect-square rounded-2xl overflow-hidden">
                 <Image
-                  src="/val banner.png"
+                  src="/banners.png"
                   alt="Valentine Special Collection"
                   fill
                   className="object-cover"

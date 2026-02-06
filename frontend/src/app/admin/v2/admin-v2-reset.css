@@ -1,0 +1,180 @@
+/* ============================================
+   ADMIN V2 LIGHT THEME RESET
+   ============================================
+   Overrides the parent admin dark theme (!important rules)
+   for the v2 admin panel. Uses [data-admin-v2] to scope.
+   ============================================ */
+
+/* ---- ROOT RESET ---- */
+[data-admin-v2="true"] {
+  background-color: #f6f7f9 !important;
+  color: #111827 !important;
+  isolation: isolate !important;
+}
+
+/* ---- BACKGROUND OVERRIDES ---- */
+[data-admin-v2="true"] .bg-white,
+[data-admin-v2="true"] [class*="bg-white"] {
+  background-color: #ffffff !important;
+}
+
+[data-admin-v2="true"] .bg-background,
+[data-admin-v2="true"] .bg-gray-50,
+[data-admin-v2="true"] .bg-primary-50 {
+  background-color: #f6f7f9 !important;
+}
+
+/* ---- TEXT OVERRIDES ---- */
+[data-admin-v2="true"] .text-foreground,
+[data-admin-v2="true"] .text-black,
+[data-admin-v2="true"] .text-gray-900,
+[data-admin-v2="true"] .text-neutral-900 {
+  color: #111827 !important;
+}
+
+/* ---- BORDER OVERRIDES ---- */
+[data-admin-v2="true"] .border-neutral-200,
+[data-admin-v2="true"] .border-gray-200,
+[data-admin-v2="true"] .border-primary-100 {
+  border-color: #e5e7eb !important;
+}
+
+/* ---- TABLE RESET ---- */
+[data-admin-v2="true"] table,
+[data-admin-v2="true"] thead,
+[data-admin-v2="true"] tbody,
+[data-admin-v2="true"] tr,
+[data-admin-v2="true"] td,
+[data-admin-v2="true"] th {
+  background-color: transparent !important;
+  border-color: #e5e7eb !important;
+  color: inherit !important;
+}
+
+[data-admin-v2="true"] thead {
+  background-color: #f6f7f9 !important;
+}
+
+[data-admin-v2="true"] tbody tr {
+  background-color: #ffffff !important;
+}
+
+[data-admin-v2="true"] tbody tr:hover {
+  background-color: #f6f7f9 !important;
+}
+
+/* ---- FORM ELEMENTS RESET ---- */
+[data-admin-v2="true"] input,
+[data-admin-v2="true"] select,
+[data-admin-v2="true"] textarea {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+  border-color: #d1d5db !important;
+}
+
+[data-admin-v2="true"] input::placeholder,
+[data-admin-v2="true"] textarea::placeholder {
+  color: #9ca3af !important;
+}
+
+[data-admin-v2="true"] input:focus,
+[data-admin-v2="true"] select:focus,
+[data-admin-v2="true"] textarea:focus {
+  border-color: #d4af37 !important;
+}
+
+/* ---- BUTTON RESET ---- */
+[data-admin-v2="true"] button {
+  color: inherit !important;
+}
+
+/* ---- MODAL/DIALOG RESET ---- */
+[data-admin-v2="true"] [role="dialog"],
+[data-admin-v2="true"] .modal,
+[data-admin-v2="true"] .dialog {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+  border-color: #e5e7eb !important;
+}
+
+/* ---- EXPLICIT COLOR CLASSES (override dark theme !important) ---- */
+
+/* Backgrounds with explicit hex values */
+[data-admin-v2="true"] [class*="bg-\[#ffffff\]"],
+[data-admin-v2="true"] [class*="bg-\[#f6f7f9\]"],
+[data-admin-v2="true"] [class*="bg-\[#f3f4f6\]"] {
+  background-color: revert !important;
+}
+
+/* Text with explicit hex values */
+[data-admin-v2="true"] [class*="text-\[#111827\]"] {
+  color: #111827 !important;
+}
+
+[data-admin-v2="true"] [class*="text-\[#4b5563\]"] {
+  color: #4b5563 !important;
+}
+
+[data-admin-v2="true"] [class*="text-\[#9ca3af\]"] {
+  color: #9ca3af !important;
+}
+
+/* Border with explicit hex values */
+[data-admin-v2="true"] [class*="border-\[#e5e7eb\]"] {
+  border-color: #e5e7eb !important;
+}
+
+[data-admin-v2="true"] [class*="border-\[#d1d5db\]"] {
+  border-color: #d1d5db !important;
+}
+
+/* ---- DIVIDE COLOR RESET ---- */
+[data-admin-v2="true"] [class*="divide-"] > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e5e7eb !important;
+}
+
+/* ---- CARD-LIKE CONTAINERS ---- */
+[data-admin-v2="true"] [class*="rounded-xl"][class*="border"],
+[data-admin-v2="true"] [class*="rounded-lg"][class*="border"] {
+  background-color: #ffffff !important;
+  border-color: #e5e7eb !important;
+  color: #111827 !important;
+}
+
+/* ---- SIDEBAR OVERRIDE ---- */
+[data-admin-v2="true"] aside,
+[data-admin-v2="true"] nav {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+  border-color: #e5e7eb !important;
+}
+
+/* ---- HEADER OVERRIDE ---- */
+[data-admin-v2="true"] header {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+  border-color: #e5e7eb !important;
+}
+
+/* ---- SELECT/OPTION OVERRIDE ---- */
+[data-admin-v2="true"] option {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+}
+
+/* ---- DROPDOWN MENUS ---- */
+[data-admin-v2="true"] [class*="shadow-lg"][class*="bg-white"] {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+}
+
+/* ---- CHECKBOX APPEARANCE ---- */
+[data-admin-v2="true"] input[type="checkbox"] {
+  background-color: #ffffff !important;
+  border-color: #d1d5db !important;
+}
+
+[data-admin-v2="true"] input[type="checkbox"]:checked {
+  background-color: #d4af37 !important;
+  border-color: #d4af37 !important;
+}

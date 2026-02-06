@@ -1,13 +1,16 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Collections | ORA Jewellery — Everyday Luxury Under ₹1,500',
-  description: 'Explore our curated collections of necklaces, rings, and bracelets. Premium Indian jewellery designed for the modern woman. Affordable luxury under ₹1,500.',
-  keywords: ['ORA jewellery', 'necklaces', 'rings', 'bracelets', 'affordable luxury', 'Indian jewellery'],
+  title: 'All Jewellery | ORA - Everyday Luxury Under ₹1,500',
+  description: "Explore ORA's complete collection of necklaces, rings, bracelets, and earrings. Premium Indian jewellery designed for the modern woman. Affordable luxury under ₹1,500.",
+  keywords: ['ORA jewellery', 'all jewellery', 'necklaces', 'rings', 'bracelets', 'affordable luxury', 'Indian jewellery'],
   openGraph: {
-    title: 'Collections | ORA Jewellery',
-    description: 'Everyday luxury under ₹1,500. Explore necklaces, rings & bracelets.',
+    title: 'All Jewellery | ORA',
+    description: 'Explore our complete collection. Everyday luxury under ₹1,500.',
     type: 'website',
+  },
+  alternates: {
+    canonical: '/collections',
   },
 };
 

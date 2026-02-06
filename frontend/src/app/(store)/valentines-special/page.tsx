@@ -71,21 +71,21 @@ const CATEGORIES = [
     label: 'Necklaces',
     tagline: 'Close to the heart',
     description: 'Delicate chains that whisper love',
-    image: '/necklace.png'
+    image: '/chain.jpeg'
   },
   { 
     id: 'rings', 
     label: 'Rings',
     tagline: 'A promise worn',
     description: 'Circles of eternal devotion',
-    image: '/rings.png'
+    image: '/ring.jpeg'
   },
   { 
     id: 'bracelets', 
     label: 'Bracelets',
     tagline: 'Wrapped in affection',
     description: 'Gentle reminders on her wrist',
-    image: '/bracelet.png'
+    image: '/bracelets.jpeg'
   },
 ] as const;
 
@@ -180,7 +180,7 @@ export default function ValentinesSpecialPage() {
         {/* Background Image */}
         <div className="absolute inset-0">
           <Image
-            src="/val banner.png"
+            src="/banners.png"
             alt="Valentine's Special Collection - ORA Jewellery"
             fill
             className="object-cover object-center"

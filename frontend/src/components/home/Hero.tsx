@@ -12,7 +12,7 @@ export default function Hero() {
       <div className="absolute inset-0">
         {/* Hero Image - Valentine's Special Banner */}
         <Image
-          src="/val banner.png"
+          src="/banners.png"
           alt="Elegant Indian woman wearing ORA jewellery"
           fill
           className="object-cover object-center"

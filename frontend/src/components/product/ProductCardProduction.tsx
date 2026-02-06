@@ -271,10 +271,8 @@ function ProductCard({
         {/* ====================================================================
             IMAGE CONTAINER
             ==================================================================== */}
-        <motion.div
-          className={`relative ${aspectClass} overflow-hidden rounded-luxury bg-background will-change-transform`}
-          animate={{ y: isHovered ? -4 : 0 }}
-          transition={{ duration: 0.3, ease: 'easeOut' }}
+        <div
+          className={`relative ${aspectClass} overflow-hidden bg-neutral-50 will-change-transform`}
         >
           {/* PRIMARY IMAGE */}
           {primaryImage && (
@@ -452,9 +450,7 @@ function ProductCard({
             </>
           )}
 
-          {/* SUBTLE OVERLAY GRADIENT (improves text legibility on bright images) */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/5 via-transparent to-transparent pointer-events-none" />
-        </motion.div>
+        </div>
 
         {/* ====================================================================
             PRODUCT INFO SECTION - Mobile Optimized

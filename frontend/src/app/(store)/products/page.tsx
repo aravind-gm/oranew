@@ -143,7 +143,7 @@ export default function ProductsPage() {
         {/* Background Image - Subtle */}
         <div className="absolute inset-0">
           <Image
-            src="/val banner.png"
+            src="/banners.png"
             alt="Fresh designs from ORA Atelier"
             fill
             className="object-cover object-center"

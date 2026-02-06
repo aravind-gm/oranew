@@ -29,7 +29,7 @@ const PROMOTIONAL_ADS = [
     id: 'valentine-gift-1',
     type: 'valentine' as const,
     productName: 'Valentine Gift Combo',
-    productImage: '/val banner.png',
+    productImage: '/banners.png',
     discount: 20,
     ctaText: 'Explore',
     badge: '💕 Limited',

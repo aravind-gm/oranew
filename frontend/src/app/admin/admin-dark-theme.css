@@ -5,10 +5,11 @@
    Uses scoped selectors with CSS containment to prevent cascade to public site
    The data-admin-root attribute ensures ZERO color leakage to storefront
    CSS containment: layout style paint prevents cascade
+   NOTE: All rules exclude [data-admin-v2] to allow v2 light theme
    ============================================ */
 
-/* SCOPED: Admin dark theme - only inside [data-admin-root="true"] */
-:is([data-admin-root="true"]) {
+/* SCOPED: Admin dark theme - only inside [data-admin-root="true"], NOT inside v2 */
+:is([data-admin-root="true"]):not(:has([data-admin-v2="true"])) {
   --primary: #ec4899 !important;
   --primary-dark: #be185d !important;
   --secondary: #d4af37 !important;
@@ -28,73 +29,73 @@
   isolation: isolate !important;
 }
 
-/* Admin page base styles - scoped to [data-admin-root="true"] only */
-:is([data-admin-root="true"]) {
+/* Admin page base styles - scoped to [data-admin-root="true"] only, exclude v2 */
+[data-admin-root="true"]:not(:has([data-admin-v2="true"])) {
   background-color: #111827 !important;
   color: #f3f4f6 !important;
 }
 
-/* Override any inherited light-mode classes - scoped to admin */
-:is([data-admin-root="true"]) .bg-background,
-:is([data-admin-root="true"]) .bg-white,
-:is([data-admin-root="true"]) .bg-gray-50,
-:is([data-admin-root="true"]) .bg-primary-50 {
+/* Override any inherited light-mode classes - scoped to admin, exclude v2 */
+[data-admin-root="true"]:not(:has([data-admin-v2])) .bg-background,
+[data-admin-root="true"]:not(:has([data-admin-v2])) .bg-white,
+[data-admin-root="true"]:not(:has([data-admin-v2])) .bg-gray-50,
+[data-admin-root="true"]:not(:has([data-admin-v2])) .bg-primary-50 {
   background-color: #1f2937 !important;
 }
 
-:is([data-admin-root="true"]) .text-foreground,
-:is([data-admin-root="true"]) .text-black,
-:is([data-admin-root="true"]) .text-gray-900,
-:is([data-admin-root="true"]) .text-neutral-900 {
+[data-admin-root="true"]:not(:has([data-admin-v2])) .text-foreground,
+[data-admin-root="true"]:not(:has([data-admin-v2])) .text-black,
+[data-admin-root="true"]:not(:has([data-admin-v2])) .text-gray-900,
+[data-admin-root="true"]:not(:has([data-admin-v2])) .text-neutral-900 {
   color: #f3f4f6 !important;
 }
 
-:is([data-admin-root="true"]) .border-neutral-200,
-:is([data-admin-root="true"]) .border-gray-200,
-:is([data-admin-root="true"]) .border-primary-100 {
+[data-admin-root="true"]:not(:has([data-admin-v2])) .border-neutral-200,
+[data-admin-root="true"]:not(:has([data-admin-v2])) .border-gray-200,
+[data-admin-root="true"]:not(:has([data-admin-v2])) .border-primary-100 {
   border-color: #374151 !important;
 }
 
-/* Admin table/card overrides - scoped */
-:is([data-admin-root="true"]) :is(table, thead, tbody, tr, td, th) {
+/* Admin table/card overrides - scoped, exclude v2 */
+[data-admin-root="true"]:not(:has([data-admin-v2])) :is(table, thead, tbody, tr, td, th) {
   background-color: #1f2937 !important;
   border-color: #374151 !important;
   color: #f3f4f6 !important;
 }
 
-/* Admin form elements - scoped */
-:is([data-admin-root="true"]) :is(input, select, textarea) {
+/* Admin form elements - scoped, exclude v2 */
+[data-admin-root="true"]:not(:has([data-admin-v2])) :is(input, select, textarea) {
   background-color: #111827 !important;
   color: #f3f4f6 !important;
   border-color: #374151 !important;
 }
 
-:is([data-admin-root="true"]) :is(input::placeholder, textarea::placeholder) {
+[data-admin-root="true"]:not(:has([data-admin-v2])) :is(input::placeholder, textarea::placeholder) {
   color: #9ca3af !important;
 }
 
-/* Admin modal/dialog - scoped */
-:is([data-admin-root="true"]) :is([role="dialog"], .modal, .dialog) {
+/* Admin modal/dialog - scoped, exclude v2 */
+[data-admin-root="true"]:not(:has([data-admin-v2])) :is([role="dialog"], .modal, .dialog) {
   background-color: #1f2937 !important;
   color: #f3f4f6 !important;
   border-color: #374151 !important;
 }
 
-/* Admin buttons - scoped */
-:is([data-admin-root="true"]) :is(.btn, button) {
+/* Admin buttons - scoped, exclude v2 */
+[data-admin-root="true"]:not(:has([data-admin-v2])) :is(.btn, button) {
   color: inherit !important;
 }
 
-:is([data-admin-root="true"]) :is(.btn-primary, .bg-amber-600, .bg-blue-600) {
+[data-admin-root="true"]:not(:has([data-admin-v2])) :is(.btn-primary, .bg-amber-600, .bg-blue-600) {
   background-color: #b45309 !important;
 }
 
-:is([data-admin-root="true"]) :is(.btn-primary:hover, .bg-amber-600:hover) {
+[data-admin-root="true"]:not(:has([data-admin-v2])) :is(.btn-primary:hover, .bg-amber-600:hover) {
   background-color: #92400e !important;
 }
 
-/* Additional safety: ensure no primary-50 backgrounds leak into admin */
-:is([data-admin-root="true"]) :is(.bg-primary-50, .bg-primary-100, .bg-primary-200) {
+/* Additional safety: ensure no primary-50 backgrounds leak into admin, exclude v2 */
+[data-admin-root="true"]:not(:has([data-admin-v2])) :is(.bg-primary-50, .bg-primary-100, .bg-primary-200) {
   background-color: #1f2937 !important;
   color: #f3f4f6 !important;
 }

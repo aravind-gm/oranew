@@ -22,9 +22,9 @@ const cormorant = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: 'ORA Jewellery - REBUILDING | Premium Artificial Fashion Jewellery',
-  description: 'own. radiate. adorn. - Discover our exquisite collection of artificial fashion jewellery. Chains, necklaces, bracelets, rings, earrings and more.',
-  keywords: 'jewellery, fashion jewellery, artificial jewellery, necklaces, earrings, bracelets, rings, ORA',
+  title: 'ORA Jewellery | Premium Everyday Jewellery',
+  description: 'own. radiate. adorn. — Discover ORA\'s curated collection of premium fashion jewellery. Necklaces, bracelets, rings, earrings and more. Everyday luxury under ₹1,500.',
+  keywords: 'jewellery, fashion jewellery, premium jewellery, necklaces, earrings, bracelets, rings, ORA, luxury jewellery, Indian jewellery',
   icons: {
     icon: '/oralogo.png',
     apple: '/oralogo.png',
