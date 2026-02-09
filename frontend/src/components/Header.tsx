@@ -100,8 +100,7 @@ export default function Header() {
 
   return (
     <header 
-      className={`sticky top-0 z-[1000] w-full transform transition-transform duration-300 ${
-        isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
+      className={`sticky top-0 z-[1000] w-full tr
       }`}
       style={{ willChange: 'transform' }}
     >

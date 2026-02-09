@@ -31,15 +31,23 @@ const getApiUrl = () => {
 
 const api = axios.create({
   baseURL: getApiUrl(),
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  // NOTE: Do NOT set Content-Type here - let axios handle it per request
+  // For multipart/form-data uploads, axios MUST auto-set the boundary
   timeout: 30000,
 });
 
 // Setup custom interceptors for 503 retry and auth
 setupRequestInterceptor(api);
 setupErrorInterceptor(api);
+
+// Fix Content-Type for JSON requests (multipart requests will set their own)
+api.interceptors.request.use((config) => {
+  // Only set Content-Type for non-multipart requests
+  if (!(config.data instanceof FormData)) {
+    config.headers['Content-Type'] = 'application/json';
+  }
+  return config;
+});
 
 // Additional response interceptor for 401 handling
 api.interceptors.response.use(

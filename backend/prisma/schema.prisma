@@ -129,15 +129,80 @@ model Product {
 }
 
 model ProductImage {
-  id        String  @id @default(uuid())
-  productId String  @map("product_id")
-  imageUrl  String  @map("image_url")
-  altText   String? @map("alt_text")
-  sortOrder Int     @default(0) @map("sort_order")
-  isPrimary Boolean @default(false) @map("is_primary")
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id          String     @id @default(uuid())
+  productId   String     @map("product_id")
+  imageUrl    String     @map("image_url")
+  altText     String?    @map("alt_text")
+  sortOrder   Int        @default(0) @map("sort_order")
+  isPrimary   Boolean    @default(false) @map("is_primary")
+  imageRole   ImageRole? @map("image_role")
+  cdnVerified Boolean    @default(false) @map("cdn_verified")
+  originalUrl String?    @map("original_url")
+  product     Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@map("product_images")
+}
+
+model Banner {
+  id             String    @id @default(uuid())
+  page           String
+  title          String?
+  imageUrl       String    @map("image_url")
+  mobileImageUrl String?   @map("mobile_image_url")
+  ctaText        String?   @map("cta_text")
+  ctaLink        String?   @map("cta_link")
+  position       String    @default("hero")
+  sortOrder      Int       @default(0) @map("sort_order")
+  isActive       Boolean   @default(true) @map("is_active")
+  startDate      DateTime? @map("start_date")
+  endDate        DateTime? @map("end_date")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@index([page])
+  @@index([isActive])
+  @@map("banners")
+}
+
+model CollectionImage {
+  id             String   @id @default(uuid())
+  collectionSlug String   @unique @map("collection_slug")
+  heroUrl        String   @map("hero_url")
+  thumbnailUrl   String?  @map("thumbnail_url")
+  altText        String?  @map("alt_text")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("collection_images")
+}
+
+model BrandAsset {
+  id        String   @id @default(uuid())
+  assetType String   @map("asset_type")
+  imageUrl  String   @map("image_url")
+  altText   String?  @map("alt_text")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("brand_assets")
+}
+
+model ImageMigration {
+  id           String    @id @default(uuid())
+  originalUrl  String    @unique @map("original_url")
+  newUrl       String    @map("new_url")
+  entityType   String    @map("entity_type")
+  entityId     String?   @map("entity_id")
+  status       String    @default("pending")
+  errorMessage String?   @map("error_message")
+  migratedAt   DateTime? @map("migrated_at")
+  verifiedAt   DateTime? @map("verified_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@index([status])
+  @@index([entityType, entityId])
+  @@map("image_migrations")
 }
 
 model Review {
@@ -332,6 +397,13 @@ enum UserRole {
   CUSTOMER
   ADMIN
   STAFF
+}
+
+enum ImageRole {
+  THUMBNAIL
+  LISTING
+  HERO
+  ZOOM
 }
 
 enum AddressType {

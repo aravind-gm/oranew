@@ -2,59 +2,57 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.searchProducts = exports.getProductByIdPublic = exports.getProductBySlug = exports.getFeaturedProducts = exports.deleteProduct = exports.updateProduct = exports.getProductById = exports.getProducts = exports.createProduct = void 0;
 const database_1 = require("../config/database");
-const supabase_1 = require("../config/supabase");
 const errorHandler_1 = require("../middleware/errorHandler");
 const helpers_1 = require("../utils/helpers");
-const supabaseUrlHelper_1 = require("../utils/supabaseUrlHelper");
-// Helper function to ensure product images have correct public URLs
-// PUBLIC storefront uses public URLs (no expiration)
-// ADMIN uses signed URLs (temporary, secure access)
+// Helper function to transform image URL to CDN URL
+// Handles both Supabase legacy URLs and R2/CDN URLs
+function transformImageUrlToCDN(imageUrl) {
+    if (!imageUrl)
+        return null;
+    // Already a CDN URL
+    if (imageUrl.includes('cdn.orashop.in')) {
+        return imageUrl;
+    }
+    // Supabase URL - extract the filename and use CDN
+    if (imageUrl.includes('supabase.co')) {
+        const filenameMatch = imageUrl.match(/\/([^\/]+\.(?:jpg|jpeg|png|gif|webp))$/i);
+        if (filenameMatch) {
+            const filename = filenameMatch[1];
+            return `${process.env.R2_PUBLIC_BASE_URL || 'https://cdn.orashop.in'}/products/${filename}`;
+        }
+    }
+    // R2 bucket URL - transform to CDN
+    if (imageUrl.includes('.r2.dev') || imageUrl.includes('r2.dev')) {
+        const filenameMatch = imageUrl.match(/\/([^\/]+\.(?:jpg|jpeg|png|gif|webp))$/i);
+        if (filenameMatch) {
+            const filename = filenameMatch[1];
+            return `${process.env.R2_PUBLIC_BASE_URL || 'https://cdn.orashop.in'}/products/${filename}`;
+        }
+    }
+    // Relative path - prepend CDN URL
+    if (!imageUrl.startsWith('http')) {
+        return `${process.env.R2_PUBLIC_BASE_URL || 'https://cdn.orashop.in'}/${imageUrl}`;
+    }
+    // Unknown format - return as is
+    return imageUrl;
+}
+// Helper function to ensure product images have correct CDN URLs
+// Both storefront and admin now use CDN URLs for consistency
 async function transformProductImages(product, forPublic = true) {
     if (!product.images || product.images.length === 0) {
         return product;
     }
     const transformedImages = product.images.map((img) => {
-        // Ensure image URL is valid and public
         if (!img.imageUrl) {
             return img;
         }
-        // For public storefront: ensure it's a public URL (no signing needed)
-        if (forPublic) {
-            // Normalize the URL to ensure correct format
-            const normalizedUrl = (0, supabaseUrlHelper_1.normalizeSupabaseUrl)(img.imageUrl);
-            return { ...img, imageUrl: normalizedUrl || img.imageUrl };
-        }
-        return img;
+        // Transform to CDN URL
+        const cdnUrl = transformImageUrlToCDN(img.imageUrl);
+        return { ...img, imageUrl: cdnUrl };
     });
     return { ...product, images: transformedImages };
 }
-// Helper function to transform product images to signed URLs (ADMIN only)
-async function transformProductImagesToSigned(product) {
-    if (!product.images || product.images.length === 0) {
-        return product;
-    }
-    const imagesWithSignedUrls = await Promise.all(product.images.map(async (img) => {
-        try {
-            // Extract file path from imageUrl
-            // URL format: https://[project].supabase.co/storage/v1/object/public/product-images/filename
-            const urlMatch = img.imageUrl.match(/product-images\/(.*)/);
-            const filePath = urlMatch ? urlMatch[1] : img.imageUrl;
-            // Generate signed URL for reliable access (ADMIN only)
-            const signedUrl = await (0, supabase_1.getSignedUrl)(filePath);
-            return { ...img, imageUrl: signedUrl };
-        }
-        catch (error) {
-            console.error('[Product Controller] ⚠️ Failed to generate signed URL:', {
-                imageUrl: img.imageUrl,
-                error: error instanceof Error ? error.message : String(error),
-            });
-            // Fallback to public URL if signed URL generation fails
-            const fixed = img.imageUrl.replace('/object/', '/object/public/');
-            return { ...img, imageUrl: fixed };
-        }
-    }));
-    return { ...product, images: imagesWithSignedUrls };
-}
+// Note: Signed URLs no longer needed - using CDN public URLs instead
 // @desc    Create product (Admin)
 // @route   POST /api/admin/products
 // @access  Private/Admin

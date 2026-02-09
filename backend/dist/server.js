@@ -50,6 +50,7 @@ const payment_routes_1 = __importDefault(require("./routes/payment.routes"));
 const product_routes_1 = __importDefault(require("./routes/product.routes"));
 const review_routes_1 = __importDefault(require("./routes/review.routes"));
 const upload_routes_1 = __importDefault(require("./routes/upload.routes"));
+const r2_upload_routes_1 = __importDefault(require("./routes/r2-upload.routes"));
 const user_routes_1 = __importDefault(require("./routes/user.routes"));
 const wishlist_routes_1 = __importDefault(require("./routes/wishlist.routes"));
 const health_routes_1 = __importDefault(require("./routes/health.routes"));
@@ -115,6 +116,7 @@ app.use('/api/payments/webhook', express_1.default.raw({ type: 'application/json
 // Multer needs to handle multipart/form-data directly
 // Applying express.json() before upload routes will cause 400 errors
 app.use('/api/upload', upload_routes_1.default);
+app.use('/api/r2', r2_upload_routes_1.default);
 // ============================================
 // BODY PARSER - SKIP WEBHOOK ROUTE
 // ============================================

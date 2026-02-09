@@ -9,7 +9,7 @@ const router = Router();
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB max
+    fileSize: 10 * 1024 * 1024, // 10MB max (increased for flexibility)
     files: 10, // Max 10 files at once
   },
   fileFilter: (_req, file, cb) => {

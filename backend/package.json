@@ -12,9 +12,14 @@
     "prisma:push": "prisma db push",
     "prisma:studio": "prisma studio",
     "prisma:seed": "ts-node prisma/seed.ts",
-    "prisma:deploy": "prisma migrate deploy"
+    "prisma:deploy": "prisma migrate deploy",
+    "migrate:r2": "tsx scripts/migrate-to-r2.ts",
+    "migrate:r2:dry": "tsx scripts/migrate-to-r2.ts --dry-run",
+    "migrate:r2:verify": "tsx scripts/migrate-to-r2.ts --verify-only",
+    "migrate:r2:cleanup": "tsx scripts/migrate-to-r2.ts --cleanup"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.500.0",
     "@prisma/client": "^5.8.0",
     "@sendgrid/mail": "^8.1.6",
     "@supabase/supabase-js": "^2.39.0",
@@ -31,7 +36,8 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^7.0.12",
-    "razorpay": "^2.9.2"
+    "razorpay": "^2.9.2",
+    "sharp": "^0.33.1"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

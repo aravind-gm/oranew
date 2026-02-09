@@ -117,8 +117,19 @@ export default function AdminProductsPage() {
       const response = await api.get('/admin/products', { params });
       
       if (response.data.success) {
-        setProducts(response.data.data?.products || []);
+        const fetchedProducts = response.data.data?.products || [];
+        setProducts(fetchedProducts);
         setPagination(response.data.data?.pagination || null);
+        
+        // 🔍 DEBUG: Log image URLs for verification
+        if (fetchedProducts.length > 0) {
+          console.log('[Admin Products] 📸 First product image URL:', {
+            productName: fetchedProducts[0].name,
+            imageUrl: fetchedProducts[0].images?.[0]?.imageUrl,
+            isCDN: fetchedProducts[0].images?.[0]?.imageUrl?.includes('cdn.orashop.in'),
+            fullImages: fetchedProducts[0].images,
+          });
+        }
       }
     } catch (error) {
       console.error('Failed to fetch products:', error);

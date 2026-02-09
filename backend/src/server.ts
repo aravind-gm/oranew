@@ -14,6 +14,7 @@ import paymentRoutes from './routes/payment.routes';
 import productRoutes from './routes/product.routes';
 import reviewRoutes from './routes/review.routes';
 import uploadRoutes from './routes/upload.routes';
+import r2UploadRoutes from './routes/r2-upload.routes';
 import userRoutes from './routes/user.routes';
 import wishlistRoutes from './routes/wishlist.routes';
 import healthRoutes from './routes/health.routes';
@@ -93,6 +94,7 @@ app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 // Multer needs to handle multipart/form-data directly
 // Applying express.json() before upload routes will cause 400 errors
 app.use('/api/upload', uploadRoutes);
+app.use('/api/r2', r2UploadRoutes);
 
 // ============================================
 // BODY PARSER - SKIP WEBHOOK ROUTE

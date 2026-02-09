@@ -12,44 +12,60 @@ import {
 import { cleanupExpiredLocks, restoreInventory } from '../utils/inventory';
 import { normalizeSupabaseUrl } from '../utils/supabaseUrlHelper';
 
-// Helper function to transform product images to signed URLs with timeout
+// Helper function to transform image URL to CDN URL
+// Handles both Supabase legacy URLs and R2/CDN URLs
+function transformImageUrlToCDN(imageUrl: string | null | undefined): string | null {
+  if (!imageUrl) return null;
+
+  // Already a CDN URL
+  if (imageUrl.includes('cdn.orashop.in')) {
+    return imageUrl;
+  }
+
+  // Supabase URL - extract the filename and use CDN
+  if (imageUrl.includes('supabase.co')) {
+    const filenameMatch = imageUrl.match(/\/([^\/]+\.(?:jpg|jpeg|png|gif|webp))$/i);
+    if (filenameMatch) {
+      const filename = filenameMatch[1];
+      return `${process.env.R2_PUBLIC_BASE_URL || 'https://cdn.orashop.in'}/products/${filename}`;
+    }
+  }
+
+  // R2 bucket URL - transform to CDN
+  if (imageUrl.includes('.r2.dev') || imageUrl.includes('r2.dev')) {
+    const filenameMatch = imageUrl.match(/\/([^\/]+\.(?:jpg|jpeg|png|gif|webp))$/i);
+    if (filenameMatch) {
+      const filename = filenameMatch[1];
+      return `${process.env.R2_PUBLIC_BASE_URL || 'https://cdn.orashop.in'}/products/${filename}`;
+    }
+  }
+
+  // Relative path - prepend CDN URL
+  if (!imageUrl.startsWith('http')) {
+    return `${process.env.R2_PUBLIC_BASE_URL || 'https://cdn.orashop.in'}/${imageUrl}`;
+  }
+
+  // Unknown format - return as is
+  return imageUrl;
+}
+
+// Helper function to transform product images to CDN URLs
 async function transformProductImages(product: any) {
   if (!product.images || product.images.length === 0) {
     return product;
   }
 
-  const imagesWithSignedUrls = await Promise.all(
-    product.images.map(async (img: any) => {
-      try {
-        // Normalize URL first to ensure correct format
-        const normalizedUrl = normalizeSupabaseUrl(img.imageUrl);
-        
-        // Extract file path from imageUrl
-        // URL format: https://[project].supabase.co/storage/v1/object/public/product-images/filename
-        const urlMatch = (normalizedUrl || img.imageUrl).match(/product-images\/(.*)/);
-        const filePath = urlMatch ? urlMatch[1] : (normalizedUrl || img.imageUrl);
-        
-        // Generate signed URL with 2-second timeout
-        const signedUrlPromise = getSignedUrl(filePath);
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Signed URL generation timeout')), 2000)
-        );
-        
-        const signedUrl = await Promise.race([signedUrlPromise, timeoutPromise]);
-        return { ...img, imageUrl: signedUrl };
-      } catch (error) {
-        console.warn('[Admin Controller] ⚠️ Failed to generate signed URL, using normalized public URL fallback:', {
-          originalUrl: img.imageUrl,
-          error: error instanceof Error ? error.message : String(error),
-        });
-        // Fallback: ensure image URL is properly normalized and public (not signed)
-        const normalizedUrl = normalizeSupabaseUrl(img.imageUrl);
-        return { ...img, imageUrl: normalizedUrl || img.imageUrl };
-      }
-    })
-  );
+  const transformedImages = product.images.map((img: any) => {
+    if (!img.imageUrl) {
+      return img;
+    }
 
-  return { ...product, images: imagesWithSignedUrls };
+    // Transform to CDN URL
+    const cdnUrl = transformImageUrlToCDN(img.imageUrl);
+    return { ...img, imageUrl: cdnUrl };
+  });
+
+  return { ...product, images: transformedImages };
 }
 
 // ============================================
