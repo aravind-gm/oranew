@@ -18,6 +18,11 @@ const nextConfig = {
         destination: '/auth/login',
         permanent: true,
       },
+      {
+        source: '/admin/login',
+        destination: '/auth/login',
+        permanent: true,
+      },
     ];
   },
 
