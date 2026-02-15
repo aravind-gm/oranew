@@ -7,6 +7,7 @@ import {
     webhook,
 } from '../controllers/payment.controller';
 import { authorize, protect } from '../middleware/auth';
+import { paymentLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
@@ -19,9 +20,10 @@ const router = Router();
  * Creates a Razorpay order and returns payment details
  * 
  * Protected endpoint - requires authentication
+ * Rate limited: 5 per 10 minutes
  * Called when user confirms order and proceeds to payment
  */
-router.post('/create', protect, createPayment);
+router.post('/create', protect, paymentLimiter, createPayment);
 
 /**
  * POST /api/payments/verify
@@ -29,9 +31,10 @@ router.post('/create', protect, createPayment);
  * Updates order status to CONFIRMED and clears cart
  * 
  * Protected endpoint - requires authentication
+ * Rate limited: 5 per 10 minutes
  * Called from frontend Razorpay success callback
  */
-router.post('/verify', protect, verifyPayment);
+router.post('/verify', protect, paymentLimiter, verifyPayment);
 
 /**
  * GET /api/payments/:orderId/status

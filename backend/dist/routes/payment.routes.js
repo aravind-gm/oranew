@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const payment_controller_1 = require("../controllers/payment.controller");
 const auth_1 = require("../middleware/auth");
+const rateLimiter_1 = require("../middleware/rateLimiter");
 const router = (0, express_1.Router)();
 // ============================================
 // PAYMENT ENDPOINTS
@@ -12,18 +13,20 @@ const router = (0, express_1.Router)();
  * Creates a Razorpay order and returns payment details
  *
  * Protected endpoint - requires authentication
+ * Rate limited: 5 per 10 minutes
  * Called when user confirms order and proceeds to payment
  */
-router.post('/create', auth_1.protect, payment_controller_1.createPayment);
+router.post('/create', auth_1.protect, rateLimiter_1.paymentLimiter, payment_controller_1.createPayment);
 /**
  * POST /api/payments/verify
  * Verifies Razorpay payment signature from frontend callback
  * Updates order status to CONFIRMED and clears cart
  *
  * Protected endpoint - requires authentication
+ * Rate limited: 5 per 10 minutes
  * Called from frontend Razorpay success callback
  */
-router.post('/verify', auth_1.protect, payment_controller_1.verifyPayment);
+router.post('/verify', auth_1.protect, rateLimiter_1.paymentLimiter, payment_controller_1.verifyPayment);
 /**
  * GET /api/payments/:orderId/status
  * Returns current payment and order status

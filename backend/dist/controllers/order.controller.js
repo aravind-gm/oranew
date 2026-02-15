@@ -256,52 +256,103 @@ exports.checkout = (0, helpers_1.asyncHandler)(async (req, res) => {
     const shippingFee = await (0, shipping_1.calculateShippingFee)(subtotal - discountAmount);
     // ====== TOTAL WITH NEGATIVE PREVENTION (Step 4) ======
     const totalAmount = Math.max(0, subtotal - discountAmount + gstAmount + shippingFee);
-    // Create order
-    const order = await (0, retry_1.withRetry)(() => database_1.prisma.order.create({
-        data: {
-            orderNumber: (0, helpers_1.generateOrderNumber)(),
-            userId: req.user.id,
-            subtotal: new library_1.Decimal(subtotal),
-            discountAmount: new library_1.Decimal(discountAmount),
-            gstAmount: new library_1.Decimal(gstAmount),
-            shippingFee: new library_1.Decimal(shippingFee),
-            totalAmount: new library_1.Decimal(totalAmount),
-            shippingAddressId: finalShippingAddrId,
-            billingAddressId: finalBillingAddrId,
-            status: 'PENDING',
-            paymentStatus: 'PENDING',
-            items: {
-                create: cartItems.map((item, index) => ({
-                    productId: item.productId,
-                    productName: item.product.name,
-                    productImage: item.product.images?.[0]?.imageUrl || null,
-                    quantity: item.quantity,
-                    unitPrice: item.product.finalPrice,
-                    gstRate: new library_1.Decimal(itemGstRates[index] || 3),
-                    discount: new library_1.Decimal(0),
-                    totalPrice: new library_1.Decimal(Number(item.product.finalPrice) * item.quantity),
-                })),
+    // ====== TRANSACTIONAL ORDER + INVENTORY LOCK CREATION (CRITICAL) ======
+    // ALL stock checks, order creation, inventory locks, and coupon updates
+    // happen in a SINGLE atomic transaction to prevent race conditions
+    const order = await database_1.prisma.$transaction(async (tx) => {
+        // 1️⃣ FINAL stock check inside transaction (prevents race conditions)
+        for (const item of cartItems) {
+            const freshProduct = await tx.product.findUnique({
+                where: { id: item.productId },
+                select: { stockQuantity: true, name: true },
+            });
+            if (!freshProduct) {
+                throw new helpers_1.AppError(`Product ${item.productId} not found`, 400);
+            }
+            if (freshProduct.stockQuantity < item.quantity) {
+                throw new helpers_1.AppError(`Insufficient stock for "${freshProduct.name}". Available: ${freshProduct.stockQuantity}, Requested: ${item.quantity}`, 409 // 409 Conflict for inventory issues
+                );
+            }
+        }
+        // 2️⃣ Create order
+        const newOrder = await tx.order.create({
+            data: {
+                orderNumber: (0, helpers_1.generateOrderNumber)(),
+                userId: req.user.id,
+                subtotal: new library_1.Decimal(subtotal),
+                discountAmount: new library_1.Decimal(discountAmount),
+                gstAmount: new library_1.Decimal(gstAmount),
+                shippingFee: new library_1.Decimal(shippingFee),
+                totalAmount: new library_1.Decimal(totalAmount),
+                shippingAddressId: finalShippingAddrId,
+                billingAddressId: finalBillingAddrId,
+                status: 'PENDING',
+                paymentStatus: 'PENDING',
+                items: {
+                    create: cartItems.map((item, index) => ({
+                        productId: item.productId,
+                        productName: item.product.name,
+                        productImage: item.product.images?.[0]?.imageUrl || null,
+                        quantity: item.quantity,
+                        unitPrice: item.product.finalPrice,
+                        gstRate: new library_1.Decimal(itemGstRates[index] || 3),
+                        discount: new library_1.Decimal(0),
+                        totalPrice: new library_1.Decimal(Number(item.product.finalPrice) * item.quantity),
+                    })),
+                },
             },
-        },
-        include: {
-            items: true,
-            shippingAddress: true,
-            user: { select: { fullName: true, email: true } },
-        },
-    }));
-    // Lock inventory for this order (holds for 15 minutes)
-    const inventoryItems = cartItems.map((item) => ({
-        productId: item.productId,
-        quantity: item.quantity,
-    }));
-    try {
-        await (0, inventory_1.lockInventory)(order.id, inventoryItems);
-    }
-    catch (error) {
-        // If inventory lock fails, delete the order
-        await database_1.prisma.order.delete({ where: { id: order.id } });
-        throw error;
-    }
+            include: {
+                items: true,
+                shippingAddress: true,
+                user: { select: { fullName: true, email: true } },
+            },
+        });
+        // 3️⃣ Create inventory locks (10-minute expiry to prevent spam locking)
+        const lockExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+        await tx.inventoryLock.createMany({
+            data: cartItems.map((item) => ({
+                productId: item.productId,
+                orderId: newOrder.id,
+                quantity: item.quantity,
+                expiresAt: lockExpiry,
+            })),
+        });
+        // 4️⃣ Atomic coupon increment + per-user usage tracking
+        if (appliedCouponCode) {
+            const coupon = await tx.coupon.findUnique({
+                where: { code: appliedCouponCode },
+                select: { id: true },
+            });
+            if (coupon) {
+                // Check if user already used this coupon
+                const existingUsage = await tx.couponUsage.findUnique({
+                    where: {
+                        userId_couponId: {
+                            userId: req.user.id,
+                            couponId: coupon.id,
+                        },
+                    },
+                });
+                if (existingUsage) {
+                    throw new helpers_1.AppError('You have already used this coupon', 400);
+                }
+                // Atomic increment (prevents race conditions)
+                await tx.coupon.update({
+                    where: { id: coupon.id },
+                    data: { usageCount: { increment: 1 } },
+                });
+                // Track per-user usage
+                await tx.couponUsage.create({
+                    data: {
+                        userId: req.user.id,
+                        couponId: coupon.id,
+                        orderId: newOrder.id,
+                    },
+                });
+            }
+        }
+        return newOrder;
+    });
     // Send order placed email (fire and forget - don't block response)
     try {
         const emailData = {

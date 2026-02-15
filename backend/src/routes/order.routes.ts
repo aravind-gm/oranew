@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import { cancelOrder, checkout, getOrderById, getOrders, processRefund, requestReturn } from '../controllers/order.controller';
 import { authorize, protect } from '../middleware/auth';
+import { checkoutLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
 router.use(protect);
 
-router.post('/checkout', checkout);
+router.post('/checkout', checkoutLimiter, checkout); // Rate limited: 3 per 5 minutes
 router.get('/', getOrders);
 router.get('/:id', getOrderById);
 router.put('/:id/cancel', cancelOrder);

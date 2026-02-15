@@ -330,9 +330,31 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
   // ====== TOTAL WITH NEGATIVE PREVENTION (Step 4) ======
   const totalAmount = Math.max(0, subtotal - discountAmount + gstAmount + shippingFee);
 
-  // Create order
-  const order = await withRetry(() =>
-    prisma.order.create({
+  // ====== TRANSACTIONAL ORDER + INVENTORY LOCK CREATION (CRITICAL) ======
+  // ALL stock checks, order creation, inventory locks, and coupon updates
+  // happen in a SINGLE atomic transaction to prevent race conditions
+  const order = await prisma.$transaction(async (tx) => {
+    // 1️⃣ FINAL stock check inside transaction (prevents race conditions)
+    for (const item of cartItems) {
+      const freshProduct = await tx.product.findUnique({
+        where: { id: item.productId },
+        select: { stockQuantity: true, name: true },
+      });
+
+      if (!freshProduct) {
+        throw new AppError(`Product ${item.productId} not found`, 400);
+      }
+
+      if (freshProduct.stockQuantity < item.quantity) {
+        throw new AppError(
+          `Insufficient stock for "${freshProduct.name}". Available: ${freshProduct.stockQuantity}, Requested: ${item.quantity}`,
+          409 // 409 Conflict for inventory issues
+        );
+      }
+    }
+
+    // 2️⃣ Create order
+    const newOrder = await tx.order.create({
       data: {
         orderNumber: generateOrderNumber(),
         userId: req.user!.id,
@@ -363,22 +385,60 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
         shippingAddress: true,
         user: { select: { fullName: true, email: true } },
       },
-    })
-  );
+    });
 
-  // Lock inventory for this order (holds for 15 minutes)
-  const inventoryItems = cartItems.map((item) => ({
-    productId: item.productId,
-    quantity: item.quantity,
-  }));
+    // 3️⃣ Create inventory locks (10-minute expiry to prevent spam locking)
+    const lockExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    await tx.inventoryLock.createMany({
+      data: cartItems.map((item) => ({
+        productId: item.productId,
+        orderId: newOrder.id,
+        quantity: item.quantity,
+        expiresAt: lockExpiry,
+      })),
+    });
 
-  try {
-    await lockInventory((order as any).id, inventoryItems);
-  } catch (error) {
-    // If inventory lock fails, delete the order
-    await prisma.order.delete({ where: { id: (order as any).id } });
-    throw error;
-  }
+    // 4️⃣ Atomic coupon increment + per-user usage tracking
+    if (appliedCouponCode) {
+      const coupon = await tx.coupon.findUnique({
+        where: { code: appliedCouponCode },
+        select: { id: true },
+      });
+
+      if (coupon) {
+        // Check if user already used this coupon
+        const existingUsage = await tx.couponUsage.findUnique({
+          where: {
+            userId_couponId: {
+              userId: req.user!.id,
+              couponId: coupon.id,
+            },
+          },
+        });
+
+        if (existingUsage) {
+          throw new AppError('You have already used this coupon', 400);
+        }
+
+        // Atomic increment (prevents race conditions)
+        await tx.coupon.update({
+          where: { id: coupon.id },
+          data: { usageCount: { increment: 1 } },
+        });
+
+        // Track per-user usage
+        await tx.couponUsage.create({
+          data: {
+            userId: req.user!.id,
+            couponId: coupon.id,
+            orderId: newOrder.id,
+          },
+        });
+      }
+    }
+
+    return newOrder;
+  });
 
   // Send order placed email (fire and forget - don't block response)
   try {
