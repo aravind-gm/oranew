@@ -87,14 +87,14 @@ const errorHandler = (err, req, res, _next) => {
     }
     res.status(statusCode).json({
         success: false,
-        error: process.env.NODE_ENV === 'development'
-            ? {
+        error: process.env.NODE_ENV === 'production'
+            ? message // Production: Only send error message, never stack traces
+            : {
                 message,
                 category,
                 stack: err.stack,
                 diagnostics: { isColdStart, isPoolExhaustion, isNetworkDrop }
-            }
-            : message,
+            },
     });
 };
 exports.errorHandler = errorHandler;

@@ -14,6 +14,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const multer_1 = __importDefault(require("multer"));
 const auth_1 = require("../middleware/auth");
+const imageValidation_1 = require("../middleware/imageValidation");
 const r2_upload_controller_1 = require("../controllers/r2-upload.controller");
 const router = (0, express_1.Router)();
 // ============================================
@@ -45,7 +46,8 @@ const upload = (0, multer_1.default)({
  * Body: { productId: string }
  * Files: images[]
  */
-router.post('/product-images', auth_1.protect, (0, auth_1.authorize)('ADMIN', 'STAFF'), upload.array('images', 10), r2_upload_controller_1.uploadProductImages);
+router.post('/product-images', auth_1.protect, (0, auth_1.authorize)('ADMIN', 'STAFF'), upload.array('images', 10), imageValidation_1.validateImageUpload, // Security validation
+r2_upload_controller_1.uploadProductImages);
 /**
  * Delete a product image
  * DELETE /api/r2/product-images/:imageId

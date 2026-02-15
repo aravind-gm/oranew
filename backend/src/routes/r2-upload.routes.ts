@@ -10,6 +10,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { authorize, protect } from '../middleware/auth';
+import { validateImageUpload } from '../middleware/imageValidation';
 import {
   checkR2Health,
   deleteImage,
@@ -64,6 +65,7 @@ router.post(
   protect,
   authorize('ADMIN', 'STAFF'),
   upload.array('images', 10),
+  validateImageUpload, // Security validation
   uploadProductImages
 );
 

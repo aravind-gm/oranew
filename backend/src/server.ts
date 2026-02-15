@@ -1,6 +1,7 @@
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express, { Application, NextFunction, Request, Response } from 'express';
+import helmet from 'helmet';
 import path from 'path';
 
 // Routes
@@ -45,7 +46,24 @@ app.set('trust proxy', 1);
 // MIDDLEWARE
 // ============================================
 
-// CORS - MUST be first before any other middleware
+// ============================================
+// SECURITY HEADERS - HELMET
+// ============================================
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+  xssFilter: true,
+  frameguard: { action: 'deny' },
+  hidePoweredBy: true,
+}));
+
+// CORS - MUST be after helmet
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001',
@@ -66,9 +84,25 @@ console.log('[CORS] 🔐 Allowed Origins:', allowedOrigins);
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, Postman, etc.)
+      if (!origin) return callback(null, true);
+      
+      // In production, strictly validate origins
+      if (process.env.NODE_ENV === 'production') {
+        if (allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          console.warn('[CORS] ⚠️ Blocked request from unauthorized origin:', origin);
+          callback(new Error('Not allowed by CORS'));
+        }
+      } else {
+        // Development: allow all localhost origins
+        callback(null, true);
+      }
+    },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );

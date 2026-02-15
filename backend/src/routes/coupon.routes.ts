@@ -1,15 +1,15 @@
 import { Router } from 'express';
-import { getCoupon, listCoupons, redeemCoupon, validateCoupon } from '../controllers/coupon.controller';
+import { validateCoupon } from '../controllers/coupon.controller';
 import { protect } from '../middleware/auth';
+import { couponLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
-// Public routes
-router.get('/:code', getCoupon);
-router.get('/', listCoupons);
+// ⚠️ SECURITY: No public coupon routes allowed
+// Coupons must NEVER be enumerable or publicly accessible
+// Prevents coupon farming/brute-forcing attacks
 
 // Protected routes (require authentication)
-router.post('/:code/validate', protect, validateCoupon);
-router.post('/:code/redeem', protect, redeemCoupon);
+router.post('/validate', protect, couponLimiter, validateCoupon);
 
 export default router;
