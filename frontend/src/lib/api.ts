@@ -79,7 +79,7 @@ api.interceptors.response.use(
             console.warn('[API] 🔐 Token refresh failed. Auto-logging out.');
             authStore.logout();
             localStorage.removeItem('ora-token');
-            window.location.href = '/login';
+            window.location.href = '/auth/login';
             return Promise.reject(error);
           }
         } catch (refreshError) {
@@ -87,7 +87,7 @@ api.interceptors.response.use(
           console.warn('[API] 🔐 Token refresh error:', refreshError);
           authStore.logout();
           localStorage.removeItem('ora-token');
-          window.location.href = '/login';
+          window.location.href = '/auth/login';
         } finally {
           isRefreshing = false;
         }
@@ -95,7 +95,7 @@ api.interceptors.response.use(
         // No token — redirect to login immediately
         console.warn('[API] 🔐 No token found. Redirecting to login.');
         localStorage.removeItem('ora-token');
-        window.location.href = '/login';
+        window.location.href = '/auth/login';
       }
     }
     
