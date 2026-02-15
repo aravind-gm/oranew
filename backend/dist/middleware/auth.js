@@ -9,22 +9,39 @@ const errorHandler_1 = require("./errorHandler");
 const protect = async (req, res, next) => {
     try {
         let token;
-        // Extract token from Authorization header
-        if (req.headers.authorization &&
+        let tokenSource = 'none';
+        // 🔐 PRIORITY 1: Check HttpOnly cookie (NEW - more secure)
+        if (req.cookies && req.cookies.access_token) {
+            token = req.cookies.access_token;
+            tokenSource = 'cookie';
+            console.log('[Auth Middleware] 🍪 Token found in HttpOnly cookie', {
+                endpoint: req.method + ' ' + req.path,
+                tokenLength: token.length,
+            });
+        }
+        // 🔐 PRIORITY 2: Fallback to Authorization header (OLD - backward compatibility)
+        else if (req.headers.authorization &&
             req.headers.authorization.startsWith('Bearer')) {
             token = req.headers.authorization.split(' ')[1];
+            tokenSource = 'header';
+            console.log('[Auth Middleware] 📋 Token found in Authorization header', {
+                endpoint: req.method + ' ' + req.path,
+                tokenLength: token.length,
+            });
         }
         // 🚨 CRITICAL: Token validation
         if (!token) {
             console.error('[Auth Middleware] ❌ NO TOKEN PROVIDED', {
                 endpoint: req.method + ' ' + req.path,
                 authHeader: req.headers.authorization ? 'Present' : 'MISSING',
+                cookiePresent: !!req.cookies?.access_token,
                 timestamp: new Date().toISOString(),
             });
             throw new errorHandler_1.AppError('Not authorized, no token provided', 401);
         }
         console.log('[Auth Middleware] 🔐 Token validation starting...', {
             endpoint: req.method + ' ' + req.path,
+            tokenSource: tokenSource,
             tokenLength: token.length,
             tokenPrefix: token.substring(0, 30) + '...',
             timestamp: new Date().toISOString(),
@@ -33,6 +50,7 @@ const protect = async (req, res, next) => {
         const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
         console.log('[Auth Middleware] ✅ Token verified successfully', {
             endpoint: req.method + ' ' + req.path,
+            tokenSource: tokenSource,
             userId: decoded.id,
             userEmail: decoded.email,
             userRole: decoded.role,

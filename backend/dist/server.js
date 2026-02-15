@@ -40,6 +40,7 @@ const cors_1 = __importDefault(require("cors"));
 const express_1 = __importDefault(require("express"));
 const helmet_1 = __importDefault(require("helmet"));
 const path_1 = __importDefault(require("path"));
+const cookie_parser_1 = __importDefault(require("cookie-parser"));
 // Routes
 const admin_routes_1 = __importDefault(require("./routes/admin.routes"));
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
@@ -69,6 +70,33 @@ const database_1 = require("./config/database");
 const scheduler_1 = require("./utils/scheduler");
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 8000;
+// ============================================
+// RUNTIME SECRET VALIDATION (Production Security)
+// ============================================
+if (process.env.NODE_ENV === 'production') {
+    console.log('[SECURITY] 🔐 Validating production secrets...');
+    // JWT Secret validation
+    if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+        throw new Error('FATAL: JWT_SECRET is missing or too weak (must be at least 32 characters)');
+    }
+    // Razorpay webhook secret validation
+    if (!process.env.RAZORPAY_WEBHOOK_SECRET) {
+        throw new Error('FATAL: RAZORPAY_WEBHOOK_SECRET is missing');
+    }
+    // Razorpay key validation
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+        throw new Error('FATAL: RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET is missing');
+    }
+    // Ensure production uses live keys
+    if (process.env.RAZORPAY_KEY_ID.startsWith('rzp_test_')) {
+        throw new Error('FATAL: Production cannot use Razorpay test keys');
+    }
+    // Database URL validation
+    if (!process.env.DATABASE_URL) {
+        throw new Error('FATAL: DATABASE_URL is missing');
+    }
+    console.log('[SECURITY] ✅ All production secrets validated');
+}
 // ============================================
 // TRUST PROXY - Important for production
 // ============================================
@@ -103,9 +131,10 @@ const allowedOrigins = [
     'https://orashop.vercel.app',
     'https://oranew-staging.vercel.app',
     'https://orashop.in',
+    'https://www.orashop.in', // Include www subdomain
 ];
-// Add FRONTEND_URL if set in env
-if (process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL)) {
+// Add FRONTEND_URL if set in env (only in development)
+if (process.env.NODE_ENV !== 'production' && process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL)) {
     allowedOrigins.push(process.env.FRONTEND_URL);
 }
 console.log('[CORS] 🔐 Allowed Origins:', allowedOrigins);
@@ -116,6 +145,25 @@ app.use((0, cors_1.default)({
             return callback(null, true);
         // In production, strictly validate origins
         if (process.env.NODE_ENV === 'production') {
+            // SECURITY: Production strict mode - only allow whitelisted domains
+            const productionDomains = [
+                'https://orashop.in',
+                'https://www.orashop.in',
+            ];
+            if (productionDomains.includes(origin)) {
+                callback(null, true);
+            }
+            else {
+                console.warn('[SECURITY:CORS] ⚠️ Blocked unauthorized origin:', {
+                    origin,
+                    ip: undefined, // Available in route handlers
+                    timestamp: new Date().toISOString(),
+                });
+                callback(new Error('Not allowed by CORS'));
+            }
+        }
+        else {
+            // Development: allow all localhost origins + staging
             if (allowedOrigins.includes(origin)) {
                 callback(null, true);
             }
@@ -123,10 +171,6 @@ app.use((0, cors_1.default)({
                 console.warn('[CORS] ⚠️ Blocked request from unauthorized origin:', origin);
                 callback(new Error('Not allowed by CORS'));
             }
-        }
-        else {
-            // Development: allow all localhost origins
-            callback(null, true);
         }
     },
     credentials: true,
@@ -159,6 +203,10 @@ app.use('/api/payments/webhook', express_1.default.raw({ type: 'application/json
 // Applying express.json() before upload routes will cause 400 errors
 app.use('/api/upload', upload_routes_1.default);
 app.use('/api/r2', r2_upload_routes_1.default);
+// ============================================
+// COOKIE PARSER - For HttpOnly Cookie Authentication
+// ============================================
+app.use((0, cookie_parser_1.default)());
 // ============================================
 // BODY PARSER - SKIP WEBHOOK ROUTE
 // ============================================

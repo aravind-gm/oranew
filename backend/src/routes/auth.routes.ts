@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { otpLogin, verifyOtp, register, passwordLogin, changePassword, getMe, logout, deleteAccount, login } from '../controllers/auth.controller';
+import { otpLogin, verifyOtp, register, passwordLogin, changePassword, getMe, deleteAccount, login } from '../controllers/auth.controller';
+import { refreshAccessToken, logout } from '../controllers/authToken.controller';
 import { protect } from '../middleware/auth';
 import { authLimiter } from '../middleware/rateLimiter';
 
@@ -17,9 +18,12 @@ router.post('/register', authLimiter, register);
 router.post('/password-login', authLimiter, passwordLogin);
 router.post('/change-password', protect, changePassword);
 
+// Token management (HttpOnly cookies)
+router.post('/refresh', authLimiter, refreshAccessToken);
+router.post('/logout', protect, logout);
+
 // Protected routes (requires JWT token)
 router.get('/me', protect, getMe);
-router.post('/logout', protect, logout);
 router.delete('/account', protect, deleteAccount);
 
 export default router;

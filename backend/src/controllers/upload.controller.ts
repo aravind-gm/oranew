@@ -8,6 +8,7 @@ import { isR2Configured, uploadToR2, generateProductImagePath, getCdnUrl, delete
 import { generateProductVariants } from '../services/image.service';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
+import { validateMultipleImageUploads } from '../utils/uploadValidation';
 
 /**
  * Upload multiple images to Cloudflare R2 (or fallback to Supabase Storage)
@@ -68,7 +69,21 @@ export const uploadImages = async (
       throw new AppError('No files uploaded', 400);
     }
 
-    console.log('[Upload Controller] ✅ Files received:', {
+    // SECURITY: Validate all files before processing
+    const validation = validateMultipleImageUploads(files, req.user.id, req.ip);
+    if (!validation.valid) {
+      console.warn('[Upload Controller] ⚠️ UPLOAD VALIDATION FAILED', {
+        userId: req.user.id,
+        errors: validation.errors,
+        failedFiles: validation.failedFiles,
+      });
+      throw new AppError(
+        `Upload validation failed: ${validation.errors.join(', ')}`,
+        400
+      );
+    }
+
+    console.log('[Upload Controller] ✅ Files validated and received:', {
       fileCount: files.length,
       files: files.map(f => ({ name: f.originalname, size: f.size, type: f.mimetype })),
     });

@@ -8,6 +8,7 @@ import { AppError } from '../middleware/errorHandler';
 import { sendEmail } from '../utils/email';
 import { generateToken, verifyToken } from '../utils/jwt';
 import { getSupabaseAdmin } from '../config/supabase';
+import { generateRefreshToken, storeRefreshToken } from '../utils/refreshToken';
 
 // ============================================
 // CUSTOM 8-DIGIT OTP AUTHENTICATION SYSTEM
@@ -200,11 +201,30 @@ export const verifyOtp = async (
       }
     }
 
-    // Generate JWT token for backend session
-    const token = generateToken({
+    // Generate access token (30m expiry)
+    const accessToken = generateToken({
       id: user.id,
       email: user.email,
       role: user.role,
+    });
+
+    // Generate refresh token (7d expiry)
+    const refreshToken = generateRefreshToken();
+    await storeRefreshToken(user.id, refreshToken);
+
+    // Set HttpOnly cookies
+    res.cookie('access_token', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 60 * 1000, // 30 minutes
+    });
+
+    res.cookie('refresh_token', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
     console.log(`[Auth] ✅ User logged in via OTP: ${email} (isNewUser: ${isNewUser})`);
@@ -219,7 +239,6 @@ export const verifyOtp = async (
         isVerified: user.isVerified,
         profileCompleted: user.profileCompleted,
       },
-      token,
       isNewUser,
     });
   } catch (error) {
@@ -286,11 +305,30 @@ export const login = async (
         });
       }
 
-      // Generate JWT token
-      const token = generateToken({
+      // Generate access token (30m expiry)
+      const accessToken = generateToken({
         id: user.id,
         email: user.email,
         role: user.role,
+      });
+
+      // Generate refresh token (7d expiry)
+      const refreshToken = generateRefreshToken();
+      await storeRefreshToken(user.id, refreshToken);
+
+      // Set HttpOnly cookies
+      res.cookie('access_token', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 30 * 60 * 1000, // 30 minutes
+      });
+
+      res.cookie('refresh_token', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
       console.log(`[Auth] ✅ User logged in with password: ${email}`);
@@ -305,7 +343,6 @@ export const login = async (
           isVerified: user.isVerified,
           profileCompleted: user.profileCompleted,
         },
-        token,
         isNewUser: false,
       });
     } else {
@@ -413,11 +450,30 @@ export const register = async (
         },
       });
 
-      // Generate JWT token
-      const token = generateToken({
+      // Generate access token (30m expiry)
+      const accessToken = generateToken({
         id: user.id,
         email: user.email,
         role: user.role,
+      });
+
+      // Generate refresh token (7d expiry)
+      const refreshToken = generateRefreshToken();
+      await storeRefreshToken(user.id, refreshToken);
+
+      // Set HttpOnly cookies
+      res.cookie('access_token', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 30 * 60 * 1000, // 30 minutes
+      });
+
+      res.cookie('refresh_token', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
       console.log(`[Auth] ✅ User registered with password: ${email}`);
@@ -433,7 +489,6 @@ export const register = async (
           isVerified: user.isVerified,
           profileCompleted: user.profileCompleted,
         },
-        token,
         isNewUser: true,
       });
     } else {
@@ -553,11 +608,30 @@ export const passwordLogin = async (
       });
     }
 
-    // Generate JWT token
-    const token = generateToken({
+    // Generate access token (30m expiry)
+    const accessToken = generateToken({
       id: user.id,
       email: user.email,
       role: user.role,
+    });
+
+    // Generate refresh token (7d expiry)
+    const refreshToken = generateRefreshToken();
+    await storeRefreshToken(user.id, refreshToken);
+
+    // Set HttpOnly cookies
+    res.cookie('access_token', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 60 * 1000, // 30 minutes
+    });
+
+    res.cookie('refresh_token', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
     console.log(`[Auth] ✅ User logged in with password: ${email}`);
@@ -572,7 +646,6 @@ export const passwordLogin = async (
         isVerified: user.isVerified,
         profileCompleted: user.profileCompleted,
       },
-      token,
       isNewUser: false,
     });
   } catch (error) {

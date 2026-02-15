@@ -51,6 +51,7 @@ model User {
   wishlists        Wishlist[]
   adminAuditLogs   AdminAuditLog[]
   couponUsages     CouponUsage[] // Track per-user coupon usage
+  refreshTokens    RefreshToken[] // Track refresh tokens for session management
 
   @@map("users")
 }
@@ -538,6 +539,24 @@ model ComboProduct {
   @@index([slug])
   @@index([sortOrder])
   @@map("combo_products")
+}
+
+// ============================================
+// REFRESH TOKENS (JWT Session Management)
+// ============================================
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
 }
 
 model BOGOCampaign {

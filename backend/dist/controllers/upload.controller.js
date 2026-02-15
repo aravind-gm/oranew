@@ -5,6 +5,7 @@ const supabase_1 = require("../config/supabase");
 const r2_1 = require("../config/r2");
 const image_service_1 = require("../services/image.service");
 const errorHandler_1 = require("../middleware/errorHandler");
+const uploadValidation_1 = require("../utils/uploadValidation");
 /**
  * Upload multiple images to Cloudflare R2 (or fallback to Supabase Storage)
  * @route POST /api/upload/images
@@ -49,7 +50,17 @@ const uploadImages = async (req, res, next) => {
             });
             throw new errorHandler_1.AppError('No files uploaded', 400);
         }
-        console.log('[Upload Controller] ✅ Files received:', {
+        // SECURITY: Validate all files before processing
+        const validation = (0, uploadValidation_1.validateMultipleImageUploads)(files, req.user.id, req.ip);
+        if (!validation.valid) {
+            console.warn('[Upload Controller] ⚠️ UPLOAD VALIDATION FAILED', {
+                userId: req.user.id,
+                errors: validation.errors,
+                failedFiles: validation.failedFiles,
+            });
+            throw new errorHandler_1.AppError(`Upload validation failed: ${validation.errors.join(', ')}`, 400);
+        }
+        console.log('[Upload Controller] ✅ Files validated and received:', {
             fileCount: files.length,
             files: files.map(f => ({ name: f.originalname, size: f.size, type: f.mimetype })),
         });

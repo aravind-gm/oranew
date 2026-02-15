@@ -75,7 +75,7 @@ export const errorHandler = (
   const message = err.message || 'Internal Server Error';
   const { category, isColdStart, isPoolExhaustion, isNetworkDrop } = categorizeError(err);
 
-  // Detailed logging for diagnostics
+  // Detailed logging for diagnostics (internal only)
   const logData = {
     timestamp: new Date().toISOString(),
     endpoint: req.path,
@@ -95,7 +95,7 @@ export const errorHandler = (
       console.error('\n[STACK TRACE]\n', err.stack);
     }
   } else {
-    // Production: log with diagnostic hints
+    // Production: log with diagnostic hints (internal only)
     if (isColdStart) {
       console.warn('[WARNING] ⏱️  COLD START: Database connection timeout. Server may be waking up.', logData);
     } else if (isPoolExhaustion) {
@@ -107,10 +107,27 @@ export const errorHandler = (
     }
   }
 
+  // SECURITY: Sanitize error response for production
+  // Never expose stack traces, Prisma errors, or SQL messages to clients
+  let clientMessage = message;
+  
+  if (process.env.NODE_ENV === 'production') {
+    // Hide technical details in production
+    if (message.includes('Prisma') || message.includes('PrismaClient') || message.includes('SQL')) {
+      clientMessage = 'A database error occurred. Please try again.';
+    } else if (message.includes('jwt') || message.includes('token')) {
+      clientMessage = 'Authentication error. Please log in again.';
+    } else if (statusCode >= 500) {
+      // Generic 500 errors
+      clientMessage = 'Something went wrong. Please try again later.';
+    }
+    // Else: keep original message for 400-level errors (validation, etc.)
+  }
+
   res.status(statusCode).json({
     success: false,
     error: process.env.NODE_ENV === 'production'
-      ? message // Production: Only send error message, never stack traces
+      ? clientMessage // Production: Sanitized message only
       : {
           message,
           category,
