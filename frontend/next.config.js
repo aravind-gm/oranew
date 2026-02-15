@@ -33,6 +33,11 @@ const nextConfig = {
         protocol: 'https',
         hostname: '**.supabase.co',
       },
+      // Unsplash (for demo/mock images)
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
       {
         protocol: 'http',
         hostname: 'localhost',

@@ -40,13 +40,13 @@ export const useAuthStore = create<AuthState>()(
       isHydrated: false,
       
       login: (user, token) => {
-        console.log('[AuthStore] 🔐 Logging in user:', { email: user.email, role: user.role });
+        // console.log('[AuthStore] 🔐 Logging in user:', { email: user.email, role: user.role });
         localStorage.setItem('ora_token', token);
         set({ user, token, isAuthenticated: true, isHydrated: true });
       },
       
       logout: () => {
-        console.log('[AuthStore] 🚪 Logging out user');
+        // console.log('[AuthStore] 🚪 Logging out user');
         localStorage.removeItem('ora_token');
         // Also clear Supabase session
         try {
@@ -61,27 +61,24 @@ export const useAuthStore = create<AuthState>()(
       },
       
       updateUser: (user) => {
-        console.log('[AuthStore] 👤 Updating user:', { email: user.email });
+        // console.log('[AuthStore] 👤 Updating user:', { email: user.email });
         set({ user });
       },
       
       setToken: (token) => {
-        console.log('[AuthStore] 🔑 Setting token');
+        // console.log('[AuthStore] 🔑 Setting token');
         localStorage.setItem('ora_token', token);
         set({ token, isAuthenticated: true });
       },
       
       setUser: (user) => {
-        console.log('[AuthStore] 👥 Setting user:', { email: user.email });
+        // console.log('[AuthStore] 👥 Setting user:', { email: user.email });
         set({ user, isAuthenticated: true });
       },
       
       setHydrated: (hydrated) => {
         if (hydrated && !get().isHydrated) {
-          console.log('[AuthStore] 💧 Store hydrated from localStorage', {
-            hasToken: !!get().token,
-            hasUser: !!get().user,
-          });
+          // Debug logging removed for production
         }
         set({ isHydrated: hydrated });
       },

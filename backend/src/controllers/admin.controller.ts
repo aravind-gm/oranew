@@ -81,6 +81,8 @@ export const getDashboardStats = async (
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+
     const [
       totalOrders,
       totalRevenue,
@@ -89,6 +91,9 @@ export const getDashboardStats = async (
       todayOrders,
       todayRevenue,
       lowStockCount,
+      monthRevenue,
+      topProducts,
+      recentOrders,
     ] = await Promise.all([
       prisma.order.count(),
       prisma.order.aggregate({
@@ -113,7 +118,42 @@ export const getDashboardStats = async (
           stockQuantity: { lte: 10 },
         },
       }),
+      prisma.order.aggregate({
+        _sum: { totalAmount: true },
+        where: {
+          createdAt: { gte: monthStart },
+          paymentStatus: 'CONFIRMED',
+        },
+      }),
+      // Top 5 selling products (by quantity sold)
+      prisma.orderItem.groupBy({
+        by: ['productId', 'productName'],
+        _sum: { quantity: true, totalPrice: true },
+        orderBy: { _sum: { quantity: 'desc' } },
+        take: 5,
+      }),
+      // Recent 7 days revenue chart data
+      prisma.order.findMany({
+        where: {
+          createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+          paymentStatus: 'CONFIRMED',
+        },
+        select: { createdAt: true, totalAmount: true },
+        orderBy: { createdAt: 'asc' },
+      }),
     ]);
+
+    // Aggregate daily revenue for chart
+    const dailyRevenue: Record<string, number> = {};
+    recentOrders.forEach((order: any) => {
+      const dateKey = order.createdAt.toISOString().split('T')[0];
+      dailyRevenue[dateKey] = (dailyRevenue[dateKey] || 0) + Number(order.totalAmount);
+    });
+
+    const revenueChart = Object.entries(dailyRevenue).map(([date, revenue]) => ({
+      date,
+      revenue: Math.round(revenue),
+    }));
 
     res.json({
       success: true,
@@ -125,6 +165,14 @@ export const getDashboardStats = async (
         todayOrders,
         todayRevenue: todayRevenue._sum.totalAmount || 0,
         lowStockCount,
+        monthRevenue: monthRevenue._sum.totalAmount || 0,
+        topProducts: topProducts.map((p: any) => ({
+          productId: p.productId,
+          name: p.productName,
+          totalSold: p._sum.quantity || 0,
+          totalRevenue: Number(p._sum.totalPrice) || 0,
+        })),
+        revenueChart,
       },
     });
   } catch (error) {
@@ -465,7 +513,7 @@ export const getAdminProducts = async (
   next: NextFunction
 ) => {
   try {
-    const { page = '1', limit = '20', search, category, isActive, lowStock, outOfStock } = req.query;
+    const { page = '1', limit = '20', search, category, isActive, lowStock, outOfStock, archived } = req.query;
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
 
     // 📊 Log incoming request
@@ -478,10 +526,18 @@ export const getAdminProducts = async (
       isActive: isActive || '(no filter - see all)',
       hasLowStock: lowStock === 'true',
       hasOutOfStock: outOfStock === 'true',
+      archived: archived || 'false',
       timestamp: new Date().toISOString(),
     });
 
     const where: any = {};
+
+    // Archive filter: by default exclude archived, show only archived if requested
+    if (archived === 'true') {
+      where.deletedAt = { not: null };
+    } else {
+      where.deletedAt = null;
+    }
     
     if (search) {
       where.OR = [
@@ -1313,6 +1369,403 @@ export const getReturnStats = async (
       data: {
         stats: returnStats,
         pendingCount,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ============================================
+// PRODUCT ARCHIVE / RESTORE
+// ============================================
+
+// @desc    Archive a product (soft delete)
+// @route   PUT /api/admin/products/:id/archive
+// @access  Private/Admin
+export const archiveProduct = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+    const product = await prisma.product.findUnique({ where: { id } });
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+
+    // Check for pending orders
+    const pendingOrders = await prisma.orderItem.count({
+      where: {
+        productId: id,
+        order: { status: { in: ['PENDING', 'CONFIRMED', 'PROCESSING'] } },
+      },
+    });
+
+    if (pendingOrders > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot archive "${product.name}" — ${pendingOrders} pending order(s) exist.`,
+      });
+    }
+
+    await prisma.product.update({
+      where: { id },
+      data: { deletedAt: new Date(), isActive: false, bogoActive: false },
+    });
+
+    console.log('[Admin] 📦 Product archived:', { id, name: product.name });
+
+    res.json({ success: true, message: 'Product archived successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Restore an archived product
+// @route   PUT /api/admin/products/:id/restore
+// @access  Private/Admin
+export const restoreProduct = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+    const product = await prisma.product.findUnique({ where: { id } });
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+
+    if (!product.deletedAt) {
+      return res.status(400).json({ success: false, message: 'Product is not archived' });
+    }
+
+    await prisma.product.update({
+      where: { id },
+      data: { deletedAt: null, isActive: false }, // Restore as draft, admin must manually activate
+    });
+
+    console.log('[Admin] ♻️ Product restored:', { id, name: product.name });
+
+    res.json({ success: true, message: 'Product restored as draft' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ============================================
+// BULK PRODUCT ACTIONS
+// ============================================
+
+// @desc    Bulk product actions (activate, deactivate, archive)
+// @route   POST /api/admin/products/bulk-action
+// @access  Private/Admin
+export const bulkProductAction = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { action, productIds } = req.body as {
+      action: 'activate' | 'deactivate' | 'archive' | 'restore';
+      productIds: string[];
+    };
+
+    if (!action || !productIds?.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'action and productIds[] are required',
+      });
+    }
+
+    const validActions = ['activate', 'deactivate', 'archive', 'restore'];
+    if (!validActions.includes(action)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid action. Must be one of: ${validActions.join(', ')}`,
+      });
+    }
+
+    let updateData: any = {};
+    switch (action) {
+      case 'activate':
+        updateData = { isActive: true };
+        break;
+      case 'deactivate':
+        updateData = { isActive: false };
+        break;
+      case 'archive':
+        updateData = { deletedAt: new Date(), isActive: false, bogoActive: false };
+        break;
+      case 'restore':
+        updateData = { deletedAt: null, isActive: false };
+        break;
+    }
+
+    // For archive, check pending orders first
+    if (action === 'archive') {
+      const pendingCount = await prisma.orderItem.count({
+        where: {
+          productId: { in: productIds },
+          order: { status: { in: ['PENDING', 'CONFIRMED', 'PROCESSING'] } },
+        },
+      });
+      if (pendingCount > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot archive — ${pendingCount} pending order item(s) reference these products.`,
+        });
+      }
+    }
+
+    const result = await prisma.product.updateMany({
+      where: { id: { in: productIds } },
+      data: updateData,
+    });
+
+    console.log('[Admin] ⚡ Bulk product action:', {
+      action,
+      count: result.count,
+      productIds,
+    });
+
+    res.json({
+      success: true,
+      message: `${result.count} product(s) ${action}d successfully`,
+      data: { affected: result.count },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ============================================
+// SHIPPING CONFIG ADMIN
+// ============================================
+
+// @desc    Get shipping config for admin
+// @route   GET /api/admin/settings/shipping
+// @access  Private/Admin
+export const getAdminShippingConfig = async (
+  _req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const config = await prisma.shippingConfig.findFirst({
+      where: { isActive: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json({
+      success: true,
+      data: config || { freeThreshold: 999, standardFee: 99, isActive: true },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update shipping config
+// @route   PUT /api/admin/settings/shipping
+// @access  Private/Admin
+export const updateAdminShippingConfig = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { freeThreshold, standardFee } = req.body;
+
+    if (freeThreshold === undefined || standardFee === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'freeThreshold and standardFee are required',
+      });
+    }
+
+    if (freeThreshold < 0 || standardFee < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Values must be non-negative',
+      });
+    }
+
+    // Upsert: deactivate existing, create new active config
+    await prisma.shippingConfig.updateMany({
+      where: { isActive: true },
+      data: { isActive: false },
+    });
+
+    const config = await prisma.shippingConfig.create({
+      data: {
+        freeThreshold: parseFloat(freeThreshold),
+        standardFee: parseFloat(standardFee),
+        isActive: true,
+      },
+    });
+
+    // Invalidate shipping cache
+    const { invalidateShippingCache } = await import('../utils/shipping');
+    invalidateShippingCache();
+
+    console.log('[Admin] 🚚 Shipping config updated:', {
+      freeThreshold: config.freeThreshold,
+      standardFee: config.standardFee,
+    });
+
+    res.json({ success: true, data: config });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ============================================
+// TAX CONFIG ADMIN
+// ============================================
+
+// @desc    Get all tax configs
+// @route   GET /api/admin/settings/taxes
+// @access  Private/Admin
+export const getAdminTaxConfigs = async (
+  _req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const configs = await prisma.taxConfig.findMany({
+      orderBy: { categorySlug: 'asc' },
+    });
+
+    res.json({ success: true, data: configs });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Create or update a tax config entry
+// @route   PUT /api/admin/settings/taxes
+// @access  Private/Admin
+export const upsertTaxConfig = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { categorySlug, gstRate, label, isActive } = req.body;
+
+    if (!categorySlug || gstRate === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'categorySlug and gstRate are required',
+      });
+    }
+
+    if (gstRate < 0 || gstRate > 28) {
+      return res.status(400).json({
+        success: false,
+        message: 'GST rate must be between 0 and 28%',
+      });
+    }
+
+    const config = await prisma.taxConfig.upsert({
+      where: { categorySlug },
+      update: {
+        gstRate: parseFloat(gstRate),
+        label: label || 'GST',
+        isActive: isActive !== undefined ? isActive : true,
+      },
+      create: {
+        categorySlug,
+        gstRate: parseFloat(gstRate),
+        label: label || 'GST',
+        isActive: isActive !== undefined ? isActive : true,
+      },
+    });
+
+    // Invalidate tax cache
+    const { invalidateTaxCache } = await import('../utils/tax');
+    invalidateTaxCache();
+
+    console.log('[Admin] 🧾 Tax config upserted:', {
+      categorySlug,
+      gstRate: config.gstRate,
+    });
+
+    res.json({ success: true, data: config });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Delete a tax config entry
+// @route   DELETE /api/admin/settings/taxes/:id
+// @access  Private/Admin
+export const deleteTaxConfig = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+
+    await prisma.taxConfig.delete({ where: { id } });
+
+    // Invalidate tax cache
+    const { invalidateTaxCache } = await import('../utils/tax');
+    invalidateTaxCache();
+
+    console.log('[Admin] 🗑️ Tax config deleted:', { id });
+
+    res.json({ success: true, message: 'Tax config deleted' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ============================================
+// AUDIT LOG
+// ============================================
+
+// @desc    Get admin audit logs
+// @route   GET /api/admin/audit-log
+// @access  Private/Admin
+export const getAuditLogs = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { page = '1', limit = '50', action, entityType } = req.query;
+    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+
+    const where: any = {};
+    if (action) where.action = action;
+    if (entityType) where.entityType = entityType;
+
+    const [logs, total] = await Promise.all([
+      prisma.adminAuditLog.findMany({
+        where,
+        include: { user: { select: { id: true, fullName: true, email: true, role: true } } },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: parseInt(limit as string),
+      }),
+      prisma.adminAuditLog.count({ where }),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        logs,
+        pagination: {
+          page: parseInt(page as string),
+          limit: parseInt(limit as string),
+          total,
+          pages: Math.ceil(total / parseInt(limit as string)),
+        },
       },
     });
   } catch (error) {

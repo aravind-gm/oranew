@@ -4,7 +4,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
 // Subscribe function for useSyncExternalStore to detect client-side hydration
@@ -12,6 +12,7 @@ const emptySubscribe = () => () => {};
 
 export default function Header() {
   const router = useRouter();
+  const pathname = usePathname();
   const { token, user, logout, isHydrated } = useAuthStore();
   const { items } = useCartStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -19,6 +20,9 @@ export default function Header() {
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [mounted, setMounted] = useState(false);
+  
+  // Hide menu bar on admin v2 pages
+  const isAdminPage = pathname?.startsWith('/admin/v2');
   
   // Use useSyncExternalStore to safely handle hydration
   const isClient = useSyncExternalStore(
@@ -93,36 +97,31 @@ export default function Header() {
     { label: 'New Arrivals', href: '/collections/new-arrivals' },
     { label: 'Combos for Her', href: '/collections/combos' },
     { label: 'Gifts for Her', href: '/collections/gifts-for-her' },
-    { label: 'Valentine Gifts', href: '/collections/valentine' },
     { label: 'Tumblers', href: '/collections/tumblers' },
     { label: 'Offers', href: '/collections/offers' }
   ];
 
   return (
     <header 
-      className={`sticky top-0 z-[1000] w-full tr
-      }`}
-      style={{ willChange: 'transform' }}
+      className="sticky top-0 z-[1000] w-full bg-white"
+      style={{
+        willChange: 'transform',
+        transition: 'transform 0.3s ease-in-out',
+        transform: isHeaderVisible ? 'translateY(0)' : 'translateY(-100%)'
+      }}
     >
-      {/* Announcement Bar */}
-      <div className="bg-[#FFE4EC] text-center py-2 px-4">
-        <p className="text-xs text-neutral-900 font-medium">
-          Valentine&apos;s Sale is Live — FLAT 20% OFF
-        </p>
-      </div>
-
       {/* Main Header */}
-      <div className="bg-white border-b border-neutral-200 px-4 lg:px-6 relative overflow-visible">
-        <div className="max-w-7xl mx-auto flex items-center justify-between h-16 lg:h-20 relative overflow-visible">
+      <div className="bg-white border-b border-oraLight px-4 lg:px-6 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto flex items-center justify-between h-16 lg:h-20 relative overflow-hidden">
           {/* Logo - Brand Dominant */}
-          <Link href="/" className="flex-shrink-0 group">
+          <Link href="/" className="flex-shrink-0 group flex items-center justify-center" style={{ marginTop: '8px' }}>
             <Image
               src="/oralogo.png"
               alt="ORA Jewellery"
               width={220}
               height={80}
               className="h-10 lg:h-12 w-auto object-contain transition-opacity group-hover:opacity-90"
-              style={{ width: 'clamp(150px, 16vw, 220px)' }}
+              style={{ width: 'clamp(150px, 16vw, 220px)', transform: 'scale(3.5)' }}
               priority
             />
           </Link>
@@ -135,11 +134,11 @@ export default function Header() {
                 placeholder="Search pendants, rings, gifts..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-12 pl-4 pr-12 border border-white rounded-lg bg-white text-neutral-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
+                className="w-full h-12 pl-4 pr-12 border border-white rounded-lg bg-white text-neutral-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-oraAccent focus:border-transparent"
               />
               <button
                 type="submit"
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-neutral-900 transition-colors"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-oraAccent transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -153,7 +152,7 @@ export default function Header() {
             {/* Mobile Search */}
             <Link
               href="/search"
-              className="md:hidden text-neutral-900 hover:text-neutral-900 transition-colors p-2"
+              className="md:hidden text-neutral-900 hover:text-oraAccent transition-colors p-2"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -163,7 +162,7 @@ export default function Header() {
             {/* Wishlist */}
             <Link
               href="/wishlist"
-              className="text-neutral-900 hover:text-neutral-900 transition-colors p-2"
+              className="text-neutral-900 hover:text-oraAccent transition-colors p-2"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
@@ -173,13 +172,13 @@ export default function Header() {
             {/* Cart */}
             <Link
               href="/cart"
-              className="text-neutral-900 hover:text-neutral-900 transition-colors p-2 relative"
+              className="text-neutral-900 hover:text-oraAccent transition-colors p-2 relative"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-neutral-900 text-white rounded-full text-xs flex items-center justify-center font-semibold">
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-oraAccent text-white rounded-full text-xs flex items-center justify-center font-semibold">
                   {cartCount}
                 </span>
               )}
@@ -188,7 +187,7 @@ export default function Header() {
             {/* User Menu */}
             {isLoggedIn ? (
               <div className="relative group">
-                <button className="flex items-center gap-2 text-neutral-900 hover:text-neutral-900 transition-colors p-2">
+                <button className="flex items-center gap-2 text-neutral-900 hover:text-oraAccent transition-colors p-2">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
@@ -199,16 +198,16 @@ export default function Header() {
                 </button>
                 <div className="hidden group-hover:block absolute right-0 top-full pt-2 w-48 z-[9999] origin-top-right transition-all opacity-100 scale-100">
                   <div className="bg-white rounded-lg shadow-2xl border border-neutral-200 py-2 overflow-visible">
-                    <Link href="/account" className="block px-4 py-2 text-sm text-neutral-900 hover:bg-[#FFE4EC] transition-colors">My Account</Link>
-                    <Link href="/account/orders" className="block px-4 py-2 text-sm text-neutral-900 hover:bg-[#FFE4EC] transition-colors">Orders</Link>
-                    {isAdmin && <Link href="/admin" className="block px-4 py-2 text-sm text-[#9B2C46] hover:bg-[#FFE4EC] transition-colors">Admin</Link>}
-                    <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-[#FFE4EC] transition-colors">Sign Out</button>
+                  <Link href="/account" className="block px-4 py-2 text-sm text-neutral-900 hover:bg-oraLight/40 transition-colors">My Account</Link>
+                  <Link href="/account/orders" className="block px-4 py-2 text-sm text-neutral-900 hover:bg-oraLight/40 transition-colors">Orders</Link>
+                  {isAdmin && <Link href="/admin" className="block px-4 py-2 text-sm text-neutral-700 hover:bg-oraLight/40 transition-colors">Admin</Link>}
+                  <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-oraLight/40 transition-colors">Sign Out</button>
                   </div>
                 </div>
               </div>
             ) : (
               <div className="hidden md:flex items-center gap-3">
-                <Link href="/auth/login" className="bg-neutral-900 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-opacity-90 transition-colors">
+                <Link href="/auth/login" className="bg-oraAccent text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-pink-600 transition-colors">
                   Login / Sign Up
                 </Link>
               </div>
@@ -218,7 +217,7 @@ export default function Header() {
             {!isLoggedIn && (
               <Link
                 href="/auth/login"
-                className="md:hidden text-neutral-900 hover:text-neutral-900 transition-colors p-2"
+                className="md:hidden text-neutral-900 hover:text-oraAccent transition-colors p-2"
                 title="Login"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -230,7 +229,7 @@ export default function Header() {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden text-neutral-900 hover:text-neutral-900 transition-colors p-2"
+              className="md:hidden text-neutral-900 hover:text-oraAccent transition-colors p-2"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {isMobileMenuOpen ? (
@@ -244,38 +243,51 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Menu Bar - Pink Luxury */}
-      <nav className="bg-[#FFE4EC] border-b border-neutral-200">
+      {/* Menu Bar - Pink Luxury (hidden on admin v2 pages) */}
+      {!isAdminPage && (
+      <nav className="bg-oraLight border-b border-oraPink/30">
         <div className="max-w-7xl mx-auto px-4 lg:px-6">
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center h-12 space-x-8">
-            {menuItems.map((item) => (
+            {menuItems.map((item) => {
+              const isActive = pathname === item.href;
+              return (
               <Link
                 key={`${item.label}-${item.href}`}
                 href={item.href}
-                className="text-neutral-900 hover:text-neutral-900 text-sm font-medium transition-colors hover:underline decoration-2 underline-offset-4"
+                className={`relative text-sm font-medium transition-colors px-3 py-2 rounded-md hover:bg-oraLight/60 ${
+                  isActive ? 'text-oraAccent font-semibold' : 'text-neutral-900 hover:text-oraAccent'
+                }`}
               >
                 {item.label}
+                {isActive && (
+                  <span className="absolute bottom-0 left-0 w-full h-[2px] bg-oraAccent"></span>
+                )}
               </Link>
-            ))}
+            );})}
           </div>
 
           {/* Mobile Menu - Horizontal Scroll */}
           <div className="md:hidden">
             <div className="flex overflow-x-auto py-3 space-x-6 scrollbar-hide">
-              {menuItems.map((item) => (
+              {menuItems.map((item) => {
+                const isActive = pathname === item.href;
+                return (
                 <Link
                   key={`${item.label}-${item.href}`}
                   href={item.href}
-                  className="text-neutral-900 hover:text-neutral-900 text-sm font-medium whitespace-nowrap transition-colors"
+                  className={`text-sm font-medium whitespace-nowrap transition-colors ${
+                    isActive ? 'text-oraAccent font-semibold' : 'text-neutral-900 hover:text-oraAccent'
+                  }`}
                 >
                   {item.label}
                 </Link>
-              ))}
+              );})}
             </div>
           </div>
         </div>
       </nav>
+      )}
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
@@ -286,7 +298,7 @@ export default function Header() {
                 key={`${item.label}-${item.href}`}
                 href={item.href}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="block px-4 py-3 text-neutral-900 hover:bg-[#FFE4EC] rounded-lg text-sm font-medium"
+                className="block px-4 py-3 text-neutral-900 hover:bg-neutral-100 rounded-lg text-sm font-medium"
               >
                 {item.label}
               </Link>
@@ -316,15 +328,15 @@ export default function Header() {
             {/* Mobile Auth Actions */}
             {isLoggedIn ? (
               <div className="space-y-3 pt-2">
-                <Link href="/account" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-2 text-neutral-900 hover:bg-[#FFE4EC] rounded-lg text-sm font-medium">My Account</Link>
-                <Link href="/account/orders" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-2 text-neutral-900 hover:bg-[#FFE4EC] rounded-lg text-sm font-medium">Orders</Link>
-                {isAdmin && <Link href="/admin" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-2 text-[#9B2C46] hover:bg-[#FFE4EC] rounded-lg text-sm font-medium">Admin</Link>}
+                <Link href="/account" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-2 text-neutral-900 hover:bg-neutral-100 rounded-lg text-sm font-medium">My Account</Link>
+                <Link href="/account/orders" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-2 text-neutral-900 hover:bg-neutral-100 rounded-lg text-sm font-medium">Orders</Link>
+                {isAdmin && <Link href="/admin" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-2 text-neutral-700 hover:bg-neutral-100 rounded-lg text-sm font-medium">Admin</Link>}
                 <button 
                   onClick={() => {
                     handleLogout();
                     setIsMobileMenuOpen(false);
                   }} 
-                  className="w-full text-left px-4 py-2 text-red-600 hover:bg-[#FFE4EC] rounded-lg text-sm font-medium"
+                  className="w-full text-left px-4 py-2 text-red-600 hover:bg-neutral-100 rounded-lg text-sm font-medium"
                 >
                   Sign Out
                 </button>

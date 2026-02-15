@@ -11,6 +11,21 @@ interface CartItem {
   quantity: number;
   stockQuantity?: number;
   isOutOfStock?: boolean;
+  // Offer fields
+  isOnOffer?: boolean;
+  offerType?: string;
+  offerValue?: number;
+  offerExpiry?: string;
+  offerPrice?: number;
+  bogoPartnerId?: string;
+}
+
+interface OfferValidationResult {
+  valid: boolean;
+  adjustedItems: CartItem[];
+  totalDiscount: number;
+  messages: string[];
+  bogoApplied: boolean;
 }
 
 interface SavedItem {
@@ -48,6 +63,11 @@ interface CartState {
   // Stock validation
   validateStock: () => Promise<StockInfo[]>;
   updateItemStock: (productId: string, stockQuantity: number) => void;
+  // Offer validation
+  validateOffers: () => Promise<OfferValidationResult>;
+  getDiscountedTotal: () => number;
+  offerMessages: string[];
+  totalDiscount: number;
 }
 
 export const useCartStore = create<CartState>()(
@@ -220,6 +240,88 @@ export const useCartStore = create<CartState>()(
               : item
           ),
         })),
+
+      // Offer validation
+      offerMessages: [],
+      totalDiscount: 0,
+
+      validateOffers: async () => {
+        const state = get();
+        if (state.items.length === 0) {
+          return { valid: true, adjustedItems: [], totalDiscount: 0, messages: [], bogoApplied: false };
+        }
+
+        try {
+          const response = await api.post('/offers/validate', {
+            items: state.items.map(item => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              price: item.price,
+            })),
+          });
+
+          const result = response.data;
+          const messages: string[] = [];
+          let totalDiscount = 0;
+          let bogoApplied = false;
+
+          const adjustedItems = state.items.map(item => {
+            const validated = result.validatedItems?.find(
+              (v: { productId: string }) => v.productId === item.productId
+            );
+
+            if (!validated) return item;
+
+            // Check if offer has expired
+            if (validated.offerExpired) {
+              messages.push(`Offer on "${item.name}" has expired`);
+              return { ...item, isOnOffer: false, offerPrice: undefined };
+            }
+
+            // Apply valid offer pricing
+            if (validated.offerValid && validated.offerPrice !== undefined) {
+              const discount = (item.price - validated.offerPrice) * item.quantity;
+              totalDiscount += discount;
+
+              if (validated.offerType === 'BOGO') {
+                bogoApplied = true;
+                messages.push(`BOGO applied: "${item.name}" — cheaper item free!`);
+              }
+
+              return {
+                ...item,
+                offerPrice: validated.offerPrice,
+                isOnOffer: true,
+                offerType: validated.offerType,
+                bogoPartnerId: validated.bogoPartnerId,
+              };
+            }
+
+            return item;
+          });
+
+          set({ offerMessages: messages, totalDiscount });
+
+          return {
+            valid: true,
+            adjustedItems,
+            totalDiscount,
+            messages,
+            bogoApplied,
+          };
+        } catch (err) {
+          console.error('Offer validation failed:', err);
+          return { valid: false, adjustedItems: state.items, totalDiscount: 0, messages: ['Failed to validate offers'], bogoApplied: false };
+        }
+      },
+
+      getDiscountedTotal: () => {
+        const state = get();
+        return state.items.reduce((total, item) => {
+          const price = item.offerPrice ?? item.price;
+          return total + price * item.quantity;
+        }, 0);
+      },
     }),
     {
       name: 'ora-cart',
@@ -227,6 +329,7 @@ export const useCartStore = create<CartState>()(
         items: state.items,
         savedForLater: state.savedForLater,
         totalPrice: state.totalPrice,
+        totalDiscount: state.totalDiscount,
       }),
     }
   )

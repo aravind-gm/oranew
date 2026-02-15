@@ -121,7 +121,9 @@ export default function ProductsPage() {
           isNew: true
         }
       });
-      setProducts(response.data.data?.products || response.data.products || []);
+      // Handle response format: backend returns { data: [...], pagination: {...} }
+      const productData = response.data.data || response.data.products || [];
+      setProducts(productData);
     } catch (error) {
       console.error('Failed to fetch new products:', error);
       setProducts([]);
@@ -436,7 +438,7 @@ export default function ProductsPage() {
                 </li>
                 <li className="flex items-center gap-3">
                   <span className="w-1.5 h-1.5 bg-accent rounded-full" />
-                  <span className="text-sm">Combo Sets — gift-ready, thoughtfully paired</span>
+                  <span className="text-sm">Combo Sets — thoughtfully paired jewellery</span>
                 </li>
               </ul>
 

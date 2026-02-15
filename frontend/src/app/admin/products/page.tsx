@@ -121,15 +121,7 @@ export default function AdminProductsPage() {
         setProducts(fetchedProducts);
         setPagination(response.data.data?.pagination || null);
         
-        // 🔍 DEBUG: Log image URLs for verification
-        if (fetchedProducts.length > 0) {
-          console.log('[Admin Products] 📸 First product image URL:', {
-            productName: fetchedProducts[0].name,
-            imageUrl: fetchedProducts[0].images?.[0]?.imageUrl,
-            isCDN: fetchedProducts[0].images?.[0]?.imageUrl?.includes('cdn.orashop.in'),
-            fullImages: fetchedProducts[0].images,
-          });
-        }
+        // 🔍 DEBUG: Image URL verification removed for production
       }
     } catch (error) {
       console.error('Failed to fetch products:', error);
@@ -262,9 +254,11 @@ export default function AdminProductsPage() {
 
   const getStockBadge = (qty: number) => {
     if (qty === 0) {
-      return <span className="px-2 py-1 text-xs rounded-full bg-red-900/50 text-red-300">Out of Stock</span>;
+      return <span className="px-2 py-1 text-xs rounded-full bg-red-900/50 text-red-300 font-semibold">❌ Out of Stock</span>;
+    } else if (qty <= 5) {
+      return <span className="px-2 py-1 text-xs rounded-full bg-orange-900/50 text-orange-300 font-semibold animate-pulse">⚠ Low Stock ({qty})</span>;
     } else if (qty <= 10) {
-      return <span className="px-2 py-1 text-xs rounded-full bg-yellow-900/50 text-yellow-300">Low Stock ({qty})</span>;
+      return <span className="px-2 py-1 text-xs rounded-full bg-yellow-900/50 text-yellow-300">Low ({qty})</span>;
     }
     return <span className="px-2 py-1 text-xs rounded-full bg-green-900/50 text-green-300">{qty} in stock</span>;
   };
@@ -535,10 +529,14 @@ export default function AdminProductsPage() {
                       <td className="p-4">
                         <button
                           onClick={() => toggleProductStatus(product.id, product.isActive)}
+                          disabled={product.stockQuantity === 0 && !product.isActive}
+                          title={product.stockQuantity === 0 && !product.isActive ? 'Cannot activate: Out of stock' : ''}
                           className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm transition ${
-                            product.isActive
-                              ? 'bg-green-900/50 text-green-300 hover:bg-green-800/50'
-                              : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                            product.stockQuantity === 0 && !product.isActive
+                              ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed opacity-50'
+                              : product.isActive
+                                ? 'bg-green-900/50 text-green-300 hover:bg-green-800/50'
+                                : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
                           }`}
                         >
                           {product.isActive ? (

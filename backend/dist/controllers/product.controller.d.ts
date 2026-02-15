@@ -8,5 +8,6 @@ export declare const deleteProduct: (req: AuthRequest, res: Response, next: Next
 export declare const getFeaturedProducts: (req: AuthRequest, res: Response, next: NextFunction) => Promise<void>;
 export declare const getProductBySlug: (req: AuthRequest, res: Response, next: NextFunction) => Promise<void>;
 export declare const getProductByIdPublic: (req: AuthRequest, res: Response, next: NextFunction) => Promise<void>;
+export declare const getRecommendedProducts: (req: AuthRequest, res: Response, next: NextFunction) => Promise<void>;
 export declare const searchProducts: (req: AuthRequest, res: Response, next: NextFunction) => Promise<void>;
 //# sourceMappingURL=product.controller.d.ts.map

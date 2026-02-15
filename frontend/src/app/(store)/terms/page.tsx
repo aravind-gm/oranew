@@ -63,8 +63,8 @@ export default function TermsPage() {
             <h2 className="text-2xl font-serif font-semibold text-text-primary mb-4">7. Contact Information</h2>
             <p>
               For questions about these Terms of Service, please contact us at{' '}
-              <a href="mailto:support@orajewellery.com" className="text-accent hover:underline">
-                support@orajewellery.com
+              <a href="mailto:admin@orashop.in" className="text-accent hover:underline">
+                admin@orashop.in
               </a>
             </p>
           </section>

@@ -146,6 +146,12 @@ module.exports = {
         900: '#78350f',
       },
       
+      // ORA Brand Colors (Baby Pink Theme)
+      oraPink: '#F6C1CF',      // Primary soft baby pink
+      oraAccent: '#E75480',    // CTA / hover pink
+      oraLight: '#FDECEF',     // Light pink background
+      oraGold: '#C6A85B',      // Rose gold accent
+      
       // Emerald Color Palette
       emerald: {
         50: '#ecfdf5',
@@ -273,6 +279,45 @@ module.exports = {
         950: '#0c0a09',
       },
       
+      // Gold Color Palette (alias for secondary champagne gold)
+      gold: {
+        DEFAULT: '#C6A85B',
+        50: '#fef9f0',
+        100: '#fef3e1',
+        200: '#fce3c3',
+        300: '#f9d4a5',
+        400: '#C6A85B',
+        500: '#d4af37',
+        600: '#c19b2f',
+        700: '#a67c25',
+        800: '#8b621d',
+        900: '#704815',
+      },
+
+      // Green Color Palette
+      green: {
+        50: '#f0fdf4',
+        100: '#dcfce7',
+        200: '#bbf7d0',
+        300: '#86efac',
+        400: '#4ade80',
+        500: '#22c55e',
+        600: '#16a34a',
+        700: '#15803d',
+        800: '#166534',
+        900: '#14532d',
+      },
+
+      // ORA Combos Campaign Palette
+      'ora-bg': '#0F0F14',
+      'ora-surface': '#16161D',
+      'ora-accent': '#E91E63',
+      'ora-gold': '#C6A85B',
+      'ora-rose': '#F6E9EE',
+      'ora-text': '#111111',
+      'ora-muted': '#7A7A85',
+      'ora-border': '#ECECF2',
+
       // Semantic Color Aliases for Components (DO NOT USE bg-text-primary etc directly)
       'text-primary': '#1A1A1A',     // Dark charcoal = foreground
       'text-secondary': '#78716b',   // neutral-500
@@ -309,6 +354,11 @@ module.exports = {
     },
     
     extend: {
+      fontFamily: {
+        serif: ["'Cormorant Garamond'", "'Playfair Display'", 'Georgia', 'serif'],
+        sans: ['Inter', 'Poppins', 'system-ui', 'sans-serif'],
+      },
+      
       borderRadius: {
         luxury: '12px',
         'luxury-lg': '16px',
@@ -318,6 +368,9 @@ module.exports = {
         luxury: '0 4px 12px rgba(0, 0, 0, 0.08)',
         'luxury-lg': '0 8px 24px rgba(0, 0, 0, 0.12)',
         'luxury-hover': '0 12px 32px rgba(0, 0, 0, 0.16)',
+        'luxury-gold': '0 4px 20px rgba(212, 175, 55, 0.15)',
+        'card-premium': '0 2px 8px rgba(0, 0, 0, 0.04)',
+        'card-premium-hover': '0 16px 48px rgba(0, 0, 0, 0.12)',
       },
       
       fontSize: {

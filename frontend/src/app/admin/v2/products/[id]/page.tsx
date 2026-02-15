@@ -104,6 +104,28 @@ interface ProductFormData {
   isActive: boolean;
   isFeatured: boolean;
   
+  // Gift Collections & Occasions
+  collections: string[];
+  occasions: string[];
+  isFeaturedGift: boolean;
+  
+  // BOGO Campaign
+  isBOGOEligible: boolean;
+  bogoPriceTier: number | null;
+  bogoCategory: string;
+  
+  // Tumbler Settings
+  isTumbler: boolean;
+  capacity: string;
+  isBestseller: boolean;
+  
+  // Offer Settings
+  isOnOffer: boolean;
+  offerType: string;
+  offerValue: number;
+  offerExpiry: string;
+  showCountdown: boolean;
+  
   // SEO
   metaTitle: string;
   metaDescription: string;
@@ -301,6 +323,20 @@ export default function ProductFormPage() {
     careInstructions: '',
     isActive: false,
     isFeatured: false,
+    collections: [],
+    occasions: [],
+    isFeaturedGift: false,
+    isBOGOEligible: false,
+    bogoPriceTier: null,
+    bogoCategory: '',
+    isTumbler: false,
+    capacity: '',
+    isBestseller: false,
+    isOnOffer: false,
+    offerType: '',
+    offerValue: 0,
+    offerExpiry: '',
+    showCountdown: false,
     metaTitle: '',
     metaDescription: '',
     images: [],
@@ -312,6 +348,7 @@ export default function ProductFormPage() {
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [slugLocked, setSlugLocked] = useState(true); // Lock slug by default when editing
 
   // Calculate final price when price or discount changes
   useEffect(() => {
@@ -320,7 +357,7 @@ export default function ProductFormPage() {
     setFormData(prev => ({ ...prev, finalPrice: Math.round(finalPrice) }));
   }, [formData.price, formData.discountPercent]);
 
-  // Auto-generate slug from name
+  // Auto-generate slug from name (only for new products, not locked slugs)
   useEffect(() => {
     if (!isEditing && formData.name) {
       const slug = formData.name
@@ -381,7 +418,7 @@ export default function ProductFormPage() {
       };
 
       // TODO: API call to save product
-      console.log('Saving product:', payload);
+      // console.log('Saving product:', payload);
 
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -447,15 +484,36 @@ export default function ProductFormPage() {
                   error={errors.name}
                 />
                 
-                <Input
-                  label="URL Slug"
-                  placeholder="gold-diamond-necklace"
-                  value={formData.slug}
-                  onChange={(e) => updateField('slug', e.target.value)}
-                  error={errors.slug}
-                  leftIcon={<Globe size={16} />}
-                  hint="This will be used in the product URL"
-                />
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm font-medium text-[#374151]">URL Slug</label>
+                    {isEditing && (
+                      <button
+                        type="button"
+                        onClick={() => setSlugLocked(!slugLocked)}
+                        className="text-xs text-[#d4af37] hover:text-[#b8962e] font-medium flex items-center gap-1"
+                      >
+                        {slugLocked ? (
+                          <><span>🔒</span> Unlock to edit</>
+                        ) : (
+                          <><span>🔓</span> Lock slug</>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                  <Input
+                    placeholder="gold-diamond-necklace"
+                    value={formData.slug}
+                    onChange={(e) => updateField('slug', e.target.value)}
+                    error={errors.slug}
+                    leftIcon={<Globe size={16} />}
+                    disabled={!!(isEditing && slugLocked)}
+                    hint={isEditing && slugLocked 
+                      ? '⚠️ Slug is locked to protect SEO. Unlock only if necessary.' 
+                      : 'This will be used in the product URL'
+                    }
+                  />
+                </div>
 
                 <Textarea
                   label="Short Description"
@@ -677,6 +735,8 @@ export default function ProductFormPage() {
                     { value: 'rings', label: 'Rings' },
                     { value: 'bracelets', label: 'Bracelets' },
                     { value: 'bangles', label: 'Bangles' },
+                    { value: 'tumblers', label: 'Tumblers' },
+                    { value: 'gifts', label: 'Gifts' },
                   ]}
                   error={errors.categoryId}
                 />
@@ -713,6 +773,306 @@ export default function ProductFormPage() {
                     Press Enter to add tags
                   </p>
                 </div>
+              </div>
+            </Card>
+
+            {/* Gift Collections & Occasions */}
+            <Card>
+              <CardTitle className="mb-4">Gift Collections</CardTitle>
+              
+              <div className="space-y-4">
+                {/* Collections */}
+                <div>
+                  <label className="block mb-2 text-sm font-medium text-[#111827]">
+                    Collections
+                  </label>
+                  <div className="space-y-2">
+                    {['gifts-for-her', 'gifts-for-him', 'valentine-special', 'premium-gifts'].map((collection) => (
+                      <Checkbox
+                        key={collection}
+                        label={collection.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                        checked={formData.collections.includes(collection)}
+                        onChange={(e) => {
+                          const newCollections = e.target.checked
+                            ? [...formData.collections, collection]
+                            : formData.collections.filter(c => c !== collection);
+                          updateField('collections', newCollections);
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Occasions */}
+                <div>
+                  <label className="block mb-2 text-sm font-medium text-[#111827]">
+                    Occasions
+                  </label>
+                  <div className="space-y-2">
+                    {['birthday', 'anniversary', 'valentine', 'just-because', 'wedding', 'graduation'].map((occasion) => (
+                      <Checkbox
+                        key={occasion}
+                        label={occasion.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                        checked={formData.occasions.includes(occasion)}
+                        onChange={(e) => {
+                          const newOccasions = e.target.checked
+                            ? [...formData.occasions, occasion]
+                            : formData.occasions.filter(o => o !== occasion);
+                          updateField('occasions', newOccasions);
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Featured Gift */}
+                <div className="pt-2 border-t border-[#e5e7eb]">
+                  <Checkbox
+                    label="Featured Gift"
+                    description="Show in 'Handpicked For Her' section"
+                    checked={formData.isFeaturedGift}
+                    onChange={(e) => updateField('isFeaturedGift', e.target.checked)}
+                  />
+                </div>
+              </div>
+            </Card>
+
+            {/* BOGO Campaign */}
+            <Card>
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <CardTitle className="text-base">BOGO Campaign</CardTitle>
+                  <p className="text-sm text-[#9ca3af] mt-1">
+                    Add this product to "Buy 1 Get 1 Free" offers
+                  </p>
+                </div>
+                <Badge 
+                  variant={formData.isBOGOEligible ? "success" : "secondary"}
+                  size="sm"
+                >
+                  {formData.isBOGOEligible ? 'Eligible' : 'Not in BOGO'}
+                </Badge>
+              </div>
+              
+              <div className="space-y-4">
+                <Checkbox
+                  label="Enable BOGO for this product"
+                  description="Customers can buy 2 products from the same tier and get the cheaper one free/discounted"
+                  checked={formData.isBOGOEligible}
+                  onChange={(e) => {
+                    updateField('isBOGOEligible', e.target.checked);
+                    if (!e.target.checked) {
+                      updateField('bogoPriceTier', null);
+                      updateField('bogoCategory', '');
+                    }
+                  }}
+                />
+
+                {formData.isBOGOEligible && (
+                  <>
+                    <div className="pl-6 space-y-4 border-l-2 border-[#d4af37]">
+                      <Select
+                        label="BOGO Price Tier"
+                        hint="Products must be in the same tier to qualify for BOGO"
+                        value={String(formData.bogoPriceTier || '')}
+                        onChange={(e) => updateField('bogoPriceTier', e.target.value ? parseInt(e.target.value) : null)}
+                        options={[
+                          { value: '', label: 'Select Price Tier' },
+                          { value: '999', label: '₹999 — Everyday Essentials' },
+                          { value: '1499', label: '₹1,499 — Bestseller Duos' },
+                          { value: '1999', label: '₹1,999 — Premium Picks' },
+                          { value: '2599', label: '₹2,599 — Luxury Statement' },
+                        ]}
+                      />
+
+                      <Select
+                        label="BOGO Category"
+                        hint="Used for combo display and filtering"
+                        value={formData.bogoCategory}
+                        onChange={(e) => updateField('bogoCategory', e.target.value)}
+                        options={[
+                          { value: '', label: 'Select Category' },
+                          { value: 'earrings', label: 'Earrings' },
+                          { value: 'necklaces', label: 'Necklaces' },
+                          { value: 'rings', label: 'Rings' },
+                          { value: 'bracelets', label: 'Bracelets' },
+                          { value: 'pendants', label: 'Pendants' },
+                          { value: 'bangles', label: 'Bangles' },
+                        ]}
+                      />
+
+                      <div className="p-3 bg-[#fffbf0] border border-[#fde8b3] rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="w-4 h-4 text-[#b8962e] mt-0.5 flex-shrink-0" />
+                          <div className="text-xs text-[#8b6914]">
+                            <p className="font-medium mb-1">BOGO Rules:</p>
+                            <ul className="list-disc list-inside space-y-0.5">
+                              <li>Customer picks any 2 products from same tier</li>
+                              <li>The cheaper item is free (or discounted based on campaign settings)</li>
+                              <li>Both products must be in stock and BOGO-eligible</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </Card>
+
+            {/* Tumbler Settings */}
+            <Card>
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <CardTitle className="text-base">Tumbler Settings</CardTitle>
+                  <p className="text-sm text-[#9ca3af] mt-1">
+                    Mark this product as a tumbler for the Tumblers collection
+                  </p>
+                </div>
+                <Badge 
+                  variant={formData.isTumbler ? "success" : "secondary"}
+                  size="sm"
+                >
+                  {formData.isTumbler ? 'Tumbler' : 'Regular'}
+                </Badge>
+              </div>
+              
+              <div className="space-y-4">
+                <Checkbox
+                  label="This is a Tumbler"
+                  description="Product will appear in /collections/tumblers"
+                  checked={formData.isTumbler}
+                  onChange={(e) => {
+                    updateField('isTumbler', e.target.checked);
+                    if (!e.target.checked) {
+                      updateField('capacity', '');
+                    }
+                  }}
+                />
+
+                {formData.isTumbler && (
+                  <div className="pl-6 space-y-4 border-l-2 border-[#d4af37]">
+                    <Select
+                      label="Capacity"
+                      hint="Tumbler size / volume"
+                      value={formData.capacity}
+                      onChange={(e) => updateField('capacity', e.target.value)}
+                      options={[
+                        { value: '', label: 'Select Capacity' },
+                        { value: '250ml', label: '250ml' },
+                        { value: '350ml', label: '350ml' },
+                        { value: '400ml', label: '400ml' },
+                        { value: '500ml', label: '500ml' },
+                        { value: '600ml', label: '600ml' },
+                        { value: '750ml', label: '750ml' },
+                        { value: '1L', label: '1 Litre' },
+                      ]}
+                    />
+                  </div>
+                )}
+
+                <div className="pt-2 border-t border-[#e5e7eb]">
+                  <Checkbox
+                    label="Bestseller"
+                    description="Show bestseller badge on product card"
+                    checked={formData.isBestseller}
+                    onChange={(e) => updateField('isBestseller', e.target.checked)}
+                  />
+                </div>
+              </div>
+            </Card>
+
+            {/* Offer Settings */}
+            <Card>
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <CardTitle className="text-base">Offer Settings</CardTitle>
+                  <p className="text-sm text-[#9ca3af] mt-1">
+                    Add this product to the Offers collection
+                  </p>
+                </div>
+                <Badge 
+                  variant={formData.isOnOffer ? "error" : "secondary"}
+                  size="sm"
+                >
+                  {formData.isOnOffer ? '🔥 On Offer' : 'No Offer'}
+                </Badge>
+              </div>
+              
+              <div className="space-y-4">
+                <Checkbox
+                  label="Enable offer for this product"
+                  description="Product will appear in /collections/offers"
+                  checked={formData.isOnOffer}
+                  onChange={(e) => {
+                    updateField('isOnOffer', e.target.checked);
+                    if (!e.target.checked) {
+                      updateField('offerType', '');
+                      updateField('offerValue', 0);
+                      updateField('offerExpiry', '');
+                      updateField('showCountdown', false);
+                    }
+                  }}
+                />
+
+                {formData.isOnOffer && (
+                  <div className="pl-6 space-y-4 border-l-2 border-[#E91E63]">
+                    <Select
+                      label="Offer Type"
+                      value={formData.offerType}
+                      onChange={(e) => updateField('offerType', e.target.value)}
+                      options={[
+                        { value: '', label: 'Select Offer Type' },
+                        { value: 'PERCENT', label: 'Percentage Discount (e.g., 20% off)' },
+                        { value: 'FIXED', label: 'Fixed Amount Off (e.g., ₹200 off)' },
+                        { value: 'BOGO', label: 'Buy One Get One' },
+                        { value: 'CLEARANCE', label: 'Clearance Sale' },
+                      ]}
+                    />
+
+                    {(formData.offerType === 'PERCENT' || formData.offerType === 'FIXED') && (
+                      <Input
+                        label={formData.offerType === 'PERCENT' ? 'Discount (%)' : 'Discount Amount (₹)'}
+                        type="number"
+                        min={0}
+                        max={formData.offerType === 'PERCENT' ? 100 : undefined}
+                        value={formData.offerValue}
+                        onChange={(e) => updateField('offerValue', Number(e.target.value))}
+                        leftIcon={<span className="text-sm">{formData.offerType === 'PERCENT' ? '%' : '₹'}</span>}
+                      />
+                    )}
+
+                    <Input
+                      label="Offer Expiry"
+                      type="datetime-local"
+                      value={formData.offerExpiry}
+                      onChange={(e) => updateField('offerExpiry', e.target.value)}
+                      hint="Leave empty for no expiry"
+                    />
+
+                    <Checkbox
+                      label="Show Countdown Timer"
+                      description="Display a live countdown on the product card"
+                      checked={formData.showCountdown}
+                      onChange={(e) => updateField('showCountdown', e.target.checked)}
+                    />
+
+                    <div className="p-3 bg-[#fef2f2] border border-[#fecaca] rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 text-[#dc2626] mt-0.5 flex-shrink-0" />
+                        <div className="text-xs text-[#991b1b]">
+                          <p className="font-medium mb-1">Offer Rules:</p>
+                          <ul className="list-disc list-inside space-y-0.5">
+                            <li>Offer discount applies at checkout</li>
+                            <li>Expired offers auto-hide from the offers page</li>
+                            <li>BOGO requires 2 eligible products in cart</li>
+                            <li>Countdown is only shown if expiry is set</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </Card>
 

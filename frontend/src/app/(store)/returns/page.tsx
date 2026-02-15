@@ -13,11 +13,11 @@ export default function ReturnsPage() {
         <div className="prose prose-lg max-w-none text-text-secondary space-y-8">
           <section className="bg-accent/10 p-6 rounded-2xl">
             <h2 className="text-2xl font-serif font-semibold text-text-primary mb-4">
-              7-Day Return Policy
+              5-Day Return Policy
             </h2>
             <p className="text-lg">
-              We offer a hassle-free 7-day return policy on all jewellery purchases. Your satisfaction 
-              is our priority.
+              We offer a hassle-free 5-day return policy on all jewellery purchases. Returns must be 
+              initiated within 5 days of delivery confirmation.
             </p>
           </section>
 
@@ -30,7 +30,7 @@ export default function ReturnsPage() {
               <li>Item must be unused and in the same condition that you received it</li>
               <li>Must be in the original packaging with all tags attached</li>
               <li>Certificate of authenticity and invoice must be included</li>
-              <li>Return request must be initiated within 7 days of delivery</li>
+              <li>Return request must be initiated within 5 days of delivery</li>
             </ul>
             <div className="bg-error/10 p-4 rounded-xl mt-4 border border-error/30">
               <p className="font-semibold text-error">⚠️ Non-Returnable Items:</p>
@@ -130,8 +130,8 @@ export default function ReturnsPage() {
             </h2>
             <p>
               If you receive a damaged or defective item, please contact us immediately at{' '}
-              <a href="mailto:support@orajewellery.com" className="text-accent hover:underline">
-                support@orajewellery.com
+              <a href="mailto:admin@orashop.in" className="text-accent hover:underline">
+                admin@orashop.in
               </a>{' '}
               with photos of the damage. We will arrange for a free replacement or full refund.
             </p>
@@ -145,8 +145,8 @@ export default function ReturnsPage() {
               For any questions about our return policy, please reach out to our customer service team:
             </p>
             <div className="bg-background-white p-6 rounded-xl shadow-luxury mt-4">
-              <p><strong>Email:</strong> support@orajewellery.com</p>
-              <p><strong>Phone:</strong> +91-XXXX-XXXXXX</p>
+              <p><strong>Email:</strong> admin@orashop.in</p>
+              <p><strong>Phone:</strong> 9842253984, 9095007887, 9342865987</p>
               <p><strong>Hours:</strong> Monday - Saturday, 10:00 AM - 6:00 PM IST</p>
             </div>
           </section>

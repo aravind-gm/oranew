@@ -11,32 +11,32 @@ export default function ShippingPage() {
         <h1 className="text-4xl font-serif font-bold text-text-primary mb-8">Shipping Policy</h1>
 
         <div className="prose prose-lg max-w-none text-text-secondary space-y-8">
-          <section className="bg-background-white p-6 rounded-2xl shadow-luxury">
+          <section className="bg-accent/10 p-6 rounded-2xl">
             <h2 className="text-2xl font-serif font-semibold text-text-primary mb-4">
-              Shipping Options
+              Free Delivery Across India
+            </h2>
+            <p className="text-lg">
+              We offer free delivery on all orders, no minimum purchase required. Your jewellery will be delivered safely to your doorstep.
+            </p>
+          </section>
+
+          <section className="bg-background-white p-6 rounded-2xl shadow-luxury mt-6">
+            <h2 className="text-2xl font-serif font-semibold text-text-primary mb-4">
+              Delivery Timeline
             </h2>
             <div className="space-y-4">
               <div className="flex justify-between items-center p-4 border border-border rounded-xl">
                 <div>
-                  <h3 className="font-semibold text-text-primary">Standard Shipping</h3>
-                  <p className="text-sm text-text-muted">5-7 business days</p>
+                  <h3 className="font-semibold text-text-primary">Standard Delivery</h3>
+                  <p className="text-sm text-text-muted">All orders</p>
                 </div>
-                <span className="font-semibold text-accent">FREE on orders above ₹5,000</span>
+                <span className="font-semibold text-emerald-600">FREE</span>
               </div>
-              <div className="flex justify-between items-center p-4 border border-border rounded-xl">
-                <div>
-                  <h3 className="font-semibold text-text-primary">Express Shipping</h3>
-                  <p className="text-sm text-text-muted">2-3 business days</p>
-                </div>
-                <span className="font-semibold text-accent">₹200</span>
-              </div>
-              <div className="flex justify-between items-center p-4 border border-border rounded-xl">
-                <div>
-                  <h3 className="font-semibold text-text-primary">Same Day Delivery</h3>
-                  <p className="text-sm text-text-muted">Available in select cities</p>
-                </div>
-                <span className="font-semibold text-accent">₹500</span>
-              </div>
+              <ul className="list-disc pl-6 space-y-2 text-sm text-text-secondary">
+                <li>Metro cities: 3-5 business days</li>
+                <li>Tier 2 cities: 4-6 business days</li>
+                <li>Remote areas: 5-7 business days</li>
+              </ul>
             </div>
           </section>
 
@@ -77,14 +77,13 @@ export default function ShippingPage() {
 
           <section>
             <h2 className="text-2xl font-serif font-semibold text-text-primary mb-4">
-              Shipping Charges
+              No Hidden Charges
             </h2>
             <p>
-              Shipping charges are calculated based on the delivery location and weight of the package. 
-              You can view the exact shipping cost at checkout before completing your order.
+              Delivery is always free for all orders across India. The price you see at checkout is the final price you pay.
             </p>
-            <div className="bg-primary/10 p-4 rounded-xl mt-4">
-              <p className="font-semibold text-accent">✨ Pro Tip: Enjoy FREE shipping on all orders above ₹5,000!</p>
+            <div className="bg-emerald-50 p-4 rounded-xl mt-4">
+              <p className="font-semibold text-emerald-700">✨ Free delivery on every order, no minimum required!</p>
             </div>
           </section>
 
@@ -110,9 +109,9 @@ export default function ShippingPage() {
             </h2>
             <p>
               If you experience any issues with your delivery, please contact our customer support team 
-              at <a href="mailto:support@orajewellery.com" className="text-accent hover:underline">
-                support@orajewellery.com
-              </a> or call us at +91-XXXX-XXXXXX.
+              at <a href="mailto:admin@orashop.in" className="text-accent hover:underline">
+                admin@orashop.in
+              </a> or call us at 9842253984, 9095007887, 9342865987.
             </p>
           </section>
         </div>

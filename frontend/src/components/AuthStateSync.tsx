@@ -26,20 +26,16 @@ export default function AuthStateSync() {
   const { user: authStoreUser, token: authStoreToken, setUser, setToken, logout } = useAuthStore();
 
   useEffect(() => {
-    console.log('[AuthStateSync] 🔄 Setting up Supabase auth listener...');
+    // console.log('[AuthStateSync] 🔄 Setting up Supabase auth listener...');
 
     // Subscribe to Supabase auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('[AuthStateSync] 🔐 Auth event:', event, {
-          hasSession: !!session,
-          email: session?.user?.email,
-          userId: session?.user?.id,
-        });
+        // console.log('[AuthStateSync] 🔐 Auth event:', event);
 
         if (event === 'SIGNED_IN' && session?.user) {
           // User signed in - sync to AuthStore if not already synced
-          console.log('[AuthStateSync] ✅ User signed in, syncing to AuthStore...');
+          // console.log('[AuthStateSync] ✅ User signed in, syncing to AuthStore...');
           
           // Only update if AuthStore doesn't already have this user
           // (prevents unnecessary re-renders and race conditions)
@@ -54,32 +50,32 @@ export default function AuthStateSync() {
               phone: session.user.user_metadata?.phone,
               role: session.user.user_metadata?.role || 'user',
             });
-            console.log('[AuthStateSync] ✨ AuthStore updated with Supabase user');
+            // console.log('[AuthStateSync] ✨ AuthStore updated with Supabase user');
           } else {
-            console.log('[AuthStateSync] ℹ️ AuthStore already has this user, skipping update');
+            // console.log('[AuthStateSync] ℹ️ AuthStore already has this user, skipping update');
           }
         } 
         else if (event === 'SIGNED_OUT') {
           // User signed out - sync to AuthStore
-          console.log('[AuthStateSync] 🚪 User signed out, clearing AuthStore...');
+          // console.log('[AuthStateSync] 🚪 User signed out, clearing AuthStore...');
           
           if (authStoreUser || authStoreToken) {
             logout();
-            console.log('[AuthStateSync] ✨ AuthStore cleared');
+            // console.log('[AuthStateSync] ✨ AuthStore cleared');
           }
         }
         else if (event === 'TOKEN_REFRESHED' && session?.user) {
           // Token refreshed - update token in AuthStore
-          console.log('[AuthStateSync] 🔄 Token refreshed, syncing new token...');
+          // console.log('[AuthStateSync] 🔄 Token refreshed, syncing new token...');
           
           if (authStoreToken !== session.access_token) {
             setToken(session.access_token);
-            console.log('[AuthStateSync] ✨ AuthStore token updated');
+            // console.log('[AuthStateSync] ✨ AuthStore token updated');
           }
         }
         else if (event === 'INITIAL_SESSION' && session?.user) {
           // Initial session recovered from storage on app load
-          console.log('[AuthStateSync] 🔄 Initial session recovered from storage');
+          // console.log('[AuthStateSync] 🔄 Initial session recovered from storage');
           
           if (!authStoreUser || authStoreUser.id !== session.user.id) {
             setToken(session.access_token);
@@ -92,7 +88,7 @@ export default function AuthStateSync() {
               phone: session.user.user_metadata?.phone,
               role: session.user.user_metadata?.role || 'user',
             });
-            console.log('[AuthStateSync] ✨ AuthStore synced with recovered session');
+            // console.log('[AuthStateSync] ✨ AuthStore synced with recovered session');
           }
         }
       }
@@ -100,7 +96,7 @@ export default function AuthStateSync() {
 
     // Cleanup subscription on unmount
     return () => {
-      console.log('[AuthStateSync] 🧹 Cleaning up auth listener');
+      // console.log('[AuthStateSync] 🧹 Cleaning up auth listener');
       subscription?.unsubscribe();
     };
   }, [authStoreUser, authStoreToken, setUser, setToken, logout]);

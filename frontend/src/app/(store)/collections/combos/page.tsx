@@ -3,35 +3,25 @@
 /**
  * Combos for Her — /collections/combos
  * 
- * Jewellery bundles / combo sets.
- * Query: is_combo = true
- * UI: Show savings, CTA "Add Combo", no wishlist.
+ * PREMIUM BOGO LANDING EXPERIENCE
+ * 
+ * This is NOT a normal collection page.
+ * Separate architecture, styling, and components.
+ * 
+ * Features:
+ *   - Emotional hero section with countdown
+ *   - Value proposition strip
+ *   - How it works (3-step)
+ *   - Urgency bar (social proof + scarcity)
+ *   - Bundle card grid (split product images, BOGO pricing)
+ *   - Testimonials
+ *   - Newsletter CTA
+ *   - Mobile sticky CTA
+ *   - Fully CMS-controlled from Admin
  */
 
-import CollectionPageShell from '@/components/collections/CollectionPageShell';
+import CombosPage from '@/components/combos/CombosPage';
 
-export default function CombosPage() {
-  return (
-    <CollectionPageShell
-      config={{
-        title: 'Combos for Her',
-        subtitle: 'Perfectly paired, better together',
-        apiParams: {
-          isCombo: true,
-        },
-        defaultSort: 'popularity',
-        filters: {
-          showCategory: false,
-          showPrice: true,
-          showMaterial: true,
-          showAvailability: false,
-          showSort: true,
-        },
-        showBadges: true,
-        showQuickAdd: true,
-        ctaLabel: 'Add Combo',
-        emptyMessage: 'Combo sets are being curated. Explore our full collection in the meantime.',
-      }}
-    />
-  );
+export default function CombosForHerPage() {
+  return <CombosPage />;
 }

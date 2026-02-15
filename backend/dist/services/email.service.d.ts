@@ -18,28 +18,54 @@ interface OrderEmailData {
     };
     trackingNumber?: string;
     courierName?: string;
+    gstAmount?: number;
+    shippingCost?: number;
+    discountAmount?: number;
 }
 /**
- * Send order placed email to customer
+ * Send order placed email — Luxury Rose Gold theme
  */
 export declare const sendOrderPlacedEmail: (data: OrderEmailData) => Promise<void>;
 /**
- * Send order confirmed email (after admin manual confirmation)
+ * Send order confirmed email — Luxury Rose Gold theme
  */
 export declare const sendOrderConfirmedEmail: (data: OrderEmailData) => Promise<void>;
 /**
- * Send order shipped email with tracking info
+ * Send order shipped email — Luxury Rose Gold theme
  */
 export declare const sendOrderShippedEmail: (data: OrderEmailData) => Promise<void>;
 /**
- * Send order delivered email
+ * Send order delivered email — Luxury Rose Gold theme
  */
 export declare const sendOrderDeliveredEmail: (data: OrderEmailData) => Promise<void>;
+/**
+ * Send abandoned cart reminder email — Luxury Rose Gold theme
+ */
+export declare const sendAbandonedCartEmail: (data: {
+    customerEmail: string;
+    customerName: string;
+    items: Array<{
+        productName: string;
+        unitPrice: number;
+        quantity: number;
+    }>;
+    cartTotal: number;
+}) => Promise<void>;
 declare const _default: {
     sendOrderPlacedEmail: (data: OrderEmailData) => Promise<void>;
     sendOrderConfirmedEmail: (data: OrderEmailData) => Promise<void>;
     sendOrderShippedEmail: (data: OrderEmailData) => Promise<void>;
     sendOrderDeliveredEmail: (data: OrderEmailData) => Promise<void>;
+    sendAbandonedCartEmail: (data: {
+        customerEmail: string;
+        customerName: string;
+        items: Array<{
+            productName: string;
+            unitPrice: number;
+            quantity: number;
+        }>;
+        cartTotal: number;
+    }) => Promise<void>;
 };
 export default _default;
 //# sourceMappingURL=email.service.d.ts.map

@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
-export default function Tumblers() {
+export default function TumblersRedirect() {
   redirect('/collections/tumblers');
 }

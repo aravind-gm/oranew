@@ -49,6 +49,7 @@ model User {
   returns          Return[]
   reviews          Review[]
   wishlists        Wishlist[]
+  adminAuditLogs   AdminAuditLog[]
 
   @@map("users")
 }
@@ -70,6 +71,7 @@ model Address {
   billingOrders  Order[]     @relation("BillingAddress")
   shippingOrders Order[]     @relation("ShippingAddress")
 
+  @@index([userId])
   @@map("addresses")
 }
 
@@ -108,10 +110,43 @@ model Product {
   lowStockThreshold Int             @default(5) @map("low_stock_threshold")
   isActive          Boolean         @default(true) @map("is_active")
   isFeatured        Boolean         @default(false) @map("is_featured")
+  
+  // Gift Collections & Occasions
+  collections       String[]        @default([]) // e.g., ["gifts-for-her", "valentine-special"]
+  occasions         String[]        @default([]) // e.g., ["birthday", "anniversary", "valentine"]
+  isFeaturedGift    Boolean         @default(false) @map("is_featured_gift") // Featured in Gifts For Her
+  
   metaTitle         String?         @map("meta_title")
   metaDescription   String?         @map("meta_description")
   averageRating     Decimal         @default(0) @map("average_rating") @db.Decimal(3, 2)
   reviewCount       Int             @default(0) @map("review_count")
+
+  // BOGO Campaign fields
+  isBOGOEligible    Boolean         @default(false) @map("is_bogo_eligible")
+  bogoPriceTier     Int?            @map("bogo_price_tier")
+  bogoCategory      String?         @map("bogo_category")
+
+  // Tumbler-specific fields
+  isTumbler         Boolean         @default(false) @map("is_tumbler")
+  capacity          String?         // e.g., "300ml", "500ml"
+  isBestseller      Boolean         @default(false) @map("is_bestseller")
+
+  // BOGO active toggle (separate from eligibility)
+  bogoActive        Boolean         @default(false) @map("bogo_active")
+
+  // Per-product GST rate (percentage). Defaults to 3% for jewellery.
+  gstRate           Decimal         @default(3) @map("gst_rate") @db.Decimal(5, 2)
+
+  // Offer fields
+  isOnOffer         Boolean         @default(false) @map("is_on_offer")
+  offerType         String?         @map("offer_type") // "PERCENT" | "BOGO" | "FIXED"
+  offerValue        Decimal?        @map("offer_value") @db.Decimal(10, 2)
+  offerExpiry       DateTime?       @map("offer_expiry")
+  showCountdown     Boolean         @default(false) @map("show_countdown")
+
+  // Soft delete
+  deletedAt         DateTime?       @map("deleted_at")
+
   createdAt         DateTime        @default(now()) @map("created_at")
   updatedAt         DateTime        @updatedAt @map("updated_at")
   cartItems         CartItem[]
@@ -121,10 +156,18 @@ model Product {
   category          Category        @relation(fields: [categoryId], references: [id])
   reviews           Review[]
   wishlists         Wishlist[]
+  combosAsPrimary   ComboProduct[]  @relation("ComboPrimary")
+  combosAsFree      ComboProduct[]  @relation("ComboFree")
 
   @@index([slug])
   @@index([categoryId])
   @@index([isActive, isFeatured])
+  @@index([isBOGOEligible, bogoPriceTier])
+  @@index([collections])
+  @@index([occasions])
+  @@index([isOnOffer, offerType])
+  @@index([isTumbler])
+  @@index([isBestseller])
   @@map("products")
 }
 
@@ -162,6 +205,51 @@ model Banner {
   @@index([page])
   @@index([isActive])
   @@map("banners")
+}
+
+// ============================================
+// ANNOUNCEMENTS
+// ============================================
+
+model Announcement {
+  id              String    @id @default(uuid())
+  message         String
+  type            String    @default("bar") // bar, popup, toast
+  backgroundColor String?   @map("background_color")
+  textColor       String?   @map("text_color")
+  link            String?
+  linkText        String?   @map("link_text")
+  isActive        Boolean   @default(true) @map("is_active")
+  priority        Int       @default(1)
+  startDate       DateTime? @map("start_date")
+  endDate         DateTime? @map("end_date")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@index([priority])
+  @@map("announcements")
+}
+
+// ============================================
+// STATIC PAGES
+// ============================================
+
+model StaticPage {
+  id              String   @id @default(uuid())
+  title           String
+  slug            String   @unique
+  content         String   @db.Text
+  metaTitle       String?  @map("meta_title")
+  metaDescription String?  @map("meta_description") @db.Text
+  isPublished     Boolean  @default(false) @map("is_published")
+  sortOrder       Int      @default(0) @map("sort_order")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([slug])
+  @@index([isPublished])
+  @@map("static_pages")
 }
 
 model CollectionImage {
@@ -218,6 +306,7 @@ model Review {
   product            Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, productId])
   @@index([productId])
   @@index([userId])
   @@map("reviews")
@@ -392,6 +481,141 @@ model InventoryLock {
   @@map("inventory_locks")
 }
 
+
+// ============================================
+// COMBO / BUNDLE PRODUCTS
+// ============================================
+
+model ComboProduct {
+  id               String       @id @default(uuid())
+  title            String
+  slug             String       @unique
+  description      String?
+  comboPrice       Decimal      @map("combo_price") @db.Decimal(10, 2)
+  originalTotal    Decimal      @map("original_total") @db.Decimal(10, 2)
+  savingsAmount    Decimal      @map("savings_amount") @db.Decimal(10, 2)
+  discountPercent  Decimal      @map("discount_percent") @db.Decimal(5, 2)
+  primaryProductId String       @map("primary_product_id")
+  freeProductId    String       @map("free_product_id")
+  primaryImage     String?      @map("primary_image")
+  freeImage        String?      @map("free_image")
+  hoverImage       String?      @map("hover_image")
+  badge            String?      // "Bestseller", "Limited", "Most Gifted"
+  tag              String?      // "Gift for Girlfriend", "Anniversary", etc.
+  includes         String[]     @default([])
+  averageRating    Decimal      @default(0) @map("average_rating") @db.Decimal(3, 2)
+  reviewCount      Int          @default(0) @map("review_count")
+  stockQuantity    Int          @default(0) @map("stock_quantity")
+  soldCount        Int          @default(0) @map("sold_count")
+  isActive         Boolean      @default(true) @map("is_active")
+  isLimited        Boolean      @default(false) @map("is_limited")
+  sortOrder        Int          @default(0) @map("sort_order")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+
+  primaryProduct   Product      @relation("ComboPrimary", fields: [primaryProductId], references: [id])
+  freeProduct      Product      @relation("ComboFree", fields: [freeProductId], references: [id])
+
+  @@index([isActive])
+  @@index([slug])
+  @@index([sortOrder])
+  @@map("combo_products")
+}
+
+model BOGOCampaign {
+  id                String            @id @default(uuid())
+  name              String            @default("BOGO Campaign")
+  isActive          Boolean           @default(false) @map("is_active")
+  discountType      BOGODiscountType  @default(FREE_CHEAPER) @map("discount_type")
+  discountValue     Decimal           @default(0) @map("discount_value") @db.Decimal(10, 2)
+  allowedTiers      Int[]             @default([999, 1499, 1999, 2599]) @map("allowed_tiers")
+  allowedCategories String[]          @default([]) @map("allowed_categories")
+  startDate         DateTime?         @map("start_date")
+  endDate           DateTime?         @map("end_date")
+  maxUsesPerUser    Int               @default(0) @map("max_uses_per_user")
+  totalUsageCount   Int               @default(0) @map("total_usage_count")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  @@map("bogo_campaigns")
+}
+
+model OfferCampaign {
+  id                  String    @id @default(uuid())
+  name                String    @default("Offer Campaign")
+  isActive            Boolean   @default(false) @map("is_active")
+  discountType        String    @default("PERCENT") @map("discount_type") // "PERCENT" | "BOGO" | "FIXED"
+  discountValue       Decimal   @default(0) @map("discount_value") @db.Decimal(10, 2)
+  collections         String[]  @default([]) // included collection slugs
+  startDate           DateTime? @map("start_date")
+  endDate             DateTime? @map("end_date")
+  showCountdown       Boolean   @default(true) @map("show_countdown")
+  bannerText          String?   @map("banner_text")
+  totalUsageCount     Int       @default(0) @map("total_usage_count")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  @@map("offer_campaigns")
+}
+
+// ============================================
+// TAX CONFIGURATION
+// ============================================
+
+model TaxConfig {
+  id            String   @id @default(uuid())
+  categorySlug  String   @unique @map("category_slug") // e.g., "jewellery", "tumblers"
+  gstRate       Decimal  @map("gst_rate") @db.Decimal(5, 2) // e.g., 3.00
+  label         String   @default("GST") // Display label
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("tax_configs")
+}
+
+// ============================================
+// SHIPPING CONFIGURATION
+// ============================================
+
+model ShippingConfig {
+  id                String   @id @default(uuid())
+  freeThreshold     Decimal  @map("free_threshold") @db.Decimal(10, 2) // ₹999
+  standardFee       Decimal  @map("standard_fee") @db.Decimal(10, 2)   // ₹99
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("shipping_configs")
+}
+
+// ============================================
+// ADMIN AUDIT LOG
+// ============================================
+
+model AdminAuditLog {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  action      String   // CREATE, UPDATE, DELETE, ARCHIVE, RESTORE, BULK_ACTION, CONFIG_CHANGE
+  entityType  String   @map("entity_type") // PRODUCT, ORDER, CAMPAIGN, SHIPPING, TAX, CONTENT, USER
+  entityId    String?  @map("entity_id")
+  details     Json?    // Arbitrary details about the action
+  ipAddress   String?  @map("ip_address")
+  createdAt   DateTime @default(now()) @map("created_at")
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([entityType])
+  @@index([createdAt])
+  @@map("admin_audit_logs")
+}
+
+enum BOGODiscountType {
+  FREE_CHEAPER
+  PERCENT
+  FIXED
+}
 
 enum UserRole {
   CUSTOMER

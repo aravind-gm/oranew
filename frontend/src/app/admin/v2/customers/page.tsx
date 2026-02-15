@@ -92,61 +92,40 @@ export default function CustomersPage() {
 
   // Fetch customers
   useEffect(() => {
-    const fetchCustomers = async () => {
+    const fetchCustomersData = async () => {
       setLoading(true);
       try {
-        // TODO: API call
-        await new Promise(resolve => setTimeout(resolve, 500));
+        const response = await fetch('/api/admin/customers');
+        if (!response.ok) throw new Error('Failed to fetch customers');
         
-        // Mock data
-        setCustomers([
-          {
-            id: '1',
-            fullName: 'Priya Sharma',
-            email: 'priya@example.com',
-            phone: '+91 98765 43210',
-            gender: 'Female',
-            isVerified: true,
-            totalOrders: 12,
-            totalSpent: 245000,
-            tags: ['VIP', 'Repeat Buyer'],
-            lastOrderDate: new Date().toISOString(),
-            createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-          },
-          {
-            id: '2',
-            fullName: 'Anita Desai',
-            email: 'anita@example.com',
-            phone: '+91 87654 32109',
-            gender: 'Female',
-            isVerified: true,
-            totalOrders: 5,
-            totalSpent: 78000,
-            tags: ['Repeat Buyer'],
-            lastOrderDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-            createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-          },
-          {
-            id: '3',
-            fullName: 'Ritu Agarwal',
-            email: 'ritu@example.com',
-            phone: '+91 76543 21098',
-            isVerified: true,
-            totalOrders: 1,
-            totalSpent: 15000,
-            tags: ['New Customer'],
-            lastOrderDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-            createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          },
-        ]);
+        const data = await response.json();
+        
+        // Transform API response to Customer format
+        const transformedCustomers = (data.data || data || []).map((customer: any) => ({
+          id: customer.id,
+          fullName: customer.fullName || customer.name || '',
+          email: customer.email || '',
+          phone: customer.phone || '',
+          gender: customer.gender || '',
+          isVerified: customer.isVerified || false,
+          totalOrders: customer.totalOrders || 0,
+          totalSpent: customer.totalSpent || 0,
+          tags: customer.tags || [],
+          lastOrderDate: customer.lastOrderDate,
+          createdAt: customer.createdAt,
+        }));
+        
+        setCustomers(transformedCustomers);
       } catch (error) {
         console.error('Error fetching customers:', error);
+        // Fallback to empty state if API fails
+        setCustomers([]);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCustomers();
+    fetchCustomersData();
   }, []);
 
   // Format currency

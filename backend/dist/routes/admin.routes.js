@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const admin_controller_1 = require("../controllers/admin.controller");
+const bogo_controller_1 = require("../controllers/bogo.controller");
 const product_controller_1 = require("../controllers/product.controller");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
@@ -37,6 +38,9 @@ router.get('/products/:id', product_controller_1.getProductById);
 router.post('/products', product_controller_1.createProduct);
 router.put('/products/:id', product_controller_1.updateProduct);
 router.delete('/products/:id', (0, auth_1.authorize)('ADMIN'), product_controller_1.deleteProduct);
+router.put('/products/:id/archive', admin_controller_1.archiveProduct);
+router.put('/products/:id/restore', admin_controller_1.restoreProduct);
+router.post('/products/bulk-action', admin_controller_1.bulkProductAction);
 // Product Images
 router.post('/products/:id/images', admin_controller_1.addProductImages);
 router.delete('/products/:id/images/:imageId', admin_controller_1.deleteProductImage);
@@ -60,5 +64,28 @@ router.get('/returns', admin_controller_1.getReturns);
 router.get('/returns/stats', admin_controller_1.getReturnStats);
 router.get('/returns/:id', admin_controller_1.getReturnById);
 router.put('/returns/:id/status', admin_controller_1.updateReturnStatus);
+// ============================================
+// BOGO CAMPAIGN MANAGEMENT
+// ============================================
+router.get('/bogo/campaign', bogo_controller_1.getBOGOCampaign);
+router.put('/bogo/campaign', bogo_controller_1.updateBOGOCampaign);
+router.get('/bogo/products', bogo_controller_1.getBOGOProducts);
+router.put('/bogo/products/:id', bogo_controller_1.updateProductBOGO);
+router.get('/bogo/stats', bogo_controller_1.getBOGOStats);
+// ============================================
+// SETTINGS: SHIPPING CONFIG
+// ============================================
+router.get('/settings/shipping', admin_controller_1.getAdminShippingConfig);
+router.put('/settings/shipping', admin_controller_1.updateAdminShippingConfig);
+// ============================================
+// SETTINGS: TAX CONFIG
+// ============================================
+router.get('/settings/taxes', admin_controller_1.getAdminTaxConfigs);
+router.put('/settings/taxes', admin_controller_1.upsertTaxConfig);
+router.delete('/settings/taxes/:id', admin_controller_1.deleteTaxConfig);
+// ============================================
+// AUDIT LOG
+// ============================================
+router.get('/audit-log', admin_controller_1.getAuditLogs);
 exports.default = router;
 //# sourceMappingURL=admin.routes.js.map

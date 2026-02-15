@@ -170,7 +170,7 @@ export default function TrackOrderPage() {
                 </a>
               </p>
               <p>
-                <strong>Phone:</strong> +91-XXXX-XXXXXX
+                <strong>Phone:</strong> 9842253984, 9095007887, 9342865987
               </p>
               <p>
                 <strong>Hours:</strong> Mon-Sat, 10:00 AM - 6:00 PM IST

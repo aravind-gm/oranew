@@ -166,11 +166,12 @@ function FailedContent() {
               <p className="text-sm text-text-muted">
                 Need help? Contact our support team at{' '}
                 <a
-                  href="mailto:support@orashop.in"
-                  className="text-accent hover:underline font-medium"
+                  href="mailto:admin@orashop.in"
+                  className="text-[#E75480] hover:underline font-medium"
                 >
-                  support@orashop.in
-                </a>
+                  admin@orashop.in
+                </a>{' '}
+                or call 9842253984, 9095007887, 9342865987
               </p>
             </div>
           </>

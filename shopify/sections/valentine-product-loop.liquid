@@ -1,0 +1,152 @@
+{% comment %}
+  ═══════════════════════════════════════════════════════
+  Valentine Product Loop — valentine-product-loop.liquid
+  ORA Valentine's Special | Shopify OS 2.0
+  
+  Infinite horizontal product scroll — auto-play, hover = pause
+  ═══════════════════════════════════════════════════════
+{% endcomment %}
+
+{%- style -%}
+  .valentine-loop {
+    padding: 4rem 0 5rem;
+    background: #fff;
+    overflow: hidden;
+  }
+  .valentine-loop__header {
+    max-width: 80rem;
+    margin: 0 auto;
+    padding: 0 1.25rem 2rem;
+    text-align: center;
+  }
+  @media (min-width: 640px) {
+    .valentine-loop__header { padding: 0 2rem 2rem; }
+  }
+  .valentine-loop__label {
+    font-size: 0.75rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #E11D48;
+    font-weight: 500;
+  }
+  .valentine-loop__title {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: clamp(1.875rem, 4vw, 3rem);
+    color: #171717;
+    margin-top: 0.75rem;
+    font-weight: 300;
+  }
+  .valentine-loop__subtitle {
+    color: #737373;
+    margin-top: 1rem;
+    max-width: 32rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .valentine-loop__track-wrap {
+    position: relative;
+  }
+  .valentine-loop__fade-left,
+  .valentine-loop__fade-right {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 3rem;
+    z-index: 10;
+    pointer-events: none;
+  }
+  .valentine-loop__fade-left {
+    left: 0;
+    background: linear-gradient(to right, #fff, transparent);
+  }
+  .valentine-loop__fade-right {
+    right: 0;
+    background: linear-gradient(to left, #fff, transparent);
+  }
+  .valentine-loop__track {
+    display: flex;
+    gap: 1.25rem;
+    width: max-content;
+    animation: ora-product-scroll 60s linear infinite;
+    padding: 0.5rem 0;
+  }
+  .valentine-loop__track:hover {
+    animation-play-state: paused;
+  }
+  @keyframes ora-product-scroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .valentine-loop__item {
+    flex-shrink: 0;
+    width: 220px;
+  }
+  @media (min-width: 640px) {
+    .valentine-loop__item { width: 260px; }
+  }
+{%- endstyle -%}
+
+<section class="valentine-loop" id="products" data-section-id="{{ section.id }}">
+  <div class="valentine-loop__header">
+    <span class="valentine-loop__label">Endless Inspiration</span>
+    <h2 class="valentine-loop__title">{{ section.settings.title | default: "Valentine Picks" }}</h2>
+    <p class="valentine-loop__subtitle">{{ section.settings.subtitle | default: "Keep scrolling — your perfect gift is here." }}</p>
+  </div>
+
+  {%- assign loop_collection = collections[section.settings.collection] -%}
+
+  {%- if loop_collection != blank and loop_collection.products.size > 0 -%}
+    <div class="valentine-loop__track-wrap">
+      <div class="valentine-loop__fade-left"></div>
+      <div class="valentine-loop__fade-right"></div>
+
+      <div class="valentine-loop__track">
+        <!-- First set -->
+        {%- for product in loop_collection.products limit: 24 -%}
+          <div class="valentine-loop__item">
+            {% render 'product-card', product: product, variant: 'compact' %}
+          </div>
+        {%- endfor -%}
+        <!-- Duplicate for seamless loop -->
+        {%- for product in loop_collection.products limit: 24 -%}
+          <div class="valentine-loop__item" aria-hidden="true">
+            {% render 'product-card', product: product, variant: 'compact' %}
+          </div>
+        {%- endfor -%}
+      </div>
+    </div>
+  {%- endif -%}
+</section>
+
+{% schema %}
+{
+  "name": "Valentine Product Loop",
+  "tag": "section",
+  "class": "valentine-loop-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Title",
+      "default": "Valentine Picks"
+    },
+    {
+      "type": "text",
+      "id": "subtitle",
+      "label": "Subtitle",
+      "default": "Keep scrolling — your perfect gift is here."
+    },
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "Product Collection"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Valentine Product Loop",
+      "category": "Valentine's Special"
+    }
+  ]
+}
+{% endschema %}

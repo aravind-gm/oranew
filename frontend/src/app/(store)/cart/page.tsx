@@ -21,6 +21,7 @@
 
 import { useAuth } from '@/context/AuthContext';
 import { useCartStore } from '@/store/cartStore';
+import { trackViewCart } from '@/lib/analytics';
 import RelatedProductsCart from '@/components/RelatedProductsCart';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, Minus, Plus, ShoppingBag, Trash2, Shield, Truck, Package, Heart } from 'lucide-react';
@@ -33,7 +34,7 @@ import { useEffect, useMemo, useState } from 'react';
 // CONSTANTS
 // ============================================================================
 
-const SHIPPING_THRESHOLD = 999;
+// Shipping is always free for all orders
 const TAX_INCLUDED = true;
 
 // ============================================================================
@@ -305,9 +306,7 @@ export default function CartPage() {
     return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   }, [items]);
 
-  const shippingCost = useMemo(() => {
-    return subtotal >= SHIPPING_THRESHOLD ? 0 : 0; // Free shipping
-  }, [subtotal]);
+  const shippingCost = 0; // Free delivery for all orders
 
   const total = useMemo(() => {
     return subtotal + shippingCost;
@@ -316,6 +315,22 @@ export default function CartPage() {
   const itemCount = useMemo(() => {
     return items.reduce((sum, item) => sum + item.quantity, 0);
   }, [items]);
+
+  // ====== ANALYTICS: view_cart ======
+  useEffect(() => {
+    if (items.length > 0) {
+      trackViewCart({
+        items: items.map((item) => ({
+          id: item.productId,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+        })),
+        total: subtotal,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // fire once on page load
 
   // ====== STOCK VALIDATION ======
   useEffect(() => {
@@ -457,18 +472,21 @@ export default function CartPage() {
                     <span className="text-gray-600">Subtotal ({itemCount} items)</span>
                     <span className="font-medium text-gray-900">₹{subtotal.toLocaleString('en-IN')}</span>
                   </div>
+
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Discount</span>
+                    <span className="font-medium text-gray-400">—</span>
+                  </div>
+
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">GST</span>
+                    <span className="text-gray-500 text-xs">Included in price</span>
+                  </div>
                   
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Shipping</span>
                     <span className="text-emerald-600 font-medium">FREE</span>
                   </div>
-                  
-                  {TAX_INCLUDED && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Tax</span>
-                      <span className="text-gray-500 text-xs">Included</span>
-                    </div>
-                  )}
                 </div>
 
                 {/* Total */}

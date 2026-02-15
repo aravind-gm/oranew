@@ -49,12 +49,7 @@ const createHandlePaymentSuccess = (context: PaymentHandlerContext) => {
     const { api, router, orderId, setLoading, setError } = context;
   const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = response;
 
-  console.log('[Payment] Success callback received from Razorpay');
-  console.log('[Payment] Response:', {
-    razorpay_payment_id: razorpay_payment_id.substring(0, 10) + '...',
-    razorpay_order_id: razorpay_order_id.substring(0, 10) + '...',
-    razorpay_signature: razorpay_signature.substring(0, 10) + '...',
-  });
+  // console.log('[Payment] Success callback received from Razorpay');
 
   try {
     setLoading(true);
@@ -63,7 +58,7 @@ const createHandlePaymentSuccess = (context: PaymentHandlerContext) => {
     // ────────────────────────────────────────────
     // STEP 1: Verify signature on backend
     // ────────────────────────────────────────────
-    console.log('[Payment] Verifying signature with backend...');
+    // console.log('[Payment] Verifying signature with backend...');
 
     const verifyResponse = await api.post('/payments/verify', {
       orderId,
@@ -72,18 +67,18 @@ const createHandlePaymentSuccess = (context: PaymentHandlerContext) => {
       razorpay_signature,
     });
 
-    console.log('[Payment] Verify response:', verifyResponse.status, verifyResponse.data);
+    // console.log('[Payment] Verify response:', verifyResponse.status, verifyResponse.data);
 
     if (!verifyResponse.data.success) {
       throw new Error('Payment verification failed');
     }
 
-    console.log('[Payment] ✓ Payment verified successfully');
+    // console.log('[Payment] ✓ Payment verified successfully');
 
     // ────────────────────────────────────────────
     // STEP 2: Redirect to success page
     // ────────────────────────────────────────────
-    console.log('[Payment] Redirecting to success page...');
+    // console.log('[Payment] Redirecting to success page...');
     
     // Wait a moment to ensure database is updated
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -146,7 +141,7 @@ const createDisplayRazorpayCheckout = (context: PaymentHandlerContext) => {
     // ────── SUCCESS CALLBACK ──────
     // Called when user completes payment successfully
     handler: async (response: RazorpayResponse) => {
-      console.log('[Razorpay] Success callback triggered');
+      // console.log('[Razorpay] Success callback triggered');
       await handlePaymentSuccess(response);
     },
     
@@ -154,7 +149,7 @@ const createDisplayRazorpayCheckout = (context: PaymentHandlerContext) => {
     modal: {
       // Called when user dismisses modal (Escape key or close button)
       ondismiss: () => {
-        console.log('[Razorpay] User dismissed payment modal');
+        // console.log('[Razorpay] User dismissed payment modal');
         context.setLoading(false);
         context.setError('Payment cancelled. Please try again.');
       },
@@ -199,7 +194,7 @@ const createHandlePayment = (context: PaymentHandlerContext, orderData: any) => 
   try {
     if (!orderId) throw new Error('Order ID not found');
 
-    console.log('[Payment] Starting payment flow...');
+    // console.log('[Payment] Starting payment flow...');
 
     // STEP 1: Create Razorpay order on backend
     const paymentResponse = await api.post('/payments/create', { orderId });
@@ -216,7 +211,7 @@ const createHandlePayment = (context: PaymentHandlerContext, orderData: any) => 
 
     const amount = orderData?.totalAmount || 0;
 
-    console.log('[Payment] Razorpay order created:', razorpayOrderId);
+    // console.log('[Payment] Razorpay order created:', razorpayOrderId);
 
     // STEP 2: Display Razorpay checkout modal
     const displayRazorpayCheckout = createDisplayRazorpayCheckout(context);

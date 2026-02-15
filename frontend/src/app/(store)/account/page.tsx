@@ -28,7 +28,7 @@ export default function AccountPage() {
   const [authCheckDone, setAuthCheckDone] = useState(false);
 
   useEffect(() => {
-    console.log('[AccountPage] Auth state:', { isLoading, isAuthenticated, userEmail: user?.email });
+    // console.log('[AccountPage] Auth state:', { isLoading, isAuthenticated, userEmail: user?.email });
     
     if (!isLoading) {
       setAuthCheckDone(true);
@@ -36,10 +36,10 @@ export default function AccountPage() {
       // Delay the redirect check slightly to ensure auth state is fully propagated
       const timer = setTimeout(() => {
         if (!isAuthenticated) {
-          console.log('[AccountPage] ❌ Not authenticated, redirecting to login');
+          // console.log('[AccountPage] ❌ Not authenticated, redirecting to login');
           router.replace('/auth/login');
         } else {
-          console.log('[AccountPage] ✅ Authenticated, user:', user?.email);
+          // console.log('[AccountPage] ✅ Authenticated, user:', user?.email);
         }
       }, 100);
       
@@ -399,8 +399,8 @@ export default function AccountPage() {
                 Visit Help Center
               </Link>
               <div className="mt-4 pt-4 border-t border-white/20">
-                <p className="text-rose-100 text-xs">📞 Call: 1800-123-4567</p>
-                <p className="text-rose-100 text-xs">✉️ Email: support@orajewellery.com</p>
+                <p className="text-rose-100 text-xs">📞 Call: 9842253984, 9095007887, 9342865987</p>
+                <p className="text-rose-100 text-xs">✉️ Email: admin@orashop.in</p>
               </div>
             </div>
           </div>

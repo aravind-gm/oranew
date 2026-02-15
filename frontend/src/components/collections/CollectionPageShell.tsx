@@ -28,6 +28,7 @@ import api from '@/lib/api';
 import { ChevronDown, ChevronUp, SlidersHorizontal, X } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 // ============================================================================
 // TYPES
@@ -114,9 +115,13 @@ const SORT_OPTIONS = [
 const PRICE_RANGES = [
   { value: '', label: 'All Prices' },
   { value: '0-500', label: 'Under ₹500' },
+  { value: '500-1099', label: 'Under ₹1,099' },
+  { value: '500-2099', label: 'Under ₹2,099' },
+  { value: '500-3099', label: 'Under ₹3,099' },
   { value: '500-1000', label: '₹500 – ₹1,000' },
   { value: '1000-1500', label: '₹1,000 – ₹1,500' },
   { value: '1500-999999', label: 'Above ₹1,500' },
+  { value: '3099-999999', label: 'Premium (Above ₹3,099)' },
 ];
 
 const MATERIALS = [
@@ -495,6 +500,8 @@ function ActivePill({ label, onRemove }: { label: string; onRemove: () => void }
 // ============================================================================
 
 export default function CollectionPageShell({ config }: { config: CollectionPageConfig }) {
+  const searchParams = useSearchParams();
+  
   const defaultFilters: FilterConfig = {
     showCategory: true,
     showPrice: true,
@@ -504,13 +511,41 @@ export default function CollectionPageShell({ config }: { config: CollectionPage
     ...config.filters,
   };
 
-  const [filters, setFilters] = useState<FilterState>({
-    category: '',
-    priceRange: '',
-    material: '',
-    availability: '',
-    sort: config.defaultSort || 'newest',
-  });
+  // Initialize filters from URL params if available
+  const getInitialFilters = (): FilterState => {
+    const maxPrice = searchParams.get('maxPrice');
+    const minPrice = searchParams.get('minPrice');
+    let priceRange = '';
+    
+    // Convert URL price params to priceRange format
+    if (maxPrice || minPrice) {
+      if (maxPrice && parseInt(maxPrice) <= 500) {
+        priceRange = '0-500';
+      } else if (maxPrice && parseInt(maxPrice) <= 1000) {
+        priceRange = '500-1000';
+      } else if (maxPrice && parseInt(maxPrice) <= 1500) {
+        priceRange = '1000-1500';
+      } else if (maxPrice && parseInt(maxPrice) <= 2099) {
+        priceRange = '500-2099';
+      } else if (maxPrice && parseInt(maxPrice) <= 3099) {
+        priceRange = '500-3099';
+      } else if (minPrice && parseInt(minPrice) >= 1500) {
+        priceRange = '1500-999999';
+      } else if (minPrice && parseInt(minPrice) >= 3099) {
+        priceRange = '3099-999999';
+      }
+    }
+    
+    return {
+      category: searchParams.get('category') || '',
+      priceRange,
+      material: searchParams.get('material') || '',
+      availability: '',
+      sort: config.defaultSort || 'newest',
+    };
+  };
+
+  const [filters, setFilters] = useState<FilterState>(getInitialFilters());
   const [availableCategories, setAvailableCategories] = useState<Array<{ id: string; name: string }>>([]);
   const [products, setProducts] = useState<CollectionProduct[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo>({ page: 1, limit: 24, total: 0, pages: 0 });

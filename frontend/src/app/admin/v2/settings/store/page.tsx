@@ -70,10 +70,10 @@ export default function StoreSettingsPage() {
     gstNumber: '27AABCO1234A1Z5',
     panNumber: 'AABCO1234A',
     email: 'hello@orajewellery.com',
-    phone: '+91 98765 43210',
+    phone: '9842253984',
     website: 'https://orajewellery.com',
     address: '123 MG Road, Bandra West',
-    city: 'Mumbai',
+    city: 'Tiruppur',
     state: 'Maharashtra',
     pincode: '400050',
     country: 'India',
@@ -100,11 +100,17 @@ export default function StoreSettingsPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // TODO: API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await fetch('/api/admin/settings/store', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+      });
+      if (!response.ok) throw new Error('Failed to save settings');
       setHasChanges(false);
+      alert('Settings saved successfully!');
     } catch (error) {
       console.error('Error saving settings:', error);
+      alert('Failed to save settings');
     } finally {
       setSaving(false);
     }
@@ -196,7 +202,7 @@ export default function StoreSettingsPage() {
               label="Phone"
               value={settings.phone}
               onChange={(e) => updateSetting('phone', e.target.value)}
-              placeholder="+91 98765 43210"
+              placeholder="9842253984"
               leftIcon={<Phone size={16} />}
             />
             <Input
@@ -230,7 +236,7 @@ export default function StoreSettingsPage() {
                 label="City"
                 value={settings.city}
                 onChange={(e) => updateSetting('city', e.target.value)}
-                placeholder="Mumbai"
+                placeholder="Tiruppur"
               />
               <Input
                 label="State"

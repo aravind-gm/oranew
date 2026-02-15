@@ -30,11 +30,11 @@ const addToCart = async (req, res, next) => {
         const product = await (0, retry_1.withRetry)(() => database_1.prisma.product.findUnique({
             where: { id: productId },
         }));
-        if (!product || !product.isActive) {
-            throw new errorHandler_1.AppError('Product not found', 404);
+        if (!product || !product.isActive || product.deletedAt) {
+            throw new errorHandler_1.AppError('Product not found or unavailable', 404);
         }
         if (product.stockQuantity < quantity) {
-            throw new errorHandler_1.AppError('Insufficient stock', 400);
+            throw new errorHandler_1.AppError(`Only ${product.stockQuantity} available for "${product.name}"`, 400);
         }
         // Check if item already in cart
         const existingItem = await (0, retry_1.withRetry)(() => database_1.prisma.cartItem.findUnique({
@@ -45,12 +45,25 @@ const addToCart = async (req, res, next) => {
                 },
             },
         }));
+        // Validate total quantity (existing + new) against stock
+        const existingQty = existingItem ? existingItem.quantity : 0;
+        const newTotalQty = existingQty + quantity;
+        if (newTotalQty > product.stockQuantity) {
+            const canAdd = product.stockQuantity - existingQty;
+            throw new errorHandler_1.AppError(canAdd > 0
+                ? `Cannot add ${quantity} more. Only ${canAdd} more available.`
+                : 'Maximum available stock already in cart.', 400);
+        }
+        // Cap at max 10 per product
+        if (newTotalQty > 10) {
+            throw new errorHandler_1.AppError(`Maximum 10 items per product allowed. You already have ${existingQty} in cart.`, 400);
+        }
         let cartItem;
         if (existingItem) {
             // Update quantity
             cartItem = await (0, retry_1.withRetry)(() => database_1.prisma.cartItem.update({
                 where: { id: existingItem.id },
-                data: { quantity: existingItem.quantity + quantity },
+                data: { quantity: newTotalQty },
                 include: {
                     product: {
                         include: {
@@ -90,9 +103,21 @@ const updateCartItem = async (req, res, next) => {
         const { quantity } = req.body;
         const cartItem = await (0, retry_1.withRetry)(() => database_1.prisma.cartItem.findFirst({
             where: { id, userId: req.user.id },
+            include: { product: true },
         }));
         if (!cartItem) {
             throw new errorHandler_1.AppError('Cart item not found', 404);
+        }
+        // Validate stock before updating quantity
+        if (quantity > cartItem.product.stockQuantity) {
+            throw new errorHandler_1.AppError(`Only ${cartItem.product.stockQuantity} available for "${cartItem.product.name}"`, 400);
+        }
+        if (quantity < 1) {
+            throw new errorHandler_1.AppError('Quantity must be at least 1', 400);
+        }
+        // Cap at max 10 per product
+        if (quantity > 10) {
+            throw new errorHandler_1.AppError('Maximum 10 items per product allowed', 400);
         }
         const updatedItem = await (0, retry_1.withRetry)(() => database_1.prisma.cartItem.update({
             where: { id },

@@ -93,7 +93,7 @@ export default function ProductCardLuxury({
         productId: product.id,
         name: product.name,
         price: product.finalPrice,
-        image: primaryImage?.imageUrl || '/placeholder.png',
+        image: primaryImage?.imageUrl || '/oralogo.png',
         quantity: 1,
       });
       
@@ -122,7 +122,7 @@ export default function ProductCardLuxury({
         slug: product.slug,
         name: product.name,
         price: product.finalPrice,
-        image: primaryImage?.imageUrl || '/placeholder.png',
+        image: primaryImage?.imageUrl || '/oralogo.png',
       });
     }
     

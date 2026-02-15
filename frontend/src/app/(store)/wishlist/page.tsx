@@ -68,13 +68,13 @@ function EmptyWishlist({ trendingProducts }: { trendingProducts: TrendingProduct
       productId: product.id,
       name: product.name,
       price: product.finalPrice,
-      image: product.images?.[0]?.imageUrl || '/placeholder.png',
+      image: product.images?.[0]?.imageUrl || '/oralogo.png',
       quantity: 1,
     });
     showNotification({
       productId: product.id,
       productName: product.name,
-      productImage: product.images?.[0]?.imageUrl || '/placeholder.png',
+      productImage: product.images?.[0]?.imageUrl || '/oralogo.png',
       productPrice: product.finalPrice,
       quantity: 1,
     });

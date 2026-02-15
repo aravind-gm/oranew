@@ -87,11 +87,7 @@ export default function NewProductPage() {
         formData.append('images', file);
       });
 
-      console.log('[Admin] Starting image upload...', {
-        fileCount: files.length,
-        hasToken: !!token,
-        isHydrated,
-      });
+      // Debug logging removed for production
 
       // CRITICAL: Do NOT explicitly set Content-Type header for multipart/form-data
       // Axios will automatically set it with the correct boundary parameter
@@ -99,10 +95,7 @@ export default function NewProductPage() {
       const response = await api.post('/upload/images', formData);
 
       if (response.data.success) {
-        console.log('[Admin] Image upload successful:', {
-          uploadedCount: response.data.data.urls.length,
-          imageUrls: response.data.data.urls,
-        });
+        // Debug logging removed for production
 
         const newImages = response.data.data.urls.map((url: string, index: number) => ({
           url,
@@ -230,21 +223,12 @@ export default function NewProductPage() {
         })),
       };
 
-      console.log('[Admin] Submitting product creation request...', {
-        productName: form.name,
-        imageCount: images.length,
-        hasToken: !!token,
-        isHydrated,
-        endpoint: '/admin/products',
-      });
+      // Debug logging removed for production
 
       const response = await api.post('/admin/products', productData);
       
       if (response.data.success) {
-        console.log('[Admin] ✅ Product created successfully:', {
-          productId: response.data.data.id,
-          productName: response.data.data.name,
-        });
+        // Product created successfully
         router.push('/admin/products');
       } else {
         throw new Error(response.data.message || 'Product creation failed');

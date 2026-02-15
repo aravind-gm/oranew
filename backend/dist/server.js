@@ -54,11 +54,18 @@ const r2_upload_routes_1 = __importDefault(require("./routes/r2-upload.routes"))
 const user_routes_1 = __importDefault(require("./routes/user.routes"));
 const wishlist_routes_1 = __importDefault(require("./routes/wishlist.routes"));
 const health_routes_1 = __importDefault(require("./routes/health.routes"));
+const announcements_routes_1 = __importDefault(require("./routes/announcements.routes"));
+const pages_routes_1 = __importDefault(require("./routes/pages.routes"));
+const shopall_cms_routes_1 = __importDefault(require("./routes/shopall-cms.routes"));
+const combo_routes_1 = __importDefault(require("./routes/combo.routes"));
+const bogo_routes_1 = __importDefault(require("./routes/bogo.routes"));
+const offers_routes_1 = __importDefault(require("./routes/offers.routes"));
 const supabase_1 = require("./config/supabase");
 const migrations_1 = require("./config/migrations");
 const errorHandler_1 = require("./middleware/errorHandler");
 const notFound_1 = require("./middleware/notFound");
 const database_1 = require("./config/database");
+const scheduler_1 = require("./utils/scheduler");
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 8000;
 // ============================================
@@ -270,6 +277,15 @@ app.use('/api/coupons', coupon_routes_1.default);
 app.use('/api/admin', admin_routes_1.default);
 // app.use('/api/upload', uploadRoutes); // Already registered above before express.json()
 app.use('/api/user', user_routes_1.default);
+app.use('/api/announcements', announcements_routes_1.default);
+app.use('/api/pages', pages_routes_1.default);
+app.use('/api/shopall-cms', shopall_cms_routes_1.default);
+app.use('/api/combos', combo_routes_1.default);
+app.use('/api/products/bogo-eligible', bogo_routes_1.default);
+app.use('/api/offers', offers_routes_1.default);
+// Shipping config (public)
+const shipping_routes_1 = __importDefault(require("./routes/shipping.routes"));
+app.use('/api/shipping', shipping_routes_1.default);
 // ============================================
 // ERROR HANDLING
 // ============================================
@@ -344,7 +360,10 @@ app.listen(PORT, async () => {
     console.log('\n[Startup] ✅ Server ready for requests');
     console.log('[Startup] 📌 Health check: GET /api/health');
     console.log('[Startup] 📌 Detailed health: GET /api/health/detailed (requires auth)');
-    console.log('[Startup] 📌 Auto-recovery: Enabled (reconnect on connection error)\n');
+    console.log('[Startup] 📌 Auto-recovery: Enabled (reconnect on connection error)');
+    // Start scheduled jobs (campaign expiry, inventory cleanup)
+    (0, scheduler_1.startScheduler)();
+    console.log('[Startup] ✅ Scheduler: STARTED (campaign expiry + inventory cleanup)');
 });
 exports.default = app;
 //# sourceMappingURL=server.js.map

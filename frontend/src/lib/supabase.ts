@@ -61,7 +61,7 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
       console.warn('[Supabase] Connection check failed:', error.message);
       return false;
     }
-    console.log('[Supabase] Connection check passed');
+    // console.log('[Supabase] Connection check passed');
     return true;
   } catch (err) {
     console.error('[Supabase] Connection check error:', err);

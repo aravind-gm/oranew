@@ -59,7 +59,7 @@ export const logDiagnostics = async (): Promise<void> => {
   if (typeof window === 'undefined') return; // Only run on client
 
   try {
-    console.log('🔍 Running authentication diagnostics...');
+    // console.log('🔍 Running authentication diagnostics...');
     const issues = await diagnoseAuthIssues();
     issues.forEach((issue) => console.log(issue));
   } catch (err) {

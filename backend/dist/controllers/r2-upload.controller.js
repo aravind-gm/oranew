@@ -9,7 +9,7 @@
  * @author ORA Engineering
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteImage = exports.checkR2Health = exports.reorderProductImages = exports.uploadBrandAssetEndpoint = exports.uploadCollection = exports.toggleBannerVisibility = exports.updateBanner = exports.uploadBanner = exports.deleteProductImageEndpoint = exports.uploadImages = exports.uploadProductImages = void 0;
+exports.deleteImage = exports.deleteBanner = exports.getBanners = exports.checkR2Health = exports.reorderProductImages = exports.uploadBrandAssetEndpoint = exports.uploadCollection = exports.toggleBannerVisibility = exports.updateBanner = exports.uploadBanner = exports.deleteProductImageEndpoint = exports.uploadImages = exports.uploadProductImages = void 0;
 const errorHandler_1 = require("../middleware/errorHandler");
 const r2_1 = require("../config/r2");
 const r2_upload_service_1 = require("../services/r2-upload.service");
@@ -464,6 +464,87 @@ const checkR2Health = async (req, res, next) => {
     }
 };
 exports.checkR2Health = checkR2Health;
+// ============================================
+// GET BANNERS
+// ============================================
+/**
+ * Get all banners
+ * @route GET /api/r2/banners
+ * @access Private (Admin)
+ */
+const getBanners = async (req, res, next) => {
+    try {
+        console.log('[getBanners] Request received', {
+            headers: req.headers.authorization ? '***' : 'NO_AUTH',
+            user: req.user?.id,
+            role: req.user?.role,
+            query: req.query,
+        });
+        if (!req.user) {
+            console.error('[getBanners] No user in request');
+            throw new errorHandler_1.AppError('Authentication required', 401);
+        }
+        if (req.user.role !== 'ADMIN') {
+            console.error('[getBanners] User is not admin', { role: req.user.role });
+            throw new errorHandler_1.AppError('Only admin can view banners', 403);
+        }
+        const { position, page } = req.query;
+        const where = {};
+        if (position)
+            where.position = position;
+        if (page)
+            where.page = page;
+        console.log('[getBanners] Query filter:', where);
+        const banners = await database_1.prisma.banner.findMany({
+            where,
+            orderBy: [
+                { position: 'asc' },
+                { sortOrder: 'asc' },
+            ],
+        });
+        console.log('[getBanners] Found banners:', banners.length);
+        res.json({
+            success: true,
+            banners,
+        });
+    }
+    catch (error) {
+        console.error('[getBanners] Error:', error);
+        next(error);
+    }
+};
+exports.getBanners = getBanners;
+/**
+ * Delete a banner
+ * @route DELETE /api/r2/banners/:bannerId
+ * @access Private (Admin)
+ */
+const deleteBanner = async (req, res, next) => {
+    try {
+        if (!req.user || req.user.role !== 'ADMIN') {
+            throw new errorHandler_1.AppError('Only admin can delete banners', 403);
+        }
+        const { bannerId } = req.params;
+        const banner = await database_1.prisma.banner.findUnique({
+            where: { id: bannerId },
+        });
+        if (!banner) {
+            throw new errorHandler_1.AppError('Banner not found', 404);
+        }
+        // TODO: Delete image from R2 if needed
+        await database_1.prisma.banner.delete({
+            where: { id: bannerId },
+        });
+        res.json({
+            success: true,
+            message: 'Banner deleted successfully',
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.deleteBanner = deleteBanner;
 // ============================================
 // DELETE IMAGE (Legacy endpoint)
 // ============================================

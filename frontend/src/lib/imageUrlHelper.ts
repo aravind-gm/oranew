@@ -14,7 +14,7 @@ export function isSupabaseImage(url: string | undefined): boolean {
 
 export function normalizeImageUrl(imageUrl: string | undefined): string {
   if (!imageUrl) {
-    return '/placeholder.png';
+    return '/oralogo.png';
   }
 
   // If it's already a signed URL (has ?token), use as-is
@@ -45,7 +45,7 @@ export function getProductImageUrl(
   const images = product.images || [];
   
   if (images.length === 0) {
-    return '/placeholder.png';
+    return '/oralogo.png';
   }
 
   // Find primary image
@@ -61,6 +61,6 @@ export function getProductImageUrl(
     return normalizeImageUrl(images[0].imageUrl);
   }
 
-  return '/placeholder.png';
+  return '/oralogo.png';
 }
 

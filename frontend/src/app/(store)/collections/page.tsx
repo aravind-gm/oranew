@@ -1,34 +1,19 @@
 'use client';
 
 /**
- * Shop All — /collections
+ * Shop All / All Jewellery — /collections
  * 
- * Full catalogue view. All active products, sorted by popularity.
- * Complete filter rail: Category, Price, Material, Availability, Sort.
+ * ═══════════════════════════════════════════════════════
+ *   COMPLETE PREMIUM REDESIGN v2.0 — ORA Jewellery
+ * ═══════════════════════════════════════════════════════
+ * 
+ * Luxury, emotionally-driven, high-converting e-commerce experience.
+ * Inspired by GIVA, Mejuri, Swarovski, Cartier, Nykaa Fashion.
+ * All sections admin-controllable via CMS API.
  */
 
-import CollectionPageShell from '@/components/collections/CollectionPageShell';
+import ShopAllPageV2 from '@/components/shopall-v2/ShopAllPageV2';
 
 export default function ShopAllPage() {
-  return (
-    <CollectionPageShell
-      config={{
-        title: 'All Jewellery',
-        subtitle: 'Explore our complete collection',
-        apiParams: {
-          status: 'active',
-        },
-        defaultSort: 'popularity',
-        filters: {
-          showCategory: true,
-          showPrice: true,
-          showMaterial: true,
-          showAvailability: true,
-          showSort: true,
-        },
-        showBadges: true,
-        showQuickAdd: true,
-      }}
-    />
-  );
+  return <ShopAllPageV2 />;
 }

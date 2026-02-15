@@ -79,7 +79,7 @@ export default function CheckoutPaymentPage() {
     try {
       if (!orderId) throw new Error('Order ID not found');
 
-      console.log('[Payment] Starting payment with orderId:', orderId);
+      // console.log('[Payment] Starting payment with orderId:', orderId);
 
       // IMPORTANT: DO NOT check token here. Let Axios handle it.
       // - Request interceptor will attach token automatically
@@ -92,7 +92,7 @@ export default function CheckoutPaymentPage() {
         orderId,
       });
 
-      console.log('[Payment] Payment response:', paymentResponse.status, paymentResponse.data);
+      // console.log('[Payment] Payment response:', paymentResponse.status, paymentResponse.data);
 
       if (!paymentResponse.data.success) {
         throw new Error(paymentResponse.data.error?.message || 'Failed to create payment');
@@ -143,7 +143,7 @@ export default function CheckoutPaymentPage() {
         throw new Error('Razorpay not loaded');
       }
 
-      console.log('[Payment] Opening Razorpay modal');
+      // console.log('[Payment] Opening Razorpay modal');
       const razorpay = new window.Razorpay(options);
       razorpay.open();
       setLoading(false);

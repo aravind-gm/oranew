@@ -1,6 +1,6 @@
 /* stylelint-disable at-rule-no-unknown */
 /* Import Elegant Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Poppins:wght@300;400;500;600;700&display=swap');
 
 /* Tailwind CSS Directives */
 @tailwind base;
@@ -579,6 +579,73 @@
   50% {
     opacity: 0.7;
   }
+}
+
+/* ============================================
+   SHOP ALL V2 — LUXURY ENHANCEMENTS
+   ============================================ */
+
+/* Scrollbar hide for mood carousel and other horizontal scroll */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Premium card hover lift effect */
+.luxury-card-lift {
+  transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1),
+              box-shadow 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.luxury-card-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+}
+
+/* Gold shimmer animation for accents */
+@keyframes goldShimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.gold-shimmer {
+  background: linear-gradient(
+    90deg,
+    #D4AF37 0%,
+    #F5E6C4 25%,
+    #D4AF37 50%,
+    #F5E6C4 75%,
+    #D4AF37 100%
+  );
+  background-size: 200% auto;
+  animation: goldShimmer 3s linear infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Smooth image crossfade for product cards */
+.image-crossfade {
+  transition: opacity 0.5s cubic-bezier(0.23, 1, 0.32, 1),
+              transform 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Filter sidebar thin scrollbar */
+.filter-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(212, 175, 55, 0.2) transparent;
+}
+.filter-scrollbar::-webkit-scrollbar {
+  width: 3px;
+}
+.filter-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.filter-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(212, 175, 55, 0.2);
+  border-radius: 10px;
 }
 
 /* Reduce motion for users who prefer it */

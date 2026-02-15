@@ -136,6 +136,8 @@ const navigationItems: NavItem[] = [
     label: 'Marketing',
     icon: Megaphone,
     children: [
+      { id: 'bogo-campaign', label: 'BOGO Campaign', href: '/admin/v2/marketing/bogo', badge: 'LIVE' },
+      { id: 'offers-management', label: 'Offers & Deals', href: '/admin/v2/marketing/offers', badge: 'NEW' },
       { id: 'campaigns', label: 'Campaigns', href: '/admin/v2/marketing/campaigns' },
       { id: 'discounts', label: 'Discounts', href: '/admin/v2/marketing/discounts' },
       { id: 'coupons', label: 'Coupons', href: '/admin/v2/marketing/coupons' },
@@ -175,6 +177,7 @@ const navigationItems: NavItem[] = [
       { id: 'shipping', label: 'Shipping', href: '/admin/v2/settings/shipping' },
       { id: 'taxes', label: 'Taxes', href: '/admin/v2/settings/taxes' },
       { id: 'users', label: 'Staff & Permissions', href: '/admin/v2/settings/users' },
+      { id: 'audit-log', label: 'Audit Log', href: '/admin/v2/settings/audit-log' },
     ],
   },
 ];

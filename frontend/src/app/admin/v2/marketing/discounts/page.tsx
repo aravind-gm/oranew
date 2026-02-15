@@ -70,87 +70,24 @@ export default function DiscountsPage() {
 
   // Fetch discounts
   useEffect(() => {
-    const fetchDiscounts = async () => {
+    const fetchDiscountsData = async () => {
       setLoading(true);
       try {
-        // TODO: API call
-        await new Promise(resolve => setTimeout(resolve, 500));
+        const response = await fetch('/api/admin/discounts');
+        if (!response.ok) throw new Error('Failed to fetch discounts');
         
-        setDiscounts([
-          {
-            id: '1',
-            name: 'Summer Sale 2024',
-            type: 'percentage',
-            value: 20,
-            appliesTo: 'all',
-            usedCount: 156,
-            startDate: '2024-06-01T00:00:00',
-            endDate: '2024-06-30T23:59:59',
-            status: 'active',
-            createdAt: new Date().toISOString(),
-          },
-          {
-            id: '2',
-            name: 'First Order Discount',
-            code: 'FIRST10',
-            type: 'percentage',
-            value: 10,
-            appliesTo: 'all',
-            maxUses: 1000,
-            usedCount: 89,
-            startDate: '2024-01-01T00:00:00',
-            endDate: '2024-12-31T23:59:59',
-            status: 'active',
-            createdAt: new Date().toISOString(),
-          },
-          {
-            id: '3',
-            name: 'Gold Flash Sale',
-            type: 'percentage',
-            value: 25,
-            appliesTo: 'collection',
-            appliesToName: 'Gold Collection',
-            usedCount: 0,
-            startDate: '2024-06-15T10:00:00',
-            endDate: '2024-06-15T22:00:00',
-            status: 'scheduled',
-            createdAt: new Date().toISOString(),
-          },
-          {
-            id: '4',
-            name: 'Free Shipping Weekend',
-            type: 'free_shipping',
-            value: 0,
-            appliesTo: 'all',
-            minPurchase: 5000,
-            usedCount: 45,
-            startDate: '2024-06-08T00:00:00',
-            endDate: '2024-06-09T23:59:59',
-            status: 'expired',
-            createdAt: new Date().toISOString(),
-          },
-          {
-            id: '5',
-            name: 'VIP Exclusive',
-            code: 'VIP20',
-            type: 'percentage',
-            value: 20,
-            appliesTo: 'customer',
-            appliesToName: 'VIP Customers',
-            usedCount: 23,
-            startDate: '2024-01-01T00:00:00',
-            status: 'disabled',
-            createdAt: new Date().toISOString(),
-          },
-        ]);
+        const data = await response.json();
+        const discountsList = Array.isArray(data) ? data : data.data || [];
+        setDiscounts(discountsList);
       } catch (error) {
         console.error('Error fetching discounts:', error);
+        setDiscounts([]);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchDiscounts();
+    fetchDiscountsData();
   }, []);
 
   // Format currency
@@ -203,7 +140,8 @@ export default function DiscountsPage() {
   // Copy code to clipboard
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);
-    // TODO: Show toast
+    // Show success feedback (would integrate with toast system)
+    alert(`Copied: ${code}`);
   };
 
   // Toggle discount status

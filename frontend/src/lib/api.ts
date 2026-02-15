@@ -1,11 +1,11 @@
 /**
- * Vercel Serverless Backend API Client
- * Updated for serverless architecture with Render cold-start handling
+ * ORA Jewellery — Backend API Client
  * 
  * Features:
  * - Communicates with Render backend
  * - Automatic retry on 503 (backend cold start)
  * - JWT token injection
+ * - 401 token refresh before logout
  * - Graceful error handling
  */
 
@@ -15,25 +15,20 @@ import { setupErrorInterceptor, setupRequestInterceptor } from './api-intercepto
 
 // Determine API URL with fallback
 const getApiUrl = () => {
-  // First: Check environment variable (set in Vercel/deployment)
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL;
   }
   
-  // Second: Production Render backend
   if (typeof window !== 'undefined' && window.location.hostname === 'orashop.in') {
     return 'https://oranew.onrender.com/api';
   }
   
-  // Third: Default to localhost for development
   return 'http://localhost:8000/api';
 };
 
 const api = axios.create({
   baseURL: getApiUrl(),
-  // NOTE: Do NOT set Content-Type here - let axios handle it per request
-  // For multipart/form-data uploads, axios MUST auto-set the boundary
-  timeout: 30000,
+  timeout: 10000, // 10s timeout (reduced from 30s)
 });
 
 // Setup custom interceptors for 503 retry and auth
@@ -42,32 +37,50 @@ setupErrorInterceptor(api);
 
 // Fix Content-Type for JSON requests (multipart requests will set their own)
 api.interceptors.request.use((config) => {
-  // Only set Content-Type for non-multipart requests
   if (!(config.data instanceof FormData)) {
     config.headers['Content-Type'] = 'application/json';
   }
   return config;
 });
 
-// Additional response interceptor for 401 handling
+// Track if we're currently refreshing to prevent loops
+let isRefreshing = false;
+
+// 401 handler with token refresh attempt
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError) => {
-    // 🛑 CRITICAL: Never logout on backend API 401 errors
-    // Backend 401 does NOT mean authentication is invalid
-    // It means this specific endpoint doesn't accept our token format
-    
-    if (typeof window !== 'undefined' && error.response?.status === 401) {
+  async (error: AxiosError) => {
+    if (typeof window !== 'undefined' && error.response?.status === 401 && !isRefreshing) {
       const authStore = useAuthStore.getState();
-      console.log('[API] ⚠️ Backend API returned 401 (not an auth failure)');
-      console.log('[API] Supabase session status:', { 
-        hasToken: !!authStore.token, 
-        hasUser: !!authStore.user,
-        isHydrated: authStore.isHydrated 
-      });
       
-      // ✅ DO NOT logout
-      console.log('[API] ✅ Keeping user logged in');
+      // Only attempt refresh if user was previously authenticated
+      if (authStore.token && authStore.user) {
+        isRefreshing = true;
+        try {
+          // Try to refresh the Supabase session
+          const { createClient } = await import('@supabase/supabase-js');
+          const supabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+          );
+          const { data, error: refreshError } = await supabase.auth.refreshSession();
+          
+          if (data?.session && !refreshError) {
+            // Update the store with new token
+            authStore.setToken(data.session.access_token);
+            
+            // Retry the original request with new token
+            if (error.config) {
+              error.config.headers.Authorization = `Bearer ${data.session.access_token}`;
+              return api.request(error.config);
+            }
+          }
+        } catch {
+          // Refresh failed silently — don't logout, let user continue browsing
+        } finally {
+          isRefreshing = false;
+        }
+      }
     }
     
     return Promise.reject(error);

@@ -20,6 +20,7 @@
 
 import api from '@/lib/api';
 import { getStateNames, getDistrictsByState, validatePhoneNumber, validatePincode } from '@/lib/addressData';
+import { trackBeginCheckout, trackAddPaymentInfo, setEnhancedConversions } from '@/lib/analytics';
 import { useAuth } from '@/context/AuthContext';
 import { useCartStore } from '@/store/cartStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -211,7 +212,12 @@ function Select({ label, name, value, onChange, options, placeholder, required, 
 // ORDER SUMMARY COMPONENT
 // ============================================================================
 
+const SHIPPING_THRESHOLD = 999;
+const SHIPPING_FEE = 99;
+
 function OrderSummary({ items, totalPrice }: { items: Array<{ productId: string; name: string; image: string; price: number; quantity: number }>; totalPrice: number }) {
+  const shippingCost = totalPrice >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+  const displayTotal = totalPrice + shippingCost;
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 lg:sticky lg:top-28">
       <h2 className="font-semibold text-lg text-gray-900 mb-6">Order Summary</h2>
@@ -251,7 +257,11 @@ function OrderSummary({ items, totalPrice }: { items: Array<{ productId: string;
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-gray-600">Shipping</span>
-          <span className="text-emerald-600 font-medium">FREE</span>
+          {shippingCost === 0 ? (
+            <span className="text-emerald-600 font-medium">FREE</span>
+          ) : (
+            <span className="font-medium text-gray-900">₹{shippingCost}</span>
+          )}
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-gray-600">Tax</span>
@@ -263,7 +273,7 @@ function OrderSummary({ items, totalPrice }: { items: Array<{ productId: string;
       <div className="pt-4 border-t border-gray-100">
         <div className="flex justify-between items-baseline">
           <span className="font-semibold text-gray-900">Total</span>
-          <span className="text-2xl font-bold text-gray-900">₹{totalPrice.toLocaleString()}</span>
+          <span className="text-2xl font-bold text-gray-900">₹{displayTotal.toLocaleString()}</span>
         </div>
       </div>
 
@@ -370,12 +380,14 @@ export default function CheckoutPage() {
 
     if (!address.phone.trim()) {
       newErrors.phone = 'Phone number is required';
-    } else if (!validatePhoneNumber(address.phone)) {
-      newErrors.phone = 'Please enter a valid 10-digit phone number';
+    } else if (!/^[6-9]\d{9}$/.test(address.phone.replace(/\s|-/g, ''))) {
+      newErrors.phone = 'Enter a valid Indian mobile number (10 digits, starting 6-9)';
     }
 
     if (!address.street.trim()) {
       newErrors.street = 'Address is required';
+    } else if (address.street.trim().length < 10) {
+      newErrors.street = 'Please enter a complete address (minimum 10 characters)';
     }
 
     if (!address.state) {
@@ -388,6 +400,8 @@ export default function CheckoutPage() {
 
     if (!address.city.trim()) {
       newErrors.city = 'City is required';
+    } else if (address.city.trim().length < 3) {
+      newErrors.city = 'Please enter a valid city name (minimum 3 characters)';
     }
 
     if (!address.zipCode.trim()) {
@@ -402,6 +416,22 @@ export default function CheckoutPage() {
 
   const handleContinueToReview = () => {
     if (validateAddressForm()) {
+      // Analytics: begin_checkout
+      trackBeginCheckout({
+        items: items.map((item) => ({
+          id: item.productId || item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+        })),
+        total: totalPrice,
+      });
+
+      // Enhanced conversions: send hashed PII
+      if (address.email || address.phone) {
+        setEnhancedConversions({ email: address.email, phone: address.phone });
+      }
+
       setCurrentStep('review');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -432,6 +462,20 @@ export default function CheckoutPage() {
       }
 
       const createdOrder = response.data.order || response.data.data;
+
+      // Analytics: add_payment_info
+      trackAddPaymentInfo({
+        orderId: createdOrder.id,
+        total: totalPrice,
+        paymentMethod: 'razorpay',
+        items: items.map((item) => ({
+          id: item.productId || item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+        })),
+      });
+
       router.push(`/checkout/payment?orderId=${createdOrder.id}`);
     } catch (err: unknown) {
       let errorMessage = 'Failed to create order';
@@ -544,7 +588,7 @@ export default function CheckoutPage() {
                         type="tel"
                         value={address.phone}
                         onChange={handleAddressChange}
-                        placeholder="9876543210"
+                        placeholder="9842253984"
                         required
                         error={errors.phone}
                         maxLength={10}
@@ -738,15 +782,38 @@ export default function CheckoutPage() {
                   </label>
                 </div>
 
-                {/* Security Message */}
-                <div className="flex items-center gap-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl mb-8">
+                {/* Razorpay Security Badge */}
+                <div className="flex items-center gap-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl mb-4">
                   <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <Lock className="w-6 h-6 text-emerald-600" />
                   </div>
                   <div>
-                    <p className="font-medium text-emerald-900">Your payment is secure</p>
-                    <p className="text-sm text-emerald-700">256-bit SSL encryption • Powered by Razorpay</p>
+                    <p className="font-medium text-emerald-900">Secured by Razorpay</p>
+                    <p className="text-sm text-emerald-700">256-bit SSL • PCI DSS Compliant • RBI Approved</p>
                   </div>
+                </div>
+
+                {/* Trust Signals */}
+                <div className="grid grid-cols-3 gap-3 mb-6">
+                  <div className="text-center p-3 bg-gray-50 rounded-xl">
+                    <span className="text-xl">🔒</span>
+                    <p className="text-[10px] text-gray-500 mt-1 font-medium">100% Secure</p>
+                  </div>
+                  <div className="text-center p-3 bg-gray-50 rounded-xl">
+                    <span className="text-xl">🔁</span>
+                    <p className="text-[10px] text-gray-500 mt-1 font-medium">5-Day Returns</p>
+                  </div>
+                  <div className="text-center p-3 bg-gray-50 rounded-xl">
+                    <span className="text-xl">🇮🇳</span>
+                    <p className="text-[10px] text-gray-500 mt-1 font-medium">Made in India</p>
+                  </div>
+                </div>
+
+                {/* Refund Policy Link */}
+                <div className="mb-8 text-center">
+                  <Link href="/returns" className="text-xs text-pink-600 hover:text-pink-700 underline">
+                    View our Refund & Return Policy
+                  </Link>
                 </div>
 
                 {/* Place Order Button - Desktop */}

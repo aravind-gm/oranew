@@ -66,7 +66,7 @@ export default function ProductCard({ product, showQuickAdd = true }: ProductCar
         productId: product.id,
         name: product.name,
         price: product.finalPrice,
-        image: primaryImage?.imageUrl || '/placeholder.png',
+        image: primaryImage?.imageUrl || '/oralogo.png',
         quantity: 1,
       });
     } catch (error) {
@@ -90,7 +90,7 @@ export default function ProductCard({ product, showQuickAdd = true }: ProductCar
         slug: product.slug,
         name: product.name,
         price: product.finalPrice,
-        image: primaryImage?.imageUrl || '/placeholder.png',
+        image: primaryImage?.imageUrl || '/oralogo.png',
       });
     }
     
@@ -113,7 +113,7 @@ export default function ProductCard({ product, showQuickAdd = true }: ProductCar
           {/* Primary Image */}
           {primaryImage && (
             <Image
-              src={normalizeImageUrl(primaryImage.imageUrl) || '/placeholder.png'}
+              src={normalizeImageUrl(primaryImage.imageUrl) || '/oralogo.png'}
               alt={primaryImage.altText || product.name}
               fill
               unoptimized={isSupabaseImage(primaryImage.imageUrl)}
@@ -127,7 +127,7 @@ export default function ProductCard({ product, showQuickAdd = true }: ProductCar
           {/* Hover Image */}
           {hoverImage && hoverImage !== primaryImage && (
             <Image
-              src={normalizeImageUrl(hoverImage.imageUrl) || '/placeholder.png'}
+              src={normalizeImageUrl(hoverImage.imageUrl) || '/oralogo.png'}
               alt={`${product.name} alternate view`}
               fill
               unoptimized={isSupabaseImage(hoverImage.imageUrl)}

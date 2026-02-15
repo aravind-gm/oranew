@@ -1,0 +1,18 @@
+# ORA Jewellery — https://orashop.in
+# Allow search engines to crawl all public pages
+
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /api/*
+Disallow: /checkout
+Disallow: /account
+Disallow: /account/*
+Disallow: /auth/*
+Disallow: /cart
+Disallow: /_next/
+Disallow: /404
+
+# Sitemap
+Sitemap: https://orashop.in/sitemap.xml

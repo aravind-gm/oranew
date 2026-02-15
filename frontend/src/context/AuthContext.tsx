@@ -35,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Load auth state from localStorage on mount
   useEffect(() => {
-    console.log('[AuthContext] 💧 Hydrating auth state from localStorage...');
+    // console.log('[AuthContext] 💧 Hydrating auth state from localStorage...');
     
     try {
       const storedToken = localStorage.getItem('ora_token');
@@ -43,28 +43,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (storedToken && storedUser) {
         const parsedUser = JSON.parse(storedUser);
-        console.log('[AuthContext] ✅ Found existing session:', { 
-          email: parsedUser.email, 
-          role: parsedUser.role 
-        });
+        // Session found — debug removed for production
         setToken(storedToken);
         setUser(parsedUser);
       } else {
-        console.log('[AuthContext] ℹ️ No existing session found');
+        // console.log('[AuthContext] ℹ️ No existing session found');
       }
     } catch (error) {
       console.error('[AuthContext] ❌ Error loading auth state:', error);
     } finally {
       setIsLoading(false);
-      console.log('[AuthContext] ✅ Hydration complete');
+      // console.log('[AuthContext] ✅ Hydration complete');
     }
   }, []);
 
   const login = (userData: User, authToken: string) => {
-    console.log('[AuthContext] 🔐 Logging in user:', { 
-      email: userData.email, 
-      role: userData.role 
-    });
+    // Login — debug removed for production
     
     // Save to state
     setUser(userData);
@@ -74,11 +68,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('ora_token', authToken);
     localStorage.setItem('ora_user', JSON.stringify(userData));
     
-    console.log('[AuthContext] ✅ Login successful, state persisted');
+    // console.log('[AuthContext] ✅ Login successful, state persisted');
   };
 
   const logout = () => {
-    console.log('[AuthContext] 🚪 Logging out user');
+    // console.log('[AuthContext] 🚪 Logging out user');
     
     // Clear state
     setUser(null);
@@ -92,14 +86,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     
-    console.log('[AuthContext] ✅ Logout complete');
+    // console.log('[AuthContext] ✅ Logout complete');
   };
 
   const updateUser = (updates: Partial<User>) => {
     if (!user) return;
     
     const updatedUser = { ...user, ...updates };
-    console.log('[AuthContext] 👤 Updating user:', updates);
+    // console.log('[AuthContext] 👤 Updating user:', updates);
     
     setUser(updatedUser);
     localStorage.setItem('ora_user', JSON.stringify(updatedUser));

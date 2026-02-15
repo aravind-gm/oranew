@@ -18,12 +18,19 @@ import r2UploadRoutes from './routes/r2-upload.routes';
 import userRoutes from './routes/user.routes';
 import wishlistRoutes from './routes/wishlist.routes';
 import healthRoutes from './routes/health.routes';
+import announcementsRoutes from './routes/announcements.routes';
+import pagesRoutes from './routes/pages.routes';
+import shopallCmsRoutes from './routes/shopall-cms.routes';
+import comboRoutes from './routes/combo.routes';
+import bogoRoutes from './routes/bogo.routes';
+import offersRoutes from './routes/offers.routes';
 
 import { isStorageConfigured, testStorageConnection } from './config/supabase';
 import { runPendingMigrations } from './config/migrations';
 import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
 import { warmupDatabase } from './config/database';
+import { startScheduler } from './utils/scheduler';
 
 const app: Application = express();
 const PORT = process.env.PORT || 8000;
@@ -269,6 +276,16 @@ app.use('/api/coupons', couponRoutes);
 app.use('/api/admin', adminRoutes);
 // app.use('/api/upload', uploadRoutes); // Already registered above before express.json()
 app.use('/api/user', userRoutes);
+app.use('/api/announcements', announcementsRoutes);
+app.use('/api/pages', pagesRoutes);
+app.use('/api/shopall-cms', shopallCmsRoutes);
+app.use('/api/combos', comboRoutes);
+app.use('/api/products/bogo-eligible', bogoRoutes);
+app.use('/api/offers', offersRoutes);
+
+// Shipping config (public)
+import shippingRoutes from './routes/shipping.routes';
+app.use('/api/shipping', shippingRoutes);
 
 // ============================================
 // ERROR HANDLING
@@ -351,7 +368,11 @@ app.listen(PORT, async () => {
   console.log('\n[Startup] ✅ Server ready for requests');
   console.log('[Startup] 📌 Health check: GET /api/health');
   console.log('[Startup] 📌 Detailed health: GET /api/health/detailed (requires auth)');
-  console.log('[Startup] 📌 Auto-recovery: Enabled (reconnect on connection error)\n');
+  console.log('[Startup] 📌 Auto-recovery: Enabled (reconnect on connection error)');
+
+  // Start scheduled jobs (campaign expiry, inventory cleanup)
+  startScheduler();
+  console.log('[Startup] ✅ Scheduler: STARTED (campaign expiry + inventory cleanup)');
 });
 
 export default app;

@@ -29,7 +29,7 @@ export default function CompleteProfilePage() {
 
     // No auth = redirect to login
     if (!user || !token) {
-      console.log('[Profile] ❌ Not authenticated, redirecting to login');
+      // console.log('[Profile] ❌ Not authenticated, redirecting to login');
       if (!hasRedirectedRef.current) {
         hasRedirectedRef.current = true;
         router.replace('/auth/login');
@@ -37,11 +37,11 @@ export default function CompleteProfilePage() {
       return;
     }
 
-    console.log('[Profile] ✅ User verified:', user.email);
+    // console.log('[Profile] ✅ User verified:', user.email);
     
     // Admin bypass
     if (user.role === 'ADMIN' || user.role === 'admin') {
-      console.log('[Profile] 🛡️ Admin detected, skipping profile completion');
+      // console.log('[Profile] 🛡️ Admin detected, skipping profile completion');
       if (!hasRedirectedRef.current) {
         hasRedirectedRef.current = true;
         router.replace('/admin');
@@ -80,7 +80,7 @@ export default function CompleteProfilePage() {
         throw new Error('Please enter a valid 10-digit phone number');
       }
 
-      console.log('[Profile] 📝 Updating profile for:', user?.email);
+      // console.log('[Profile] 📝 Updating profile for:', user?.email);
 
       // Call backend - CORRECT ENDPOINT: PUT /user/complete-profile (singular)
       const { data: updateData } = await api.put('/user/complete-profile', {
@@ -93,7 +93,7 @@ export default function CompleteProfilePage() {
         throw new Error(updateData?.error || 'Failed to save profile');
       }
 
-      console.log('[Profile] ✅ Profile updated successfully');
+      // console.log('[Profile] ✅ Profile updated successfully');
 
       // Update local auth store
       setUser({

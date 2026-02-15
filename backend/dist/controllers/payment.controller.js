@@ -22,6 +22,10 @@ const getRazorpay = () => {
         if (!keyId || !keySecret) {
             throw new helpers_1.AppError('Razorpay credentials not configured', 500);
         }
+        // SECURITY: Prevent test keys in production
+        if (process.env.NODE_ENV === "production" && keyId.startsWith("rzp_test_")) {
+            throw new helpers_1.AppError("FATAL: Production environment cannot use Razorpay test keys", 500);
+        }
         razorpayInstance = new razorpay_1.default({
             key_id: keyId,
             key_secret: keySecret,
@@ -81,9 +85,27 @@ exports.createPayment = (0, helpers_1.asyncHandler)(async (req, res) => {
         paymentCount: order.payments.length,
     });
     // ────────────────────────────────────────────
-    // IDEMPOTENCY: RETURN EXISTING PAYMENT IF ACTIVE
+    // IDEMPOTENCY: CHECK FOR EXISTING PAYMENTS
     // ────────────────────────────────────────────
-    const activePayment = order.payments?.find((p) => p.status !== 'FAILED' && p.status !== 'REFUNDED');
+    const existingPending = order.payments?.find((p) => p.status === 'PENDING');
+    if (existingPending) {
+        const paymentAge = Date.now() - new Date(existingPending.createdAt).getTime();
+        const fifteenMinutes = 15 * 60 * 1000;
+        if (paymentAge > fifteenMinutes) {
+            // Mark old pending payment as FAILED
+            console.log('[Payment.create] Marking stale PENDING payment as FAILED:', existingPending.id);
+            await database_1.prisma.payment.update({
+                where: { id: existingPending.id },
+                data: { status: 'FAILED' },
+            });
+        }
+        else {
+            // Payment still in progress - reject new payment attempt
+            throw new helpers_1.AppError('Payment already in progress. Please wait or contact support.', 409);
+        }
+    }
+    // Return existing active (non-failed, non-refunded) payment
+    const activePayment = order.payments?.find((p) => p.status !== 'FAILED' && p.status !== 'REFUNDED' && p.status !== 'PENDING');
     if (activePayment) {
         console.log('[Payment.create] Returning existing payment (idempotent):', activePayment.id);
         return res.json({
@@ -349,43 +371,15 @@ const webhook = async (req, res) => {
     }
     console.log('[Webhook] Raw body length:', rawBody.length);
     // ────────────────────────────────────────────
-    // STEP 2: Validate signature exists
+    // STEP 2: Validate signature exists (ALWAYS REQUIRED)
     // ────────────────────────────────────────────
     const signature = req.headers['x-razorpay-signature'];
-    const isTestMode = process.env.RAZORPAY_KEY_ID?.startsWith('rzp_test_');
     if (!signature) {
-        console.log('[Webhook] ⚠️ Signature missing from headers');
-        console.log('[Webhook] Available headers:', Object.keys(req.headers).join(', '));
-        // In TEST MODE ONLY: Allow webhooks without signature for development
-        // This happens when Razorpay webhook secret is not configured in dashboard
-        if (isTestMode) {
-            console.log('[Webhook] ⚠️ TEST MODE: Proceeding without signature verification');
-            console.log('[Webhook] ⚠️ ACTION REQUIRED: Configure webhook secret in Razorpay Dashboard');
-            console.log('[Webhook] ⚠️ Go to: Dashboard → Webhooks → Edit → Change Secret → Enter your RAZORPAY_WEBHOOK_SECRET');
-            // Parse and process the webhook without signature verification (TEST ONLY)
-            let event;
-            try {
-                event = JSON.parse(rawBody.toString());
-            }
-            catch (err) {
-                console.log('[Webhook] ❌ Invalid JSON:', err);
-                return res.status(400).json({ success: false, reason: 'Invalid JSON' });
-            }
-            const eventType = event?.event;
-            console.log('[Webhook] Event type (UNVERIFIED):', eventType);
-            if (eventType === 'payment.captured') {
-                return handlePaymentCaptured(event, res);
-            }
-            else if (eventType === 'payment.failed') {
-                return handlePaymentFailed(event, res);
-            }
-            else {
-                console.log('[Webhook] Ignoring event type:', eventType);
-                return res.status(200).json({ success: true, reason: 'Event ignored' });
-            }
-        }
-        // In LIVE MODE: Reject webhooks without signature
-        console.log('[Webhook] ❌ LIVE MODE: Signature required - rejecting webhook');
+        console.warn('SECURITY ALERT: Webhook signature missing', {
+            ip: req.ip,
+            timestamp: new Date().toISOString(),
+            headers: Object.keys(req.headers).join(', ')
+        });
         return res.status(400).json({ success: false, reason: 'Signature missing' });
     }
     console.log('[Webhook] ✓ Signature present:', signature.substring(0, 20) + '...');
@@ -485,7 +479,10 @@ async function handlePaymentCaptured(event, res) {
     // IDEMPOTENCY CHECK: Already processed?
     // ────────────────────────────────────────────
     if (payment.status === 'CONFIRMED') {
-        console.log('[Webhook:Captured] ✓ Payment already CONFIRMED (idempotent - returning success)');
+        console.warn("SECURITY ALERT: Duplicate webhook - payment already confirmed", {
+            paymentId: payment.id,
+            timestamp: new Date().toISOString()
+        });
         return res.status(200).json({ success: true, reason: 'Already confirmed' });
     }
     // Skip if already failed (shouldn't receive captured after failed, but safety check)
@@ -493,11 +490,19 @@ async function handlePaymentCaptured(event, res) {
         console.log('[Webhook:Captured] ⚠️ Payment already FAILED - ignoring captured event');
         return res.status(200).json({ success: true, reason: 'Payment already failed' });
     }
-    // Validate amount matches
+    // Validate amount matches (HARD REJECTION)
     const expectedAmountPaise = Math.round(Number(payment.amount) * 100);
     if (webhookAmount !== expectedAmountPaise) {
-        console.log('[Webhook:Captured] ⚠️ Amount mismatch!', { expectedAmountPaise, webhookAmount });
-        // Log but don't reject - amount validation is secondary to signature
+        console.warn("SECURITY ALERT: Payment amount mismatch", {
+            expected: expectedAmountPaise,
+            received: webhookAmount,
+            paymentId: payment.id,
+            timestamp: new Date().toISOString()
+        });
+        return res.status(400).json({
+            success: false,
+            reason: "Payment amount mismatch"
+        });
     }
     const order = payment.order;
     if (!order) {
@@ -824,6 +829,18 @@ exports.initiateRefund = (0, helpers_1.asyncHandler)(async (req, res) => {
     }
     if (returnRequest.status !== 'APPROVED') {
         throw new helpers_1.AppError('Return must be approved before refunding', 400);
+    }
+    // SECURITY: Validate refund amount does not exceed order total
+    const orderTotal = Number(returnRequest.order.totalAmount);
+    if (refundAmount > orderTotal) {
+        console.warn('SECURITY ALERT: Refund exceeds order total', {
+            refundAmount,
+            orderTotal,
+            orderId: returnRequest.order.id,
+            adminId: userId,
+            timestamp: new Date().toISOString()
+        });
+        throw new helpers_1.AppError('Refund amount exceeds order total', 400);
     }
     const order = returnRequest.order;
     const payment = order.payments?.[0];

@@ -200,7 +200,7 @@ export default function SearchAutocomplete({
 
   const getProductImage = (product: SearchResult) => {
     const primary = product.images.find((img) => img.isPrimary);
-    return primary?.imageUrl || product.images[0]?.imageUrl || '/placeholder.png';
+    return primary?.imageUrl || product.images[0]?.imageUrl || '/oralogo.png';
   };
 
   return (

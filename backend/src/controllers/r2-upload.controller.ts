@@ -619,6 +619,106 @@ export const checkR2Health = async (
 };
 
 // ============================================
+// GET BANNERS
+// ============================================
+
+/**
+ * Get all banners
+ * @route GET /api/r2/banners
+ * @access Private (Admin)
+ */
+export const getBanners = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    console.log('[getBanners] Request received', {
+      headers: req.headers.authorization ? '***' : 'NO_AUTH',
+      user: req.user?.id,
+      role: req.user?.role,
+      query: req.query,
+    });
+
+    if (!req.user) {
+      console.error('[getBanners] No user in request');
+      throw new AppError('Authentication required', 401);
+    }
+
+    if (req.user.role !== 'ADMIN') {
+      console.error('[getBanners] User is not admin', { role: req.user.role });
+      throw new AppError('Only admin can view banners', 403);
+    }
+
+    const { position, page } = req.query;
+
+    const where: any = {};
+    if (position) where.position = position as string;
+    if (page) where.page = page as string;
+
+    console.log('[getBanners] Query filter:', where);
+
+    const banners = await prisma.banner.findMany({
+      where,
+      orderBy: [
+        { position: 'asc' },
+        { sortOrder: 'asc' },
+      ],
+    });
+
+    console.log('[getBanners] Found banners:', banners.length);
+
+    res.json({
+      success: true,
+      banners,
+    });
+  } catch (error) {
+    console.error('[getBanners] Error:', error);
+    next(error);
+  }
+};
+
+/**
+ * Delete a banner
+ * @route DELETE /api/r2/banners/:bannerId
+ * @access Private (Admin)
+ */
+export const deleteBanner = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.user || req.user.role !== 'ADMIN') {
+      throw new AppError('Only admin can delete banners', 403);
+    }
+
+    const { bannerId } = req.params;
+
+    const banner = await prisma.banner.findUnique({
+      where: { id: bannerId },
+    });
+
+    if (!banner) {
+      throw new AppError('Banner not found', 404);
+    }
+
+    // TODO: Delete image from R2 if needed
+
+    await prisma.banner.delete({
+      where: { id: bannerId },
+    });
+
+    res.json({
+      success: true,
+      message: 'Banner deleted successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ============================================
 // DELETE IMAGE (Legacy endpoint)
 // ============================================
 

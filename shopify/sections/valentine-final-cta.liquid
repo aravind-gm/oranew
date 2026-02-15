@@ -1,0 +1,183 @@
+{% comment %}
+  ═══════════════════════════════════════════════════════
+  Valentine Final CTA — valentine-final-cta.liquid
+  ORA Valentine's Special | Shopify OS 2.0
+  
+  Emotional closing CTA — single strong conversion point
+  ═══════════════════════════════════════════════════════
+{% endcomment %}
+
+{%- style -%}
+  .valentine-final-cta {
+    position: relative;
+    padding: 6rem 1.25rem 8rem;
+    background: linear-gradient(to bottom, #fff, rgba(255,241,242,0.4), #fff);
+    overflow: hidden;
+    text-align: center;
+  }
+  @media (min-width: 640px) {
+    .valentine-final-cta { padding: 8rem 2rem; }
+  }
+  .valentine-final-cta__deco {
+    position: absolute;
+    opacity: 0.04;
+    pointer-events: none;
+    color: #F43F5E;
+  }
+  .valentine-final-cta__deco--1 { top: 3rem; left: 15%; width: 10rem; height: 10rem; }
+  .valentine-final-cta__deco--2 { bottom: 4rem; right: 12%; width: 7rem; height: 7rem; transform: rotate(-15deg); }
+  .valentine-final-cta__deco--3 { top: 50%; left: 5%; width: 5rem; height: 5rem; transform: rotate(20deg); opacity: 0.03; }
+  .valentine-final-cta__inner {
+    max-width: 48rem;
+    margin: 0 auto;
+    position: relative;
+    z-index: 10;
+  }
+  .valentine-final-cta__heart {
+    width: 2rem;
+    height: 2rem;
+    color: #FB7185;
+    margin: 0 auto 2rem;
+    display: block;
+  }
+  .valentine-final-cta__headline {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: clamp(1.875rem, 5vw, 3rem);
+    font-weight: 300;
+    color: #171717;
+    line-height: 1.3;
+    margin-bottom: 1.5rem;
+  }
+  .valentine-final-cta__headline em {
+    font-style: italic;
+    color: #BE123C;
+  }
+  .valentine-final-cta__supporting {
+    color: #737373;
+    font-size: 1.125rem;
+    line-height: 1.6;
+    margin-bottom: 2.5rem;
+    max-width: 32rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .valentine-final-cta__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1rem 2.5rem;
+    background: #BE123C;
+    color: #fff;
+    font-weight: 500;
+    border-radius: 9999px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 16px rgba(190,18,60,0.2);
+  }
+  .valentine-final-cta__button:hover {
+    background: #9F1239;
+    box-shadow: 0 8px 24px rgba(190,18,60,0.3);
+    transform: scale(1.02);
+  }
+  .valentine-final-cta__button svg:last-child {
+    transition: transform 0.3s ease;
+  }
+  .valentine-final-cta__button:hover svg:last-child {
+    transform: translateX(4px);
+  }
+  /* Scroll reveal */
+  .valentine-final-cta__inner {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .valentine-final-cta__inner.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+{%- endstyle -%}
+
+<section class="valentine-final-cta" data-section-id="{{ section.id }}">
+  <!-- Decorative hearts -->
+  <svg class="valentine-final-cta__deco valentine-final-cta__deco--1" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+  <svg class="valentine-final-cta__deco valentine-final-cta__deco--2" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+  <svg class="valentine-final-cta__deco valentine-final-cta__deco--3" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+
+  <div class="valentine-final-cta__inner" data-scroll-reveal>
+    <svg class="valentine-final-cta__heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+
+    <h2 class="valentine-final-cta__headline">
+      {{ section.settings.headline | default: "Make this Valentine's" }}
+      <br><em>{{ section.settings.headline_accent | default: "unforgettable." }}</em>
+    </h2>
+
+    <p class="valentine-final-cta__supporting">
+      {{ section.settings.supporting | default: "Every piece comes gift-wrapped with love. Because she deserves to feel extraordinary." }}
+    </p>
+
+    <a href="{{ section.settings.cta_link }}" class="valentine-final-cta__button">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.45 4.46h4.69l-3.8 2.76L15.79 14.68 12 11.92l-3.79 2.76 1.45-4.46-3.8-2.76h4.69z"></path></svg>
+      <span>{{ section.settings.cta_label | default: "Shop Valentine's Special" }}</span>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
+    </a>
+  </div>
+</section>
+
+<script>
+  (function() {
+    const el = document.querySelector('[data-section-id="{{ section.id }}"] [data-scroll-reveal]');
+    if (!el) return;
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) { e.target.classList.add('is-visible'); obs.unobserve(e.target); }
+      });
+    }, { threshold: 0.2 });
+    obs.observe(el);
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Valentine Final CTA",
+  "tag": "section",
+  "class": "valentine-final-cta-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "headline",
+      "label": "Headline",
+      "default": "Make this Valentine's"
+    },
+    {
+      "type": "text",
+      "id": "headline_accent",
+      "label": "Headline Accent (Italic)",
+      "default": "unforgettable."
+    },
+    {
+      "type": "text",
+      "id": "supporting",
+      "label": "Supporting Text",
+      "default": "Every piece comes gift-wrapped with love. Because she deserves to feel extraordinary."
+    },
+    {
+      "type": "text",
+      "id": "cta_label",
+      "label": "CTA Label",
+      "default": "Shop Valentine's Special"
+    },
+    {
+      "type": "url",
+      "id": "cta_link",
+      "label": "CTA Link"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Valentine Final CTA",
+      "category": "Valentine's Special"
+    }
+  ]
+}
+{% endschema %}

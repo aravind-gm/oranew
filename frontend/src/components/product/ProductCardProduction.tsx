@@ -185,7 +185,7 @@ function ProductCard({
           productId: product.id,
           name: product.name,
           price: product.finalPrice,
-          image: primaryImage?.imageUrl || '/placeholder.png',
+          image: primaryImage?.imageUrl || '/oralogo.png',
           quantity: 1,
         });
 
@@ -193,7 +193,7 @@ function ProductCard({
         showNotification({
           productId: product.id,
           productName: product.name,
-          productImage: primaryImage?.imageUrl || '/placeholder.png',
+          productImage: primaryImage?.imageUrl || '/oralogo.png',
           productPrice: product.finalPrice,
           quantity: 1,
         });
@@ -236,7 +236,7 @@ function ProductCard({
           slug: product.slug,
           name: product.name,
           price: product.finalPrice,
-          image: primaryImage?.imageUrl || '/placeholder.png',
+          image: primaryImage?.imageUrl || '/oralogo.png',
         });
       }
 
@@ -317,28 +317,7 @@ function ProductCard({
               )}
 
               {/* Bestseller Badge */}
-              {product.isBestseller && !product.isNew && (
-                <motion.span
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1, duration: 0.3 }}
-                  className="px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] tracking-[0.1em] sm:tracking-[0.15em] uppercase font-medium bg-primary-500 text-white rounded-full shadow-sm opacity-90"
-                >
-                  Best
-                </motion.span>
-              )}
 
-              {/* Discount Badge */}
-              {hasDiscount && (
-                <motion.span
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2, duration: 0.3 }}
-                  className="px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] tracking-[0.08em] sm:tracking-[0.1em] uppercase font-medium bg-error text-white rounded-full shadow-sm"
-                >
-                  {Math.round(discountPercent)}%
-                </motion.span>
-              )}
             </div>
           )}
 
@@ -500,16 +479,11 @@ function ProductCard({
               {formatPrice(product.finalPrice)}
             </span>
 
-            {/* Original Price + Savings (if discount exists) */}
+            {/* Original Price (if discount exists) */}
             {hasDiscount && (
-              <>
-                <span className="text-xs sm:text-sm text-text-muted line-through">
-                  {formatPrice(product.price)}
-                </span>
-                <span className="text-[10px] sm:text-xs font-medium text-accent">
-                  {Math.round(discountPercent)}% off
-                </span>
-              </>
+              <span className="text-xs sm:text-sm text-text-muted line-through">
+                {formatPrice(product.price)}
+              </span>
             )}
           </div>
         </div>

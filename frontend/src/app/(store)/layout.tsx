@@ -1,5 +1,3 @@
-import Footer from '@/components/Footer';
-
 export default function StoreLayout({
   children,
 }: {
@@ -10,7 +8,6 @@ export default function StoreLayout({
       <main className="flex-1">
         {children}
       </main>
-      <Footer />
     </div>
   );
 }

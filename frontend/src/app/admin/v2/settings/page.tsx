@@ -121,6 +121,14 @@ export default function SettingsPage() {
       href: '/admin/v2/settings/security',
     },
     {
+      id: 'audit-log',
+      title: 'Audit Log',
+      description: 'Track all admin actions',
+      icon: Shield,
+      href: '/admin/v2/settings/audit-log',
+      badge: 'New',
+    },
+    {
       id: 'api',
       title: 'API & Integrations',
       description: 'API keys and third-party apps',

@@ -9,6 +9,7 @@ import {
     DollarSign,
     Home,
     Layers,
+    LayoutGrid,
     Package,
     RotateCcw,
     ShoppingCart,
@@ -254,6 +255,17 @@ export default function AdminPage() {
                 </div>
                 <p className="font-semibold">Store</p>
                 <p className="text-xs text-gray-400 mt-1">View storefront</p>
+              </Link>
+
+              <Link
+                href="/admin/shopall-cms"
+                className="bg-gray-800 p-5 rounded-xl border border-gray-700 hover:border-pink-500/50 hover:bg-gray-750 transition group"
+              >
+                <div className="w-10 h-10 bg-pink-500/20 rounded-lg flex items-center justify-center mb-3 group-hover:bg-pink-500/30 transition">
+                  <LayoutGrid size={20} className="text-pink-500" />
+                </div>
+                <p className="font-semibold">Shop All CMS</p>
+                <p className="text-xs text-gray-400 mt-1">Page sections</p>
               </Link>
             </div>
           </div>

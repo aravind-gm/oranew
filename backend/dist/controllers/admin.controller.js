@@ -1,6 +1,39 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getReturnStats = exports.updateReturnStatus = exports.getReturnById = exports.getReturns = exports.setPrimaryImage = exports.deleteProductImage = exports.addProductImages = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getOrdersReport = exports.getPaymentsReport = exports.getRevenueReport = exports.cleanupLocks = exports.bulkUpdateInventory = exports.updateInventory = exports.getInventory = exports.getAdminProducts = exports.getLowStockProducts = exports.getCustomers = exports.updateOrderStatus = exports.getOrderById = exports.getAllOrders = exports.getDashboardStats = void 0;
+exports.getAuditLogs = exports.deleteTaxConfig = exports.upsertTaxConfig = exports.getAdminTaxConfigs = exports.updateAdminShippingConfig = exports.getAdminShippingConfig = exports.bulkProductAction = exports.restoreProduct = exports.archiveProduct = exports.getReturnStats = exports.updateReturnStatus = exports.getReturnById = exports.getReturns = exports.setPrimaryImage = exports.deleteProductImage = exports.addProductImages = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getOrdersReport = exports.getPaymentsReport = exports.getRevenueReport = exports.cleanupLocks = exports.bulkUpdateInventory = exports.updateInventory = exports.getInventory = exports.getAdminProducts = exports.getLowStockProducts = exports.getCustomers = exports.updateOrderStatus = exports.getOrderById = exports.getAllOrders = exports.getDashboardStats = void 0;
 const database_1 = require("../config/database");
 const errorHandler_1 = require("../middleware/errorHandler");
 const email_service_1 = require("../services/email.service");
@@ -59,7 +92,8 @@ const getDashboardStats = async (req, res, next) => {
     try {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const [totalOrders, totalRevenue, totalCustomers, pendingOrders, todayOrders, todayRevenue, lowStockCount,] = await Promise.all([
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        const [totalOrders, totalRevenue, totalCustomers, pendingOrders, todayOrders, todayRevenue, lowStockCount, monthRevenue, topProducts, recentOrders,] = await Promise.all([
             database_1.prisma.order.count(),
             database_1.prisma.order.aggregate({
                 _sum: { totalAmount: true },
@@ -83,7 +117,40 @@ const getDashboardStats = async (req, res, next) => {
                     stockQuantity: { lte: 10 },
                 },
             }),
+            database_1.prisma.order.aggregate({
+                _sum: { totalAmount: true },
+                where: {
+                    createdAt: { gte: monthStart },
+                    paymentStatus: 'CONFIRMED',
+                },
+            }),
+            // Top 5 selling products (by quantity sold)
+            database_1.prisma.orderItem.groupBy({
+                by: ['productId', 'productName'],
+                _sum: { quantity: true, totalPrice: true },
+                orderBy: { _sum: { quantity: 'desc' } },
+                take: 5,
+            }),
+            // Recent 7 days revenue chart data
+            database_1.prisma.order.findMany({
+                where: {
+                    createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+                    paymentStatus: 'CONFIRMED',
+                },
+                select: { createdAt: true, totalAmount: true },
+                orderBy: { createdAt: 'asc' },
+            }),
         ]);
+        // Aggregate daily revenue for chart
+        const dailyRevenue = {};
+        recentOrders.forEach((order) => {
+            const dateKey = order.createdAt.toISOString().split('T')[0];
+            dailyRevenue[dateKey] = (dailyRevenue[dateKey] || 0) + Number(order.totalAmount);
+        });
+        const revenueChart = Object.entries(dailyRevenue).map(([date, revenue]) => ({
+            date,
+            revenue: Math.round(revenue),
+        }));
         res.json({
             success: true,
             data: {
@@ -94,6 +161,14 @@ const getDashboardStats = async (req, res, next) => {
                 todayOrders,
                 todayRevenue: todayRevenue._sum.totalAmount || 0,
                 lowStockCount,
+                monthRevenue: monthRevenue._sum.totalAmount || 0,
+                topProducts: topProducts.map((p) => ({
+                    productId: p.productId,
+                    name: p.productName,
+                    totalSold: p._sum.quantity || 0,
+                    totalRevenue: Number(p._sum.totalPrice) || 0,
+                })),
+                revenueChart,
             },
         });
     }
@@ -385,7 +460,7 @@ exports.getLowStockProducts = getLowStockProducts;
 // Get all products for admin (including inactive)
 const getAdminProducts = async (req, res, next) => {
     try {
-        const { page = '1', limit = '20', search, category, isActive, lowStock, outOfStock } = req.query;
+        const { page = '1', limit = '20', search, category, isActive, lowStock, outOfStock, archived } = req.query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
         // 📊 Log incoming request
         console.log('[Admin Controller] 🔍 getAdminProducts() called', {
@@ -397,9 +472,17 @@ const getAdminProducts = async (req, res, next) => {
             isActive: isActive || '(no filter - see all)',
             hasLowStock: lowStock === 'true',
             hasOutOfStock: outOfStock === 'true',
+            archived: archived || 'false',
             timestamp: new Date().toISOString(),
         });
         const where = {};
+        // Archive filter: by default exclude archived, show only archived if requested
+        if (archived === 'true') {
+            where.deletedAt = { not: null };
+        }
+        else {
+            where.deletedAt = null;
+        }
         if (search) {
             where.OR = [
                 { name: { contains: search, mode: 'insensitive' } },
@@ -1081,4 +1164,330 @@ const getReturnStats = async (req, res, next) => {
     }
 };
 exports.getReturnStats = getReturnStats;
+// ============================================
+// PRODUCT ARCHIVE / RESTORE
+// ============================================
+// @desc    Archive a product (soft delete)
+// @route   PUT /api/admin/products/:id/archive
+// @access  Private/Admin
+const archiveProduct = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const product = await database_1.prisma.product.findUnique({ where: { id } });
+        if (!product) {
+            return res.status(404).json({ success: false, message: 'Product not found' });
+        }
+        // Check for pending orders
+        const pendingOrders = await database_1.prisma.orderItem.count({
+            where: {
+                productId: id,
+                order: { status: { in: ['PENDING', 'CONFIRMED', 'PROCESSING'] } },
+            },
+        });
+        if (pendingOrders > 0) {
+            return res.status(400).json({
+                success: false,
+                message: `Cannot archive "${product.name}" — ${pendingOrders} pending order(s) exist.`,
+            });
+        }
+        await database_1.prisma.product.update({
+            where: { id },
+            data: { deletedAt: new Date(), isActive: false, bogoActive: false },
+        });
+        console.log('[Admin] 📦 Product archived:', { id, name: product.name });
+        res.json({ success: true, message: 'Product archived successfully' });
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.archiveProduct = archiveProduct;
+// @desc    Restore an archived product
+// @route   PUT /api/admin/products/:id/restore
+// @access  Private/Admin
+const restoreProduct = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const product = await database_1.prisma.product.findUnique({ where: { id } });
+        if (!product) {
+            return res.status(404).json({ success: false, message: 'Product not found' });
+        }
+        if (!product.deletedAt) {
+            return res.status(400).json({ success: false, message: 'Product is not archived' });
+        }
+        await database_1.prisma.product.update({
+            where: { id },
+            data: { deletedAt: null, isActive: false }, // Restore as draft, admin must manually activate
+        });
+        console.log('[Admin] ♻️ Product restored:', { id, name: product.name });
+        res.json({ success: true, message: 'Product restored as draft' });
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.restoreProduct = restoreProduct;
+// ============================================
+// BULK PRODUCT ACTIONS
+// ============================================
+// @desc    Bulk product actions (activate, deactivate, archive)
+// @route   POST /api/admin/products/bulk-action
+// @access  Private/Admin
+const bulkProductAction = async (req, res, next) => {
+    try {
+        const { action, productIds } = req.body;
+        if (!action || !productIds?.length) {
+            return res.status(400).json({
+                success: false,
+                message: 'action and productIds[] are required',
+            });
+        }
+        const validActions = ['activate', 'deactivate', 'archive', 'restore'];
+        if (!validActions.includes(action)) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid action. Must be one of: ${validActions.join(', ')}`,
+            });
+        }
+        let updateData = {};
+        switch (action) {
+            case 'activate':
+                updateData = { isActive: true };
+                break;
+            case 'deactivate':
+                updateData = { isActive: false };
+                break;
+            case 'archive':
+                updateData = { deletedAt: new Date(), isActive: false, bogoActive: false };
+                break;
+            case 'restore':
+                updateData = { deletedAt: null, isActive: false };
+                break;
+        }
+        // For archive, check pending orders first
+        if (action === 'archive') {
+            const pendingCount = await database_1.prisma.orderItem.count({
+                where: {
+                    productId: { in: productIds },
+                    order: { status: { in: ['PENDING', 'CONFIRMED', 'PROCESSING'] } },
+                },
+            });
+            if (pendingCount > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Cannot archive — ${pendingCount} pending order item(s) reference these products.`,
+                });
+            }
+        }
+        const result = await database_1.prisma.product.updateMany({
+            where: { id: { in: productIds } },
+            data: updateData,
+        });
+        console.log('[Admin] ⚡ Bulk product action:', {
+            action,
+            count: result.count,
+            productIds,
+        });
+        res.json({
+            success: true,
+            message: `${result.count} product(s) ${action}d successfully`,
+            data: { affected: result.count },
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.bulkProductAction = bulkProductAction;
+// ============================================
+// SHIPPING CONFIG ADMIN
+// ============================================
+// @desc    Get shipping config for admin
+// @route   GET /api/admin/settings/shipping
+// @access  Private/Admin
+const getAdminShippingConfig = async (_req, res, next) => {
+    try {
+        const config = await database_1.prisma.shippingConfig.findFirst({
+            where: { isActive: true },
+            orderBy: { createdAt: 'desc' },
+        });
+        res.json({
+            success: true,
+            data: config || { freeThreshold: 999, standardFee: 99, isActive: true },
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.getAdminShippingConfig = getAdminShippingConfig;
+// @desc    Update shipping config
+// @route   PUT /api/admin/settings/shipping
+// @access  Private/Admin
+const updateAdminShippingConfig = async (req, res, next) => {
+    try {
+        const { freeThreshold, standardFee } = req.body;
+        if (freeThreshold === undefined || standardFee === undefined) {
+            return res.status(400).json({
+                success: false,
+                message: 'freeThreshold and standardFee are required',
+            });
+        }
+        if (freeThreshold < 0 || standardFee < 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Values must be non-negative',
+            });
+        }
+        // Upsert: deactivate existing, create new active config
+        await database_1.prisma.shippingConfig.updateMany({
+            where: { isActive: true },
+            data: { isActive: false },
+        });
+        const config = await database_1.prisma.shippingConfig.create({
+            data: {
+                freeThreshold: parseFloat(freeThreshold),
+                standardFee: parseFloat(standardFee),
+                isActive: true,
+            },
+        });
+        // Invalidate shipping cache
+        const { invalidateShippingCache } = await Promise.resolve().then(() => __importStar(require('../utils/shipping')));
+        invalidateShippingCache();
+        console.log('[Admin] 🚚 Shipping config updated:', {
+            freeThreshold: config.freeThreshold,
+            standardFee: config.standardFee,
+        });
+        res.json({ success: true, data: config });
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.updateAdminShippingConfig = updateAdminShippingConfig;
+// ============================================
+// TAX CONFIG ADMIN
+// ============================================
+// @desc    Get all tax configs
+// @route   GET /api/admin/settings/taxes
+// @access  Private/Admin
+const getAdminTaxConfigs = async (_req, res, next) => {
+    try {
+        const configs = await database_1.prisma.taxConfig.findMany({
+            orderBy: { categorySlug: 'asc' },
+        });
+        res.json({ success: true, data: configs });
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.getAdminTaxConfigs = getAdminTaxConfigs;
+// @desc    Create or update a tax config entry
+// @route   PUT /api/admin/settings/taxes
+// @access  Private/Admin
+const upsertTaxConfig = async (req, res, next) => {
+    try {
+        const { categorySlug, gstRate, label, isActive } = req.body;
+        if (!categorySlug || gstRate === undefined) {
+            return res.status(400).json({
+                success: false,
+                message: 'categorySlug and gstRate are required',
+            });
+        }
+        if (gstRate < 0 || gstRate > 28) {
+            return res.status(400).json({
+                success: false,
+                message: 'GST rate must be between 0 and 28%',
+            });
+        }
+        const config = await database_1.prisma.taxConfig.upsert({
+            where: { categorySlug },
+            update: {
+                gstRate: parseFloat(gstRate),
+                label: label || 'GST',
+                isActive: isActive !== undefined ? isActive : true,
+            },
+            create: {
+                categorySlug,
+                gstRate: parseFloat(gstRate),
+                label: label || 'GST',
+                isActive: isActive !== undefined ? isActive : true,
+            },
+        });
+        // Invalidate tax cache
+        const { invalidateTaxCache } = await Promise.resolve().then(() => __importStar(require('../utils/tax')));
+        invalidateTaxCache();
+        console.log('[Admin] 🧾 Tax config upserted:', {
+            categorySlug,
+            gstRate: config.gstRate,
+        });
+        res.json({ success: true, data: config });
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.upsertTaxConfig = upsertTaxConfig;
+// @desc    Delete a tax config entry
+// @route   DELETE /api/admin/settings/taxes/:id
+// @access  Private/Admin
+const deleteTaxConfig = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        await database_1.prisma.taxConfig.delete({ where: { id } });
+        // Invalidate tax cache
+        const { invalidateTaxCache } = await Promise.resolve().then(() => __importStar(require('../utils/tax')));
+        invalidateTaxCache();
+        console.log('[Admin] 🗑️ Tax config deleted:', { id });
+        res.json({ success: true, message: 'Tax config deleted' });
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.deleteTaxConfig = deleteTaxConfig;
+// ============================================
+// AUDIT LOG
+// ============================================
+// @desc    Get admin audit logs
+// @route   GET /api/admin/audit-log
+// @access  Private/Admin
+const getAuditLogs = async (req, res, next) => {
+    try {
+        const { page = '1', limit = '50', action, entityType } = req.query;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const where = {};
+        if (action)
+            where.action = action;
+        if (entityType)
+            where.entityType = entityType;
+        const [logs, total] = await Promise.all([
+            database_1.prisma.adminAuditLog.findMany({
+                where,
+                include: { user: { select: { id: true, fullName: true, email: true, role: true } } },
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: parseInt(limit),
+            }),
+            database_1.prisma.adminAuditLog.count({ where }),
+        ]);
+        res.json({
+            success: true,
+            data: {
+                logs,
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    total,
+                    pages: Math.ceil(total / parseInt(limit)),
+                },
+            },
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.getAuditLogs = getAuditLogs;
 //# sourceMappingURL=admin.controller.js.map

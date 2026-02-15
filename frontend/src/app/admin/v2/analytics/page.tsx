@@ -211,12 +211,12 @@ export default function AnalyticsPage() {
   // Export handlers
   const handleExportCSV = () => {
     // TODO: Implement CSV export
-    console.log('Exporting CSV...');
+    // console.log('Exporting CSV...');
   };
 
   const handleExportPDF = () => {
     // TODO: Implement PDF export
-    console.log('Exporting PDF...');
+    // console.log('Exporting PDF...');
   };
 
   if (loading) {

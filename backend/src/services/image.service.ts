@@ -300,13 +300,7 @@ export async function stripMetadata(buffer: Buffer): Promise<Buffer> {
  * Get dominant color from image (for placeholder/loading)
  */
 export async function getDominantColor(buffer: Buffer): Promise<string> {
-  const { dominant } = await sharp(buffer)
-    .resize(1, 1)
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-
-  // This is a simplified version - for production, use a proper color extraction library
-  // Sharp's stats() can provide dominant color info
+  // Use sharp's stats() to get dominant color info
   const stats = await sharp(buffer).stats();
   const { r, g, b } = stats.dominant;
   

@@ -9,7 +9,7 @@ const faqs = [
     questions: [
       {
         q: 'How long does shipping take?',
-        a: 'We offer free shipping on orders above ₹5,000. Standard delivery takes 5-7 business days. Express shipping (2-3 days) is available at checkout.',
+        a: 'We offer free delivery on all orders across India. Standard delivery takes 3-7 business days depending on your location.',
       },
       {
         q: 'Do you ship internationally?',
@@ -26,7 +26,7 @@ const faqs = [
     questions: [
       {
         q: 'What is your return policy?',
-        a: 'We offer a 7-day return policy for all jewellery. Items must be unused and in original packaging. Custom orders cannot be returned.',
+        a: 'We offer a 5-day return policy from the date of delivery. Items must be unused and in original packaging. Custom orders cannot be returned.',
       },
       {
         q: 'How do I return an item?',
@@ -34,7 +34,7 @@ const faqs = [
       },
       {
         q: 'When will I receive my refund?',
-        a: 'Refunds are processed within 7-10 business days after we receive the returned item.',
+        a: 'Refunds are processed within 5-7 business days after we receive and inspect the returned item.',
       },
     ],
   },
@@ -42,8 +42,8 @@ const faqs = [
     category: 'Products & Care',
     questions: [
       {
-        q: 'Are your products made of real gold/silver?',
-        a: 'Yes, all our products are made from genuine materials. Each item comes with a certificate of authenticity.',
+        q: 'What materials do you use?',
+        a: 'We create contemporary fashion jewellery using high-quality materials including gold-plated, silver-finished, and carefully selected artificial stones.',
       },
       {
         q: 'How do I care for my jewellery?',
@@ -155,7 +155,7 @@ export default function FAQPage() {
             Our customer support team is here to help
           </p>
           <a
-            href="mailto:support@orajewellery.com"
+            href="mailto:admin@orashop.in"
             className="btn-primary inline-block"
           >
             Contact Support

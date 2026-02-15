@@ -61,6 +61,12 @@ router.put('/product-images/reorder', auth_1.protect, (0, auth_1.authorize)('ADM
 // BANNER ROUTES
 // ============================================
 /**
+ * Get all banners
+ * GET /api/r2/banners
+ * Query: { position?: string, page?: string }
+ */
+router.get('/banners', auth_1.protect, (0, auth_1.authorize)('ADMIN'), r2_upload_controller_1.getBanners);
+/**
  * Upload banner image
  * POST /api/r2/banners
  * Body: { page: string, title?: string, ctaText?: string, ctaLink?: string, generateMobile?: boolean }
@@ -78,6 +84,11 @@ router.put('/banners/:bannerId', auth_1.protect, (0, auth_1.authorize)('ADMIN'),
  * PATCH /api/r2/banners/:bannerId/toggle
  */
 router.patch('/banners/:bannerId/toggle', auth_1.protect, (0, auth_1.authorize)('ADMIN'), r2_upload_controller_1.toggleBannerVisibility);
+/**
+ * Delete banner
+ * DELETE /api/r2/banners/:bannerId
+ */
+router.delete('/banners/:bannerId', auth_1.protect, (0, auth_1.authorize)('ADMIN'), r2_upload_controller_1.deleteBanner);
 // ============================================
 // COLLECTION IMAGE ROUTES
 // ============================================

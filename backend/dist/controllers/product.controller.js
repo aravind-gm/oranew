@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.searchProducts = exports.getProductByIdPublic = exports.getProductBySlug = exports.getFeaturedProducts = exports.deleteProduct = exports.updateProduct = exports.getProductById = exports.getProducts = exports.createProduct = void 0;
+exports.searchProducts = exports.getRecommendedProducts = exports.getProductByIdPublic = exports.getProductBySlug = exports.getFeaturedProducts = exports.deleteProduct = exports.updateProduct = exports.getProductById = exports.getProducts = exports.createProduct = void 0;
 const database_1 = require("../config/database");
 const errorHandler_1 = require("../middleware/errorHandler");
 const helpers_1 = require("../utils/helpers");
@@ -71,7 +71,7 @@ const createProduct = async (req, res, next) => {
             userRole: req.user.role,
             userEmail: req.user.email,
         });
-        const { name, description, shortDescription, price, discountPercent, categoryId, material, careInstructions, weight, dimensions, stockQuantity, isFeatured, isActive, images, metaTitle, metaDescription, } = req.body;
+        const { name, description, shortDescription, price, discountPercent, categoryId, material, careInstructions, weight, dimensions, stockQuantity, isFeatured, isActive, images, metaTitle, metaDescription, collections, occasions, isFeaturedGift, } = req.body;
         // Validation
         const errors = [];
         if (!name || !name.trim()) {
@@ -104,6 +104,13 @@ const createProduct = async (req, res, next) => {
             throw new errorHandler_1.AppError(`Category with ID ${categoryId} not found`, 400);
         }
         const slug = (0, helpers_1.slugify)(name);
+        // Ensure slug uniqueness — append random suffix if collision
+        let finalSlug = slug;
+        const existingSlug = await database_1.prisma.product.findUnique({ where: { slug: finalSlug } });
+        if (existingSlug) {
+            const suffix = Math.random().toString(36).substring(2, 7);
+            finalSlug = `${slug}-${suffix}`;
+        }
         const finalPrice = (0, helpers_1.calculateFinalPrice)(parseFloat(price), parseFloat(discountPercent || 0));
         console.log('[Product Controller] ✅ Validation passed, creating product...', {
             productName: name,
@@ -117,7 +124,7 @@ const createProduct = async (req, res, next) => {
             const createdProduct = await tx.product.create({
                 data: {
                     name,
-                    slug,
+                    slug: finalSlug,
                     description,
                     shortDescription,
                     price: parseFloat(price),
@@ -134,6 +141,9 @@ const createProduct = async (req, res, next) => {
                     isActive: isActive !== false,
                     metaTitle,
                     metaDescription,
+                    collections: collections || [],
+                    occasions: occasions || [],
+                    isFeaturedGift: isFeaturedGift || false,
                 },
             });
             // Create images if provided
@@ -174,7 +184,13 @@ exports.createProduct = createProduct;
 // @access  Public
 const getProducts = async (req, res, next) => {
     try {
-        const { category, page = '1', limit = '16', maxPrice, sortBy } = req.query;
+        const { category, page = '1', limit = '16', maxPrice, minPrice, sortBy, sort, // Add support for 'sort' parameter
+        isNew, // Add support for 'isNew' parameter
+        collection, // Gift collection filter
+        occasion, // Occasion filter
+        featuredGifts, // Featured gifts only
+        // NEW: Tumbler & Offer filters
+        hasDiscount, isOnOffer, offerType, minDiscount, material, capacity, inStock, isBestseller, isTumbler, search, } = req.query;
         // 📊 Log incoming request
         console.log('[Product Controller] 📊 getProducts() called', {
             category,
@@ -182,6 +198,11 @@ const getProducts = async (req, res, next) => {
             limit,
             maxPrice,
             sortBy,
+            sort,
+            isNew,
+            collection,
+            occasion,
+            featuredGifts,
             timestamp: new Date().toISOString(),
         });
         let categoryId = undefined;
@@ -209,13 +230,22 @@ const getProducts = async (req, res, next) => {
         }
         // 📊 Parse optional filters
         const parsedMaxPrice = maxPrice ? parseFloat(maxPrice) : undefined;
-        const parsedSortBy = sortBy ? sortBy : 'createdAt';
+        // Handle both 'sortBy' and 'sort' parameters
+        let sortParam = sortBy || sort;
+        const parsedSortBy = sortParam ? sortParam : 'createdAt';
         // 🔍 Validate sortBy to prevent injection and support valid sorts
-        const allowedSortFields = ['createdAt', 'finalPrice', '-finalPrice', 'averageRating', '-averageRating'];
+        // Support both with and without minus prefix
+        const allowedSortFields = [
+            'createdAt', '-createdAt',
+            'finalPrice', '-finalPrice',
+            'averageRating', '-averageRating',
+            'name', '-name'
+        ];
         const validSortBy = allowedSortFields.includes(parsedSortBy) ? parsedSortBy : 'createdAt';
         // 🔒 BUILD WHERE CLAUSE — MANDATORY isActive=true FOR STOREFRONT
         const whereClause = {
             isActive: true, // ← THIS IS MANDATORY. Products invisible without this.
+            deletedAt: null, // Exclude soft-deleted products
         };
         if (categoryId) {
             whereClause.categoryId = categoryId;
@@ -226,19 +256,137 @@ const getProducts = async (req, res, next) => {
                 lte: parsedMaxPrice,
             };
         }
+        // 🆕 Handle 'isNew' filter - products created in the last 30 days
+        if (isNew && (isNew === 'true' || isNew === '1')) {
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            whereClause.createdAt = {
+                gte: thirtyDaysAgo,
+            };
+            console.log('[Product Controller] 🆕 Filtering for new products', {
+                since: thirtyDaysAgo.toISOString(),
+            });
+        }
+        // 🎁 Handle 'collection' filter - products in specific gift collection
+        if (collection && typeof collection === 'string') {
+            whereClause.collections = {
+                has: collection,
+            };
+            console.log('[Product Controller] 🎁 Filtering by collection', { collection });
+        }
+        // 🎉 Handle 'occasion' filter - products for specific occasions
+        if (occasion && typeof occasion === 'string') {
+            // Support comma-separated occasions: "birthday,anniversary"
+            const occasionList = occasion.split(',').map(o => o.trim());
+            whereClause.occasions = {
+                hasSome: occasionList,
+            };
+            console.log('[Product Controller] 🎉 Filtering by occasions', { occasionList });
+        }
+        // ⭐ Handle 'featuredGifts' filter - featured gifts only
+        if (featuredGifts && (featuredGifts === 'true' || featuredGifts === '1')) {
+            whereClause.isFeaturedGift = true;
+            console.log('[Product Controller] ⭐ Filtering featured gifts only');
+        }
+        // 🥤 Handle minPrice filter
+        if (minPrice && !isNaN(parseFloat(minPrice))) {
+            const parsedMinPrice = parseFloat(minPrice);
+            if (parsedMinPrice > 0) {
+                whereClause.finalPrice = {
+                    ...whereClause.finalPrice,
+                    gte: parsedMinPrice,
+                };
+            }
+        }
+        // 🏷 Handle 'hasDiscount' filter - products with any discount > 0
+        if (hasDiscount && (hasDiscount === 'true' || hasDiscount === '1')) {
+            whereClause.discountPercent = { gt: 0 };
+        }
+        // 🏷 Handle 'isOnOffer' filter
+        if (isOnOffer && (isOnOffer === 'true' || isOnOffer === '1')) {
+            whereClause.OR = [
+                { isOnOffer: true },
+                { discountPercent: { gt: 0 } },
+            ];
+        }
+        // 🏷 Handle 'offerType' filter
+        if (offerType && typeof offerType === 'string') {
+            whereClause.offerType = offerType;
+        }
+        // 🏷 Handle 'minDiscount' filter (clearance = 30%+)
+        if (minDiscount && !isNaN(parseFloat(minDiscount))) {
+            whereClause.discountPercent = {
+                ...whereClause.discountPercent,
+                gte: parseFloat(minDiscount),
+            };
+        }
+        // 🥤 Handle 'material' filter
+        if (material && typeof material === 'string') {
+            whereClause.material = {
+                contains: material,
+                mode: 'insensitive',
+            };
+        }
+        // 🥤 Handle 'capacity' filter
+        if (capacity && typeof capacity === 'string') {
+            whereClause.capacity = {
+                contains: capacity,
+                mode: 'insensitive',
+            };
+        }
+        // 🥤 Handle 'inStock' filter
+        if (inStock && (inStock === 'true' || inStock === '1')) {
+            whereClause.stockQuantity = { gt: 0 };
+        }
+        // 🥤 Handle 'isBestseller' filter
+        if (isBestseller && (isBestseller === 'true' || isBestseller === '1')) {
+            whereClause.isBestseller = true;
+        }
+        // 🥤 Handle 'isTumbler' filter
+        if (isTumbler && (isTumbler === 'true' || isTumbler === '1')) {
+            whereClause.isTumbler = true;
+        }
+        // 🔍 Handle 'search' filter
+        if (search && typeof search === 'string' && search.trim()) {
+            whereClause.OR = [
+                ...(whereClause.OR || []),
+                { name: { contains: search.trim(), mode: 'insensitive' } },
+                { description: { contains: search.trim(), mode: 'insensitive' } },
+                { shortDescription: { contains: search.trim(), mode: 'insensitive' } },
+            ];
+        }
         // 📊 Build sort order from parameter
         let orderByClause = { createdAt: 'desc' };
-        if (validSortBy === 'finalPrice') {
-            orderByClause = { finalPrice: 'asc' };
+        // Handle minus prefix for descending sort
+        if (validSortBy.startsWith('-')) {
+            const field = validSortBy.substring(1); // Remove minus prefix
+            if (field === 'finalPrice') {
+                orderByClause = { finalPrice: 'desc' };
+            }
+            else if (field === 'averageRating') {
+                orderByClause = { averageRating: 'desc' };
+            }
+            else if (field === 'createdAt') {
+                orderByClause = { createdAt: 'desc' };
+            }
+            else if (field === 'name') {
+                orderByClause = { name: 'desc' };
+            }
         }
-        else if (validSortBy === '-finalPrice') {
-            orderByClause = { finalPrice: 'desc' };
-        }
-        else if (validSortBy === 'averageRating') {
-            orderByClause = { averageRating: 'desc' };
-        }
-        else if (validSortBy === '-averageRating') {
-            orderByClause = { averageRating: 'asc' };
+        else {
+            // Handle ascending sort (no minus prefix)
+            if (validSortBy === 'finalPrice') {
+                orderByClause = { finalPrice: 'asc' };
+            }
+            else if (validSortBy === 'averageRating') {
+                orderByClause = { averageRating: 'asc' };
+            }
+            else if (validSortBy === 'createdAt') {
+                orderByClause = { createdAt: 'asc' };
+            }
+            else if (validSortBy === 'name') {
+                orderByClause = { name: 'asc' };
+            }
         }
         // 🔍 Execute query with filters
         const [products, total] = await Promise.all([
@@ -264,6 +412,7 @@ const getProducts = async (req, res, next) => {
                 hasPriceFilter: parsedMaxPrice !== undefined,
                 maxPrice: parsedMaxPrice,
                 sortBy: validSortBy,
+                isNew: !!isNew,
                 isActiveFilter: 'MANDATORY ✅',
             },
         });
@@ -327,7 +476,18 @@ const updateProduct = async (req, res, next) => {
         const updateData = { ...otherData };
         if (name) {
             updateData.name = name;
-            updateData.slug = (0, helpers_1.slugify)(name);
+            const newSlug = (0, helpers_1.slugify)(name);
+            // Ensure slug uniqueness on rename
+            const existingSlug = await database_1.prisma.product.findFirst({
+                where: { slug: newSlug, id: { not: id } },
+            });
+            if (existingSlug) {
+                const suffix = Math.random().toString(36).substring(2, 7);
+                updateData.slug = `${newSlug}-${suffix}`;
+            }
+            else {
+                updateData.slug = newSlug;
+            }
         }
         if (price) {
             updateData.price = parseFloat(price);
@@ -369,7 +529,7 @@ const updateProduct = async (req, res, next) => {
     }
 };
 exports.updateProduct = updateProduct;
-// @desc    Delete product (Admin)
+// @desc    Delete product (Admin) — SOFT DELETE
 // @route   DELETE /api/admin/products/:id
 // @access  Private/Admin
 const deleteProduct = async (req, res, next) => {
@@ -382,30 +542,33 @@ const deleteProduct = async (req, res, next) => {
         if (!product) {
             throw new errorHandler_1.AppError('Product not found', 404);
         }
-        // Delete product with all related records in transaction
-        await database_1.prisma.$transaction(async (tx) => {
-            // Delete images first
-            if (product.images && product.images.length > 0) {
-                await tx.productImage.deleteMany({ where: { productId: id } });
-            }
-            // Then delete product (cascade will handle reviews, wishlist items, etc.)
-            await tx.product.delete({ where: { id } });
+        // Check for pending orders before soft-deleting
+        const pendingOrders = await database_1.prisma.orderItem.count({
+            where: {
+                productId: id,
+                order: {
+                    status: { in: ['PENDING', 'CONFIRMED', 'PROCESSING'] },
+                },
+            },
         });
-        console.log('[Product Controller] ✅ Product deleted successfully:', {
-            productId: id,
-            productName: product.name,
-            imagesCount: product.images?.length || 0,
+        if (pendingOrders > 0) {
+            throw new errorHandler_1.AppError(`Cannot delete product "${product.name}" — it has ${pendingOrders} pending order(s). Cancel or complete them first.`, 400);
+        }
+        // Soft delete: set deletedAt + deactivate
+        await database_1.prisma.product.update({
+            where: { id },
+            data: {
+                deletedAt: new Date(),
+                isActive: false,
+                bogoActive: false,
+            },
         });
         res.json({
             success: true,
-            message: 'Product deleted successfully',
+            message: 'Product deleted successfully (soft delete)',
         });
     }
     catch (error) {
-        console.error('[Product Controller] ❌ Delete failed:', {
-            productId: req.params.id,
-            error: error instanceof Error ? error.message : String(error),
-        });
         next(error);
     }
 };
@@ -420,6 +583,7 @@ const getFeaturedProducts = async (req, res, next) => {
             where: {
                 isFeatured: true,
                 isActive: true,
+                deletedAt: null,
             },
             include: { images: true, category: true },
             take: parseInt(limit),
@@ -447,6 +611,7 @@ const getProductBySlug = async (req, res, next) => {
             where: {
                 slug,
                 isActive: true,
+                deletedAt: null,
             },
             include: { images: true, category: true },
         });
@@ -490,9 +655,76 @@ const getProductByIdPublic = async (req, res, next) => {
     }
 };
 exports.getProductByIdPublic = getProductByIdPublic;
-// @desc    Search products (Public)
-// @route   GET /api/products/search
+// @desc    Get recommended products for cross-sell
+// @route   GET /api/products/recommended
 // @access  Public
+const getRecommendedProducts = async (req, res, next) => {
+    try {
+        const { productId, limit = '6' } = req.query;
+        let excludeIds = [];
+        let categoryId;
+        // If productId provided, find similar products
+        if (productId && typeof productId === 'string') {
+            const sourceProduct = await database_1.prisma.product.findUnique({
+                where: { id: productId },
+                select: { id: true, categoryId: true },
+            });
+            if (sourceProduct) {
+                excludeIds = [sourceProduct.id];
+                categoryId = sourceProduct.categoryId;
+            }
+        }
+        const whereClause = {
+            isActive: true,
+            stockQuantity: { gt: 0 },
+            id: { notIn: excludeIds },
+            images: { some: {} }, // Must have at least one image
+        };
+        // Prioritize same category
+        if (categoryId) {
+            whereClause.categoryId = categoryId;
+        }
+        let products = await database_1.prisma.product.findMany({
+            where: whereClause,
+            orderBy: [{ isFeatured: 'desc' }, { averageRating: 'desc' }],
+            take: Number(limit),
+            include: {
+                category: true,
+                images: { where: { isPrimary: true }, take: 1 },
+            },
+        });
+        // If not enough same-category products, fill with popular ones
+        if (products.length < Number(limit)) {
+            const remaining = Number(limit) - products.length;
+            const existingIds = [...excludeIds, ...products.map((p) => p.id)];
+            const moreProducts = await database_1.prisma.product.findMany({
+                where: {
+                    isActive: true,
+                    stockQuantity: { gt: 0 },
+                    id: { notIn: existingIds },
+                    images: { some: {} },
+                },
+                orderBy: [{ averageRating: 'desc' }, { reviewCount: 'desc' }],
+                take: remaining,
+                include: {
+                    category: true,
+                    images: { where: { isPrimary: true }, take: 1 },
+                },
+            });
+            products = [...products, ...moreProducts];
+        }
+        const productsWithUrls = await Promise.all(products.map((product) => transformProductImages(product, true)));
+        res.json({
+            success: true,
+            data: productsWithUrls,
+        });
+    }
+    catch (error) {
+        console.error('[Product] Error fetching recommendations:', error);
+        res.status(500).json({ message: 'Failed to fetch recommendations' });
+    }
+};
+exports.getRecommendedProducts = getRecommendedProducts;
 const searchProducts = async (req, res, next) => {
     try {
         const { q, categoryId, minPrice, maxPrice, limit = '12', page = '1' } = req.query;

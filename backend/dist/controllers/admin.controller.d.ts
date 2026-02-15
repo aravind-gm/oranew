@@ -24,4 +24,13 @@ export declare const getReturns: (req: AuthRequest, res: Response, next: NextFun
 export declare const getReturnById: (req: AuthRequest, res: Response, next: NextFunction) => Promise<void>;
 export declare const updateReturnStatus: (req: AuthRequest, res: Response, next: NextFunction) => Promise<void>;
 export declare const getReturnStats: (req: AuthRequest, res: Response, next: NextFunction) => Promise<void>;
+export declare const archiveProduct: (req: AuthRequest, res: Response, next: NextFunction) => Promise<Response<any, Record<string, any>>>;
+export declare const restoreProduct: (req: AuthRequest, res: Response, next: NextFunction) => Promise<Response<any, Record<string, any>>>;
+export declare const bulkProductAction: (req: AuthRequest, res: Response, next: NextFunction) => Promise<Response<any, Record<string, any>>>;
+export declare const getAdminShippingConfig: (_req: AuthRequest, res: Response, next: NextFunction) => Promise<void>;
+export declare const updateAdminShippingConfig: (req: AuthRequest, res: Response, next: NextFunction) => Promise<Response<any, Record<string, any>>>;
+export declare const getAdminTaxConfigs: (_req: AuthRequest, res: Response, next: NextFunction) => Promise<void>;
+export declare const upsertTaxConfig: (req: AuthRequest, res: Response, next: NextFunction) => Promise<Response<any, Record<string, any>>>;
+export declare const deleteTaxConfig: (req: AuthRequest, res: Response, next: NextFunction) => Promise<void>;
+export declare const getAuditLogs: (req: AuthRequest, res: Response, next: NextFunction) => Promise<void>;
 //# sourceMappingURL=admin.controller.d.ts.map

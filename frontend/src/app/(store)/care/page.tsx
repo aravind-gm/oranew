@@ -175,10 +175,10 @@ export default function CarePage() {
               Our jewellery care specialists are here to help you maintain your precious pieces.
             </p>
             <div className="space-y-2 mb-6">
-              <p><strong>Email:</strong> care@orajewellery.com</p>
-              <p><strong>Phone:</strong> +91-XXXX-XXXXXX</p>
+              <p><strong>Email:</strong> admin@orashop.in</p>
+              <p><strong>Phone:</strong> 9842253984, 9095007887, 9342865987</p>
             </div>
-            <a href="mailto:care@orajewellery.com" className="btn-primary inline-block">
+            <a href="mailto:admin@orashop.in" className="btn-primary inline-block">
               Contact Care Team
             </a>
           </section>

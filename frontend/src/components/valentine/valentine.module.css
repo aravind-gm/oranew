@@ -1,0 +1,500 @@
+/* ============================================================================
+   ORA Valentine's Special — Animation & Design Module
+   Brand: Blush pink, nude, champagne, soft rose
+   Motion: Slow, elegant, subtle
+   Accessibility: prefers-reduced-motion respected throughout
+   ============================================================================ */
+
+/* ─── KEYFRAMES ─── */
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes slowZoom {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.08); }
+}
+
+@keyframes floatHeart {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-12px) rotate(2deg); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.15); }
+  50% { box-shadow: 0 0 30px 10px rgba(244, 63, 94, 0.08); }
+}
+
+@keyframes marqueeScroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes fadeInScale {
+  0% { opacity: 0; transform: scale(0.92); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes softBreathe {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes slideUpReveal {
+  0% { opacity: 0; transform: translateY(40px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes horizontalLoop {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ─── REDUCED MOTION: handled per-component via useReducedMotion() ─── */
+
+/* ─── HERO ─── */
+
+.heroSection {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+.heroVideo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: slowZoom 20s ease-in-out infinite alternate;
+}
+
+.heroOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(26, 26, 26, 0.75) 0%,
+    rgba(26, 26, 26, 0.35) 40%,
+    rgba(190, 18, 60, 0.08) 100%
+  );
+}
+
+.heroOverlayBottom {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(26, 26, 26, 0.6) 0%,
+    transparent 40%
+  );
+}
+
+.heroShimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.03) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 6s ease-in-out infinite;
+}
+
+/* ─── MEDIA LOOP ─── */
+
+.mediaTrack {
+  display: flex;
+  gap: 1rem;
+  animation: horizontalLoop 40s linear infinite;
+  width: max-content;
+}
+
+.mediaTrack:hover {
+  animation-play-state: paused;
+}
+
+.mediaCard {
+  flex-shrink: 0;
+  width: 280px;
+  height: 380px;
+  border-radius: 1rem;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mediaCard:hover {
+  transform: scale(1.03);
+}
+
+@media (min-width: 640px) {
+  .mediaCard {
+    width: 320px;
+    height: 420px;
+  }
+}
+
+.mediaOverlayText {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 2rem;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.25);
+  pointer-events: none;
+  text-align: center;
+  letter-spacing: 0.05em;
+  z-index: 2;
+}
+
+/* ─── HEART CARDS ─── */
+
+.heartCard {
+  position: relative;
+  border-radius: 1.5rem;
+  overflow: hidden;
+  padding: 2.5rem 2rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  border: 1px solid transparent;
+}
+
+.heartCard::before {
+  content: '';
+  position: absolute;
+  top: -20%;
+  right: -10%;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  opacity: 0.06;
+  transition: opacity 0.4s ease;
+}
+
+.heartCard:hover::before {
+  opacity: 0.12;
+}
+
+.heartCard:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 50px rgba(244, 63, 94, 0.1);
+}
+
+.heartCardTier1 {
+  background: linear-gradient(145deg, #fff5f7, #fce7f3);
+}
+.heartCardTier1::before {
+  background: #f43f5e;
+}
+
+.heartCardTier2 {
+  background: linear-gradient(145deg, #fdf2f8, #fce4ec);
+}
+.heartCardTier2::before {
+  background: #e11d48;
+}
+
+.heartCardTier3 {
+  background: linear-gradient(145deg, #fff1f2, #ffe4e6);
+}
+.heartCardTier3::before {
+  background: #be123c;
+}
+
+/* ─── INFINITE SCROLL ─── */
+
+.infiniteTrack {
+  display: flex;
+  gap: 1.25rem;
+  animation: marqueeScroll 60s linear infinite;
+  width: max-content;
+}
+
+.infiniteTrack:hover {
+  animation-play-state: paused;
+}
+
+/* ─── TUMBLER TIER CARDS ─── */
+
+.tumblerTierCard {
+  position: relative;
+  border-radius: 1.25rem;
+  overflow: hidden;
+  transition: all 0.4s ease;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.tumblerTierCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+}
+
+/* ─── COMBO CARDS ─── */
+
+.comboCard {
+  border-radius: 1.25rem;
+  overflow: hidden;
+  transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  background: white;
+}
+
+.comboCard:hover {
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.1);
+  transform: translateY(-4px);
+}
+
+.comboBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.comboBadgeBestseller {
+  background: rgba(190, 18, 60, 0.9);
+  color: white;
+}
+
+.comboBadgeLimited {
+  background: rgba(212, 175, 55, 0.9);
+  color: white;
+}
+
+/* ─── TRUST STRIP ─── */
+
+.trustIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, #fff5f7, #fce7f3);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.trustIcon:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 16px rgba(244, 63, 94, 0.12);
+}
+
+/* ─── SCROLLBAR HIDE ─── */
+
+.scrollbarHide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbarHide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ─── FLOATING HEARTS (DECORATIVE) ─── */
+
+.floatingHeart {
+  position: absolute;
+  animation: floatHeart 4s ease-in-out infinite;
+  opacity: 0.06;
+  pointer-events: none;
+}
+
+/* ─── GLASS EFFECT ─── */
+
+.glassCard {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* ─── COMING SOON STATE ─── */
+
+.comingSoon {
+  position: relative;
+  overflow: hidden;
+}
+
+.comingSoon::after {
+  content: 'Coming Soon';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.25rem;
+  font-style: italic;
+  color: #be123c;
+  letter-spacing: 0.1em;
+}
+
+/* ─── EMAIL CAPTURE ─── */
+
+.emailInput {
+  border: 1px solid #e5e7eb;
+  border-radius: 9999px;
+  padding: 0.875rem 1.5rem;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  width: 100%;
+  background: white;
+}
+
+.emailInput:focus {
+  border-color: #f43f5e;
+  box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.08);
+}
+
+.emailInput::placeholder {
+  color: #9ca3af;
+}
+
+/* ─── GIFT READY COMBO BADGE ─── */
+
+.comboBadgeGiftReady {
+  background: rgba(16, 185, 129, 0.9);
+  color: white;
+}
+
+/* ─── EDITORIAL CARD (FeaturedPicks) ─── */
+
+.editorialCard {
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.editorialCard:hover {
+  transform: translateY(-4px);
+}
+
+/* ─── MOOD CARD (GiftByMood) ─── */
+
+.moodCard {
+  border-radius: 1.5rem;
+  padding: 2.5rem 2rem;
+  text-align: left;
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+}
+
+.moodCard:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.06);
+  border-color: rgba(244, 63, 94, 0.1);
+}
+
+/* ─── REEL CARD (VideoReelStrip) ─── */
+
+.reelCard {
+  position: relative;
+  width: 160px;
+  height: 285px;
+  border-radius: 1rem;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.5s ease;
+}
+
+.reelCard:hover {
+  transform: scale(1.03);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+}
+
+@media (min-width: 640px) {
+  .reelCard {
+    width: 200px;
+    height: 355px;
+  }
+}
+
+/* ─── TUMBLER CARD (ValentineTumblers — real cards) ─── */
+
+.tumblerCard {
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tumblerCard:hover {
+  transform: translateY(-4px);
+}
+
+/* ─── REEL TRACK — Infinite auto-loop ─── */
+
+.reelTrackWrapper {
+  overflow: hidden;
+  width: 100%;
+}
+
+.reelTrack {
+  display: flex;
+  gap: 1rem;
+  width: max-content;
+  animation: reelScroll 45s linear infinite;
+}
+
+.reelTrack:hover {
+  animation-play-state: paused;
+}
+
+@keyframes reelScroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-33.333%); }
+}
+
+/* ─── RESPONSIVE POLISH ─── */
+
+@media (max-width: 640px) {
+  .mediaCard {
+    width: 240px;
+    height: 320px;
+  }
+
+  .heartCard {
+    padding: 1.75rem 1.5rem;
+  }
+
+  .mediaOverlayText {
+    font-size: 1.5rem;
+  }
+
+  .heroSection {
+    min-height: 100svh;
+  }
+}
+
+@media (max-width: 480px) {
+  .heartCard {
+    padding: 1.5rem 1.25rem;
+  }
+
+  .mediaCard {
+    width: 200px;
+    height: 280px;
+  }
+}

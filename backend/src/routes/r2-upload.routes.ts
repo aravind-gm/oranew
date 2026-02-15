@@ -22,6 +22,8 @@ import {
   uploadCollection,
   uploadImages,
   uploadProductImages,
+  getBanners,
+  deleteBanner,
 } from '../controllers/r2-upload.controller';
 
 const router = Router();
@@ -93,6 +95,18 @@ router.put(
 // ============================================
 
 /**
+ * Get all banners
+ * GET /api/r2/banners
+ * Query: { position?: string, page?: string }
+ */
+router.get(
+  '/banners',
+  protect,
+  authorize('ADMIN'),
+  getBanners
+);
+
+/**
  * Upload banner image
  * POST /api/r2/banners
  * Body: { page: string, title?: string, ctaText?: string, ctaLink?: string, generateMobile?: boolean }
@@ -128,6 +142,17 @@ router.patch(
   protect,
   authorize('ADMIN'),
   toggleBannerVisibility
+);
+
+/**
+ * Delete banner
+ * DELETE /api/r2/banners/:bannerId
+ */
+router.delete(
+  '/banners/:bannerId',
+  protect,
+  authorize('ADMIN'),
+  deleteBanner
 );
 
 // ============================================

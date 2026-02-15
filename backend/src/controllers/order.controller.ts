@@ -4,8 +4,10 @@ import { prisma } from '../config/database';
 import { withRetry } from '../utils/retry';
 import { AuthRequest } from '../middleware/auth';
 import { sendOrderPlacedEmail } from '../services/email.service';
-import { AppError, asyncHandler, calculateGST, generateOrderNumber } from '../utils/helpers';
+import { AppError, asyncHandler, generateOrderNumber } from '../utils/helpers';
 import { lockInventory, releaseInventoryLocks, restockInventory } from '../utils/inventory';
+import { calculateShippingFee } from '../utils/shipping';
+import { getGSTRate, calculateGSTAmount } from '../utils/tax';
 
 interface ShippingAddressInput {
   street: string;
@@ -96,6 +98,16 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
       console.error('[Checkout] Some products not found:', { missingIds });
     }
 
+    // Validate quantities (SECURITY: prevent negative/zero/excessive quantities)
+    for (const item of itemsInput) {
+      if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
+        throw new AppError('Invalid quantity: must be a positive integer', 400);
+      }
+      if (item.quantity > 20) {
+        throw new AppError('Quantity exceeds maximum limit of 20 per item', 400);
+      }
+    }
+
     cartItems = itemsInput.map(item => {
       const product = products.find(p => p.id === item.productId);
       if (!product) {
@@ -151,17 +163,108 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
     throw new AppError('Invalid addresses', 400);
   }
 
-  // Calculate totals
+  // ====== CART RE-VALIDATION (Step 6) ======
+  // Re-fetch products from DB — do NOT trust client-side prices
+  for (const item of cartItems) {
+    const freshProduct = await withRetry(() =>
+      prisma.product.findUnique({
+        where: { id: item.productId },
+        select: {
+          id: true, name: true, finalPrice: true, price: true,
+          stockQuantity: true, isActive: true, deletedAt: true,
+          isBOGOEligible: true, bogoActive: true, bogoPriceTier: true,
+          gstRate: true,
+          category: { select: { slug: true } },
+        },
+      })
+    ) as any;
+
+    if (!freshProduct || freshProduct.deletedAt || !freshProduct.isActive) {
+      throw new AppError(`Product "${item.product?.name || item.productId}" is no longer available`, 400);
+    }
+
+    if (freshProduct.stockQuantity < item.quantity) {
+      throw new AppError(
+        `Insufficient stock for "${freshProduct.name}". Available: ${freshProduct.stockQuantity}, Requested: ${item.quantity}`,
+        400
+      );
+    }
+
+    // Override with fresh DB price (never trust localStorage)
+    item.product.finalPrice = freshProduct.finalPrice;
+    item.product.price = freshProduct.price;
+    item.product.name = freshProduct.name;
+    (item as any)._gstRate = Number(freshProduct.gstRate) || 0;
+    (item as any)._categorySlug = freshProduct.category?.slug || null;
+    (item as any)._isBOGOEligible = freshProduct.isBOGOEligible;
+    (item as any)._bogoActive = freshProduct.bogoActive;
+    (item as any)._bogoPriceTier = freshProduct.bogoPriceTier;
+  }
+
+  // Calculate subtotal from re-validated DB prices
   let subtotal = 0;
   for (const item of cartItems) {
     subtotal += Number(item.product.finalPrice) * item.quantity;
   }
 
-  // Apply coupon if provided
+  // ====== DISCOUNT LOGIC (Steps 3 & 4) ======
   let discountAmount = 0;
   let appliedCouponCode: string | null = null;
+  let bogoDiscountApplied = false;
 
+  // --- Check for BOGO discount ---
+  const bogoItems = cartItems.filter((item: any) => item._isBOGOEligible && item._bogoActive);
+  if (bogoItems.length >= 2) {
+    const activeBOGOCampaign = await prisma.bOGOCampaign.findFirst({
+      where: {
+        isActive: true,
+        OR: [{ endDate: null }, { endDate: { gte: new Date() } }],
+      },
+    });
+
+    if (activeBOGOCampaign) {
+      // Group by price tier
+      const tierGroups: Record<number, typeof bogoItems> = {};
+      for (const item of bogoItems) {
+        const tier = (item as any)._bogoPriceTier;
+        if (tier) {
+          if (!tierGroups[tier]) tierGroups[tier] = [];
+          tierGroups[tier].push(item);
+        }
+      }
+
+      // Apply BOGO per tier (pairs of 2)
+      for (const [, tierItems] of Object.entries(tierGroups)) {
+        if (tierItems.length >= 2) {
+          // Sort by price ascending — cheaper item gets the discount
+          const sorted = [...tierItems].sort(
+            (a, b) => Number(a.product.finalPrice) - Number(b.product.finalPrice)
+          );
+          const cheaperPrice = Number(sorted[0].product.finalPrice);
+
+          let bogoDiscount = 0;
+          if (activeBOGOCampaign.discountType === 'FREE_CHEAPER') {
+            bogoDiscount = cheaperPrice;
+          } else if (activeBOGOCampaign.discountType === 'PERCENT') {
+            bogoDiscount = Math.round(cheaperPrice * (Number(activeBOGOCampaign.discountValue) / 100));
+          } else if (activeBOGOCampaign.discountType === 'FIXED') {
+            bogoDiscount = Math.min(Number(activeBOGOCampaign.discountValue), cheaperPrice);
+          }
+
+          discountAmount += bogoDiscount;
+          bogoDiscountApplied = true;
+        }
+      }
+    }
+  }
+
+  // --- Apply coupon (with stacking protection) ---
   if (couponCode) {
+    // STACKING RULE: If BOGO is applied, reject coupon stacking
+    if (bogoDiscountApplied) {
+      throw new AppError('Cannot combine BOGO discount with a coupon code. Remove BOGO items or the coupon.', 400);
+    }
+
     try {
       const coupon = await withRetry(() =>
         prisma.coupon.findUnique({
@@ -170,7 +273,6 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
       ) as any;
 
       if (coupon) {
-        // Validate coupon
         const now = new Date();
         const isValid =
           (coupon as any).isActive &&
@@ -180,36 +282,53 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
           (!(coupon as any).minOrderAmount || subtotal >= (coupon as any).minOrderAmount.toNumber());
 
         if (isValid) {
-          // Calculate discount
           if ((coupon as any).discountType === 'PERCENTAGE') {
             discountAmount = (subtotal * (coupon as any).discountValue.toNumber()) / 100;
           } else {
             discountAmount = (coupon as any).discountValue.toNumber();
           }
 
-          // Apply max discount limit
           if ((coupon as any).maxDiscount && discountAmount > (coupon as any).maxDiscount.toNumber()) {
             discountAmount = (coupon as any).maxDiscount.toNumber();
           }
 
-          // Cannot exceed subtotal
           if (discountAmount > subtotal) {
             discountAmount = subtotal;
           }
 
           appliedCouponCode = (coupon as any).code;
-          console.log('[Checkout] ✓ Coupon applied:', { code: (coupon as any).code, discount: discountAmount });
         }
       }
     } catch (error) {
-      console.warn('[Checkout] Coupon validation failed:', error);
       // Continue without coupon if validation fails
     }
   }
 
-  const gstAmount = calculateGST(subtotal - discountAmount);
-  const shippingFee = subtotal - discountAmount >= 1000 ? 0 : 50;
-  const totalAmount = subtotal - discountAmount + gstAmount + shippingFee;
+  // ====== GST CALCULATION (Step 5 — per-item configurable GST) ======
+  let gstAmount = 0;
+  const itemGstRates: number[] = [];
+  for (const item of cartItems) {
+    const rate = await getGSTRate(
+      (item as any)._gstRate,
+      (item as any)._categorySlug
+    );
+    const itemTotal = Number(item.product.finalPrice) * item.quantity;
+    gstAmount += calculateGSTAmount(itemTotal, rate);
+    itemGstRates.push(rate);
+  }
+
+  // Adjust GST on discount (proportional reduction)
+  if (discountAmount > 0 && subtotal > 0) {
+    const discountRatio = discountAmount / subtotal;
+    gstAmount = gstAmount * (1 - discountRatio);
+    gstAmount = Math.round(gstAmount * 100) / 100;
+  }
+
+  // ====== SHIPPING (Step 1 — server-side source of truth) ======
+  const shippingFee = await calculateShippingFee(subtotal - discountAmount);
+
+  // ====== TOTAL WITH NEGATIVE PREVENTION (Step 4) ======
+  const totalAmount = Math.max(0, subtotal - discountAmount + gstAmount + shippingFee);
 
   // Create order
   const order = await withRetry(() =>
@@ -227,13 +346,13 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
         status: 'PENDING',
         paymentStatus: 'PENDING',
         items: {
-          create: cartItems.map((item) => ({
+          create: cartItems.map((item, index) => ({
             productId: item.productId,
             productName: item.product.name,
             productImage: item.product.images?.[0]?.imageUrl || null,
             quantity: item.quantity,
             unitPrice: item.product.finalPrice,
-            gstRate: new Decimal(3),
+            gstRate: new Decimal(itemGstRates[index] || 3),
             discount: new Decimal(0),
             totalPrice: new Decimal(Number(item.product.finalPrice) * item.quantity),
           })),

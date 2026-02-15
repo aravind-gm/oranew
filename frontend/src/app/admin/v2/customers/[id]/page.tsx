@@ -446,83 +446,34 @@ export default function CustomerDetailsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchCustomer = async () => {
+    const fetchCustomerData = async () => {
       setLoading(true);
       try {
-        // TODO: API call
-        await new Promise(resolve => setTimeout(resolve, 500));
+        const response = await fetch(`/api/admin/customers/${customerId}`);
+        if (!response.ok) throw new Error('Failed to fetch customer');
         
-        // Mock data
+        const data = await response.json();
+        const customerData = data.data || data;
+        
+        // Transform API response
         setCustomer({
-          id: customerId,
-          fullName: 'Priya Sharma',
-          email: 'priya@example.com',
-          phone: '+91 98765 43210',
-          gender: 'Female',
-          dateOfBirth: '1990-05-15',
-          isVerified: true,
-          totalOrders: 12,
-          totalSpent: 245000,
-          averageOrderValue: 20417,
-          wishlistCount: 8,
-          tags: ['VIP', 'Repeat Buyer'],
-          addresses: [
-            {
-              id: '1',
-              name: 'Home',
-              line1: '123 MG Road, Bandra West',
-              city: 'Mumbai',
-              state: 'Maharashtra',
-              pincode: '400050',
-              isDefault: true,
-            },
-            {
-              id: '2',
-              name: 'Office',
-              line1: 'Tower B, Oberoi Business Park',
-              line2: 'Goregaon East',
-              city: 'Mumbai',
-              state: 'Maharashtra',
-              pincode: '400063',
-              isDefault: false,
-            },
-          ],
-          orders: [
-            {
-              id: '1',
-              orderNumber: 'ORA-2024-00123',
-              date: new Date().toISOString(),
-              status: 'Delivered',
-              total: 35000,
-              items: 2,
-            },
-            {
-              id: '2',
-              orderNumber: 'ORA-2024-00098',
-              date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-              status: 'Delivered',
-              total: 45000,
-              items: 3,
-            },
-            {
-              id: '3',
-              orderNumber: 'ORA-2024-00067',
-              date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-              status: 'Delivered',
-              total: 28000,
-              items: 1,
-            },
-          ],
-          notes: [
-            {
-              id: '1',
-              content: 'Prefers gold jewelry over silver. Usually shops during festive seasons.',
-              author: 'Admin',
-              createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-            },
-          ],
-          lastOrderDate: new Date().toISOString(),
-          createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+          id: customerData.id || customerId,
+          fullName: customerData.fullName || customerData.name || '',
+          email: customerData.email || '',
+          phone: customerData.phone || '',
+          gender: customerData.gender || '',
+          dateOfBirth: customerData.dateOfBirth || '',
+          isVerified: customerData.isVerified || false,
+          totalOrders: customerData.totalOrders || 0,
+          totalSpent: customerData.totalSpent || 0,
+          averageOrderValue: customerData.averageOrderValue || (customerData.totalSpent && customerData.totalOrders ? Math.round(customerData.totalSpent / customerData.totalOrders) : 0),
+          wishlistCount: customerData.wishlistCount || 0,
+          tags: customerData.tags || [],
+          addresses: customerData.addresses || [],
+          orders: customerData.orders || [],
+          notes: customerData.notes || [],
+          lastOrderDate: customerData.lastOrderDate,
+          createdAt: customerData.createdAt,
         });
       } catch (error) {
         console.error('Error fetching customer:', error);
@@ -532,7 +483,7 @@ export default function CustomerDetailsPage() {
     };
 
     if (customerId) {
-      fetchCustomer();
+      fetchCustomerData();
     }
   }, [customerId]);
 

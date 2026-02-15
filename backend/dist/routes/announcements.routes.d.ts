@@ -1,0 +1,9 @@
+/**
+ * Announcements Routes
+ * CRUD operations for site-wide announcements
+ *
+ * @author ORA Engineering
+ */
+declare const router: import("express-serve-static-core").Router;
+export default router;
+//# sourceMappingURL=announcements.routes.d.ts.map

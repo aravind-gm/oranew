@@ -236,11 +236,11 @@ export default function OrderDetailsPage() {
             id: 'cust-1',
             name: 'Priya Sharma',
             email: 'priya@example.com',
-            phone: '+91 98765 43210',
+            phone: '9842253984',
           },
           shippingAddress: {
             fullName: 'Priya Sharma',
-            phone: '+91 98765 43210',
+            phone: '9842253984',
             addressLine1: '123, Rose Garden Apartments',
             addressLine2: 'MG Road, Indiranagar',
             city: 'Bangalore',
@@ -250,7 +250,7 @@ export default function OrderDetailsPage() {
           },
           billingAddress: {
             fullName: 'Priya Sharma',
-            phone: '+91 98765 43210',
+            phone: '9842253984',
             addressLine1: '123, Rose Garden Apartments',
             addressLine2: 'MG Road, Indiranagar',
             city: 'Bangalore',

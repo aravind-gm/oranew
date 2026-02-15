@@ -107,6 +107,9 @@ export const createProduct = async (
       images,
       metaTitle,
       metaDescription,
+      collections,
+      occasions,
+      isFeaturedGift,
     } = req.body;
 
     // Validation
@@ -151,6 +154,13 @@ export const createProduct = async (
     }
 
     const slug = slugify(name);
+    // Ensure slug uniqueness — append random suffix if collision
+    let finalSlug = slug;
+    const existingSlug = await prisma.product.findUnique({ where: { slug: finalSlug } });
+    if (existingSlug) {
+      const suffix = Math.random().toString(36).substring(2, 7);
+      finalSlug = `${slug}-${suffix}`;
+    }
     const finalPrice = calculateFinalPrice(
       parseFloat(price),
       parseFloat(discountPercent || 0)
@@ -169,7 +179,7 @@ export const createProduct = async (
       const createdProduct = await tx.product.create({
         data: {
           name,
-          slug,
+          slug: finalSlug,
           description,
           shortDescription,
           price: parseFloat(price),
@@ -186,6 +196,9 @@ export const createProduct = async (
           isActive: isActive !== false,
           metaTitle,
           metaDescription,
+          collections: collections || [],
+          occasions: occasions || [],
+          isFeaturedGift: isFeaturedGift || false,
         },
       });
 
@@ -233,7 +246,30 @@ export const getProducts = async (
   next: NextFunction
 ) => {
   try {
-    const { category, page = '1', limit = '16', maxPrice, sortBy } = req.query;
+    const { 
+      category, 
+      page = '1', 
+      limit = '16', 
+      maxPrice,
+      minPrice,
+      sortBy, 
+      sort, // Add support for 'sort' parameter
+      isNew, // Add support for 'isNew' parameter
+      collection, // Gift collection filter
+      occasion, // Occasion filter
+      featuredGifts, // Featured gifts only
+      // NEW: Tumbler & Offer filters
+      hasDiscount,
+      isOnOffer,
+      offerType,
+      minDiscount,
+      material,
+      capacity,
+      inStock,
+      isBestseller,
+      isTumbler,
+      search,
+    } = req.query;
 
     // 📊 Log incoming request
     console.log('[Product Controller] 📊 getProducts() called', {
@@ -242,6 +278,11 @@ export const getProducts = async (
       limit,
       maxPrice,
       sortBy,
+      sort,
+      isNew,
+      collection,
+      occasion,
+      featuredGifts,
       timestamp: new Date().toISOString(),
     });
 
@@ -272,15 +313,25 @@ export const getProducts = async (
 
     // 📊 Parse optional filters
     const parsedMaxPrice = maxPrice ? parseFloat(maxPrice as string) : undefined;
-    const parsedSortBy = sortBy ? (sortBy as string) : 'createdAt';
+    
+    // Handle both 'sortBy' and 'sort' parameters
+    let sortParam = sortBy || sort;
+    const parsedSortBy = sortParam ? (sortParam as string) : 'createdAt';
 
     // 🔍 Validate sortBy to prevent injection and support valid sorts
-    const allowedSortFields = ['createdAt', 'finalPrice', '-finalPrice', 'averageRating', '-averageRating'];
+    // Support both with and without minus prefix
+    const allowedSortFields = [
+      'createdAt', '-createdAt', 
+      'finalPrice', '-finalPrice', 
+      'averageRating', '-averageRating',
+      'name', '-name'
+    ];
     const validSortBy = allowedSortFields.includes(parsedSortBy) ? parsedSortBy : 'createdAt';
 
     // 🔒 BUILD WHERE CLAUSE — MANDATORY isActive=true FOR STOREFRONT
     const whereClause: any = {
       isActive: true,  // ← THIS IS MANDATORY. Products invisible without this.
+      deletedAt: null, // Exclude soft-deleted products
     };
 
     if (categoryId) {
@@ -294,16 +345,148 @@ export const getProducts = async (
       };
     }
 
+    // 🆕 Handle 'isNew' filter - products created in the last 30 days
+    if (isNew && (isNew === 'true' || isNew === '1')) {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      whereClause.createdAt = {
+        gte: thirtyDaysAgo,
+      };
+      
+      console.log('[Product Controller] 🆕 Filtering for new products', {
+        since: thirtyDaysAgo.toISOString(),
+      });
+    }
+
+    // 🎁 Handle 'collection' filter - products in specific gift collection
+    if (collection && typeof collection === 'string') {
+      whereClause.collections = {
+        has: collection,
+      };
+      console.log('[Product Controller] 🎁 Filtering by collection', { collection });
+    }
+
+    // 🎉 Handle 'occasion' filter - products for specific occasions
+    if (occasion && typeof occasion === 'string') {
+      // Support comma-separated occasions: "birthday,anniversary"
+      const occasionList = occasion.split(',').map(o => o.trim());
+      whereClause.occasions = {
+        hasSome: occasionList,
+      };
+      console.log('[Product Controller] 🎉 Filtering by occasions', { occasionList });
+    }
+
+    // ⭐ Handle 'featuredGifts' filter - featured gifts only
+    if (featuredGifts && (featuredGifts === 'true' || featuredGifts === '1')) {
+      whereClause.isFeaturedGift = true;
+      console.log('[Product Controller] ⭐ Filtering featured gifts only');
+    }
+
+    // 🥤 Handle minPrice filter
+    if (minPrice && !isNaN(parseFloat(minPrice as string))) {
+      const parsedMinPrice = parseFloat(minPrice as string);
+      if (parsedMinPrice > 0) {
+        whereClause.finalPrice = {
+          ...whereClause.finalPrice,
+          gte: parsedMinPrice,
+        };
+      }
+    }
+
+    // 🏷 Handle 'hasDiscount' filter - products with any discount > 0
+    if (hasDiscount && (hasDiscount === 'true' || hasDiscount === '1')) {
+      whereClause.discountPercent = { gt: 0 };
+    }
+
+    // 🏷 Handle 'isOnOffer' filter
+    if (isOnOffer && (isOnOffer === 'true' || isOnOffer === '1')) {
+      whereClause.OR = [
+        { isOnOffer: true },
+        { discountPercent: { gt: 0 } },
+      ];
+    }
+
+    // 🏷 Handle 'offerType' filter
+    if (offerType && typeof offerType === 'string') {
+      whereClause.offerType = offerType;
+    }
+
+    // 🏷 Handle 'minDiscount' filter (clearance = 30%+)
+    if (minDiscount && !isNaN(parseFloat(minDiscount as string))) {
+      whereClause.discountPercent = {
+        ...whereClause.discountPercent,
+        gte: parseFloat(minDiscount as string),
+      };
+    }
+
+    // 🥤 Handle 'material' filter
+    if (material && typeof material === 'string') {
+      whereClause.material = {
+        contains: material,
+        mode: 'insensitive',
+      };
+    }
+
+    // 🥤 Handle 'capacity' filter
+    if (capacity && typeof capacity === 'string') {
+      whereClause.capacity = {
+        contains: capacity,
+        mode: 'insensitive',
+      };
+    }
+
+    // 🥤 Handle 'inStock' filter
+    if (inStock && (inStock === 'true' || inStock === '1')) {
+      whereClause.stockQuantity = { gt: 0 };
+    }
+
+    // 🥤 Handle 'isBestseller' filter
+    if (isBestseller && (isBestseller === 'true' || isBestseller === '1')) {
+      whereClause.isBestseller = true;
+    }
+
+    // 🥤 Handle 'isTumbler' filter
+    if (isTumbler && (isTumbler === 'true' || isTumbler === '1')) {
+      whereClause.isTumbler = true;
+    }
+
+    // 🔍 Handle 'search' filter
+    if (search && typeof search === 'string' && search.trim()) {
+      whereClause.OR = [
+        ...(whereClause.OR || []),
+        { name: { contains: search.trim(), mode: 'insensitive' } },
+        { description: { contains: search.trim(), mode: 'insensitive' } },
+        { shortDescription: { contains: search.trim(), mode: 'insensitive' } },
+      ];
+    }
+
     // 📊 Build sort order from parameter
     let orderByClause: any = { createdAt: 'desc' };
-    if (validSortBy === 'finalPrice') {
-      orderByClause = { finalPrice: 'asc' };
-    } else if (validSortBy === '-finalPrice') {
-      orderByClause = { finalPrice: 'desc' };
-    } else if (validSortBy === 'averageRating') {
-      orderByClause = { averageRating: 'desc' };
-    } else if (validSortBy === '-averageRating') {
-      orderByClause = { averageRating: 'asc' };
+    
+    // Handle minus prefix for descending sort
+    if (validSortBy.startsWith('-')) {
+      const field = validSortBy.substring(1); // Remove minus prefix
+      if (field === 'finalPrice') {
+        orderByClause = { finalPrice: 'desc' };
+      } else if (field === 'averageRating') {
+        orderByClause = { averageRating: 'desc' };
+      } else if (field === 'createdAt') {
+        orderByClause = { createdAt: 'desc' };
+      } else if (field === 'name') {
+        orderByClause = { name: 'desc' };
+      }
+    } else {
+      // Handle ascending sort (no minus prefix)
+      if (validSortBy === 'finalPrice') {
+        orderByClause = { finalPrice: 'asc' };
+      } else if (validSortBy === 'averageRating') {
+        orderByClause = { averageRating: 'asc' };
+      } else if (validSortBy === 'createdAt') {
+        orderByClause = { createdAt: 'asc' };
+      } else if (validSortBy === 'name') {
+        orderByClause = { name: 'asc' };
+      }
     }
 
     // 🔍 Execute query with filters
@@ -331,6 +514,7 @@ export const getProducts = async (
         hasPriceFilter: parsedMaxPrice !== undefined,
         maxPrice: parsedMaxPrice,
         sortBy: validSortBy,
+        isNew: !!isNew,
         isActiveFilter: 'MANDATORY ✅',
       },
     });
@@ -410,7 +594,17 @@ export const updateProduct = async (
     const updateData: any = { ...otherData };
     if (name) {
       updateData.name = name;
-      updateData.slug = slugify(name);
+      const newSlug = slugify(name);
+      // Ensure slug uniqueness on rename
+      const existingSlug = await prisma.product.findFirst({
+        where: { slug: newSlug, id: { not: id } },
+      });
+      if (existingSlug) {
+        const suffix = Math.random().toString(36).substring(2, 7);
+        updateData.slug = `${newSlug}-${suffix}`;
+      } else {
+        updateData.slug = newSlug;
+      }
     }
     if (price) {
       updateData.price = parseFloat(price);
@@ -453,7 +647,7 @@ export const updateProduct = async (
   }
 };
 
-// @desc    Delete product (Admin)
+// @desc    Delete product (Admin) — SOFT DELETE
 // @route   DELETE /api/admin/products/:id
 // @access  Private/Admin
 export const deleteProduct = async (
@@ -473,32 +667,38 @@ export const deleteProduct = async (
       throw new AppError('Product not found', 404);
     }
 
-    // Delete product with all related records in transaction
-    await prisma.$transaction(async (tx) => {
-      // Delete images first
-      if (product.images && product.images.length > 0) {
-        await tx.productImage.deleteMany({ where: { productId: id } });
-      }
-      
-      // Then delete product (cascade will handle reviews, wishlist items, etc.)
-      await tx.product.delete({ where: { id } });
+    // Check for pending orders before soft-deleting
+    const pendingOrders = await prisma.orderItem.count({
+      where: {
+        productId: id,
+        order: {
+          status: { in: ['PENDING', 'CONFIRMED', 'PROCESSING'] },
+        },
+      },
     });
 
-    console.log('[Product Controller] ✅ Product deleted successfully:', {
-      productId: id,
-      productName: product.name,
-      imagesCount: product.images?.length || 0,
+    if (pendingOrders > 0) {
+      throw new AppError(
+        `Cannot delete product "${product.name}" — it has ${pendingOrders} pending order(s). Cancel or complete them first.`,
+        400
+      );
+    }
+
+    // Soft delete: set deletedAt + deactivate
+    await prisma.product.update({
+      where: { id },
+      data: {
+        deletedAt: new Date(),
+        isActive: false,
+        bogoActive: false,
+      },
     });
 
     res.json({
       success: true,
-      message: 'Product deleted successfully',
+      message: 'Product deleted successfully (soft delete)',
     });
   } catch (error) {
-    console.error('[Product Controller] ❌ Delete failed:', {
-      productId: req.params.id,
-      error: error instanceof Error ? error.message : String(error),
-    });
     next(error);
   }
 };
@@ -518,6 +718,7 @@ export const getFeaturedProducts = async (
       where: {
         isFeatured: true,
         isActive: true,
+        deletedAt: null,
       },
       include: { images: true, category: true },
       take: parseInt(limit as string),
@@ -553,6 +754,7 @@ export const getProductBySlug = async (
       where: {
         slug,
         isActive: true,
+        deletedAt: null,
       },
       include: { images: true, category: true },
     });
@@ -605,9 +807,90 @@ export const getProductByIdPublic = async (
   }
 };
 
-// @desc    Search products (Public)
-// @route   GET /api/products/search
+// @desc    Get recommended products for cross-sell
+// @route   GET /api/products/recommended
 // @access  Public
+export const getRecommendedProducts = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { productId, limit = '6' } = req.query;
+
+    let excludeIds: string[] = [];
+    let categoryId: string | undefined;
+
+    // If productId provided, find similar products
+    if (productId && typeof productId === 'string') {
+      const sourceProduct = await prisma.product.findUnique({
+        where: { id: productId },
+        select: { id: true, categoryId: true },
+      });
+      if (sourceProduct) {
+        excludeIds = [sourceProduct.id];
+        categoryId = sourceProduct.categoryId;
+      }
+    }
+
+    const whereClause: any = {
+      isActive: true,
+      stockQuantity: { gt: 0 },
+      id: { notIn: excludeIds },
+      images: { some: {} }, // Must have at least one image
+    };
+
+    // Prioritize same category
+    if (categoryId) {
+      whereClause.categoryId = categoryId;
+    }
+
+    let products = await prisma.product.findMany({
+      where: whereClause,
+      orderBy: [{ isFeatured: 'desc' }, { averageRating: 'desc' }],
+      take: Number(limit),
+      include: {
+        category: true,
+        images: { where: { isPrimary: true }, take: 1 },
+      },
+    });
+
+    // If not enough same-category products, fill with popular ones
+    if (products.length < Number(limit)) {
+      const remaining = Number(limit) - products.length;
+      const existingIds = [...excludeIds, ...products.map((p) => p.id)];
+
+      const moreProducts = await prisma.product.findMany({
+        where: {
+          isActive: true,
+          stockQuantity: { gt: 0 },
+          id: { notIn: existingIds },
+          images: { some: {} },
+        },
+        orderBy: [{ averageRating: 'desc' }, { reviewCount: 'desc' }],
+        take: remaining,
+        include: {
+          category: true,
+          images: { where: { isPrimary: true }, take: 1 },
+        },
+      });
+
+      products = [...products, ...moreProducts];
+    }
+
+    const productsWithUrls = await Promise.all(
+      products.map((product) => transformProductImages(product, true))
+    );
+
+    res.json({
+      success: true,
+      data: productsWithUrls,
+    });
+  } catch (error) {
+    console.error('[Product] Error fetching recommendations:', error);
+    res.status(500).json({ message: 'Failed to fetch recommendations' });
+  }
+};
 export const searchProducts = async (
   req: AuthRequest,
   res: Response,

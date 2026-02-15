@@ -6,6 +6,7 @@ import {
     getProductByIdPublic,
     getProductBySlug,
     getProducts,
+    getRecommendedProducts,
     searchProducts,
     updateProduct,
 } from '../controllers/product.controller';
@@ -17,6 +18,7 @@ const router = Router();
 router.get('/', getProducts);
 router.get('/featured', getFeaturedProducts);
 router.get('/search', searchProducts);
+router.get('/recommended', getRecommendedProducts);
 router.get('/id/:id', getProductByIdPublic);
 router.get('/:slug', getProductBySlug);
 

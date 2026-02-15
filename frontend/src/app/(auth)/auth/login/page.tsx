@@ -50,7 +50,7 @@ export default function LoginPage() {
     if (authLoading) return;
 
     if (isAuthenticated && user) {
-      console.log('[Auth] ✅ User already authenticated, redirecting to /account');
+      // console.log('[Auth] ✅ User already authenticated, redirecting to /account');
       router.replace('/account');
     }
   }, [authLoading, isAuthenticated, user, router]);
@@ -94,7 +94,7 @@ export default function LoginPage() {
     setMessage('');
 
     try {
-      console.log('[Auth] 🔐 Password login for:', email);
+      // console.log('[Auth] 🔐 Password login for:', email);
       
       const response = await api.post('/auth/login', {
         email: email.toLowerCase().trim(),
@@ -107,7 +107,7 @@ export default function LoginPage() {
 
       const { user: userData, token: jwtToken } = response.data;
 
-      console.log('[Auth] ✅ Password login successful:', userData.email);
+      // console.log('[Auth] ✅ Password login successful:', userData.email);
 
       const userPayload = {
         id: userData.id,
@@ -167,7 +167,7 @@ export default function LoginPage() {
     setMessage('');
 
     try {
-      console.log('[Auth] 📧 Requesting OTP for:', email);
+      // console.log('[Auth] 📧 Requesting OTP for:', email);
       
       const response = await api.post('/auth/otp-login', {
         email: email.toLowerCase().trim(),
@@ -177,7 +177,7 @@ export default function LoginPage() {
         throw new Error(response.data?.error || 'Failed to send code');
       }
 
-      console.log('[Auth] ✅ OTP sent to:', email);
+      // console.log('[Auth] ✅ OTP sent to:', email);
       setMessage('Check your inbox for the 8-digit login code!');
       setStep('otp-verify');
       setOtpTimer(300); // 5 minutes
@@ -205,7 +205,7 @@ export default function LoginPage() {
     setMessage('');
 
     try {
-      console.log('[Auth] ✅ Verifying OTP for:', email);
+      // console.log('[Auth] ✅ Verifying OTP for:', email);
 
       const response = await api.post('/auth/verify-otp', {
         email: email.toLowerCase().trim(),
@@ -218,7 +218,7 @@ export default function LoginPage() {
 
       const { user: userData, token: jwtToken, isNewUser } = response.data;
 
-      console.log('[Auth] ✅ OTP verified:', { userId: userData.id, isNewUser });
+      // console.log('[Auth] ✅ OTP verified:', { userId: userData.id, isNewUser });
 
       const userPayload = {
         id: userData.id,
@@ -288,7 +288,7 @@ export default function LoginPage() {
     setMessage('');
 
     try {
-      console.log('[Auth] 📝 Signing up:', email);
+      // console.log('[Auth] 📝 Signing up:', email);
       
       const response = await api.post('/auth/register', {
         email: email.toLowerCase().trim(),
@@ -303,7 +303,7 @@ export default function LoginPage() {
 
       const { user: userData, token: jwtToken } = response.data;
 
-      console.log('[Auth] ✅ Signup successful:', userData.email);
+      // console.log('[Auth] ✅ Signup successful:', userData.email);
 
       const userPayload = {
         id: userData.id,
@@ -693,7 +693,7 @@ export default function LoginPage() {
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+91 9876543210"
+                    placeholder="9842253984"
                     className="w-full pl-12 pr-4 py-3.5 bg-white/60 backdrop-blur border border-gray-200 rounded-xl focus:outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-200 transition-all text-gray-800 placeholder:text-gray-400"
                     disabled={loading}
                     autoComplete="tel"

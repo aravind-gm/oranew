@@ -5,14 +5,14 @@
  * =====================================
  * 
  * Full product management with Shopify-level controls
- * Filters, bulk actions, status management
+ * Filters, bulk actions, status management, archive/restore
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AdminLayout from '../components/AdminLayout';
-import { PageHeader, Button, Badge, Input, Select, Card } from '../components/ui';
+import { PageHeader, Button, Badge, Input, Select, Card, Alert } from '../components/ui';
 import { DataTable, TableActions, TableActionItem, Column } from '../components/ui/DataTable';
 import {
   Plus,
@@ -28,8 +28,13 @@ import {
   MoreHorizontal,
   Package,
   Image as ImageIcon,
+  RotateCcw,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
 } from 'lucide-react';
 import { useAdminStore } from '@/store/adminStore';
+import api from '@/lib/api';
 
 // ============================================
 // TYPES
@@ -46,6 +51,7 @@ interface Product {
   stockQuantity: number;
   isActive: boolean;
   isFeatured: boolean;
+  deletedAt: string | null;
   category: {
     id: string;
     name: string;
@@ -62,7 +68,10 @@ interface Product {
 // PRODUCT STATUS BADGE
 // ============================================
 
-const ProductStatusBadge = ({ isActive, stock }: { isActive: boolean; stock: number }) => {
+const ProductStatusBadge = ({ isActive, stock, deletedAt }: { isActive: boolean; stock: number; deletedAt?: string | null }) => {
+  if (deletedAt) {
+    return <Badge variant="secondary">Archived</Badge>;
+  }
   if (!isActive) {
     return <Badge variant="secondary">Draft</Badge>;
   }
@@ -91,11 +100,21 @@ export default function ProductsPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Fetch products on mount and when filters change
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  // Auto-dismiss messages
+  useEffect(() => {
+    if (actionMessage) {
+      const timer = setTimeout(() => setActionMessage(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [actionMessage]);
 
   // Format currency
   const formatCurrency = (amount: number) => {
@@ -106,16 +125,58 @@ export default function ProductsPage() {
     }).format(amount);
   };
 
-  // Handle delete (not implemented yet)
-  const handleDelete = async (productId: string) => {
-    // Delete functionality to be implemented with API
-    console.log('Delete product:', productId);
+  // ============================================
+  // PRODUCT ACTIONS
+  // ============================================
+
+  const handleArchive = async (productId: string) => {
+    if (!confirm('Archive this product? It will be hidden from the storefront.')) return;
+    setActionLoading(true);
+    try {
+      await api.put(`/admin/products/${productId}/archive`);
+      setActionMessage({ type: 'success', text: 'Product archived successfully' });
+      fetchProducts();
+    } catch (err: any) {
+      setActionMessage({ type: 'error', text: err.response?.data?.message || 'Failed to archive product' });
+    } finally {
+      setActionLoading(false);
+    }
   };
 
-  // Handle bulk delete (not implemented yet)
-  const handleBulkDelete = async (ids: string[]) => {
-    console.log('Delete products:', ids);
-    setSelectedProducts([]);
+  const handleRestore = async (productId: string) => {
+    setActionLoading(true);
+    try {
+      await api.put(`/admin/products/${productId}/restore`);
+      setActionMessage({ type: 'success', text: 'Product restored as draft' });
+      fetchProducts();
+    } catch (err: any) {
+      setActionMessage({ type: 'error', text: err.response?.data?.message || 'Failed to restore product' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDelete = async (productId: string) => {
+    if (!confirm('Delete this product? This performs a soft delete (archive).')) return;
+    await handleArchive(productId);
+  };
+
+  const handleBulkAction = async (action: string, ids: string[]) => {
+    if (ids.length === 0) return;
+    const actionLabel = { activate: 'activate', deactivate: 'deactivate', archive: 'archive', restore: 'restore' }[action] || action;
+    if (!confirm(`${actionLabel.charAt(0).toUpperCase() + actionLabel.slice(1)} ${ids.length} product(s)?`)) return;
+    
+    setActionLoading(true);
+    try {
+      await api.post('/admin/products/bulk-action', { action, productIds: ids });
+      setActionMessage({ type: 'success', text: `${ids.length} product(s) ${actionLabel}d successfully` });
+      setSelectedProducts([]);
+      fetchProducts();
+    } catch (err: any) {
+      setActionMessage({ type: 'error', text: err.response?.data?.message || `Failed to ${actionLabel} products` });
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   // Filter products
@@ -133,10 +194,11 @@ export default function ProductsPage() {
 
     // Status filter
     if (statusFilter !== 'all') {
-      if (statusFilter === 'active' && !product.isActive) return false;
-      if (statusFilter === 'draft' && product.isActive) return false;
-      if (statusFilter === 'outOfStock' && product.stockQuantity > 0) return false;
-      if (statusFilter === 'lowStock' && (product.stockQuantity === 0 || product.stockQuantity > 5)) return false;
+      if (statusFilter === 'active' && (!product.isActive || product.deletedAt)) return false;
+      if (statusFilter === 'draft' && (product.isActive || product.deletedAt)) return false;
+      if (statusFilter === 'archived' && !product.deletedAt) return false;
+      if (statusFilter === 'outOfStock' && (product.stockQuantity > 0 || product.deletedAt)) return false;
+      if (statusFilter === 'lowStock' && (product.stockQuantity === 0 || product.stockQuantity > 5 || product.deletedAt)) return false;
     }
 
     // Category filter
@@ -160,7 +222,7 @@ export default function ProductsPage() {
       header: 'Product',
       accessor: (row) => (
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-lg bg-[#f6f7f9] overflow-hidden flex-shrink-0">
+          <div className={`w-12 h-12 rounded-lg bg-[#f6f7f9] overflow-hidden flex-shrink-0 ${row.deletedAt ? 'opacity-50' : ''}`}>
             {row.images?.[0]?.imageUrl ? (
               <img
                 src={row.images[0].imageUrl}
@@ -174,7 +236,7 @@ export default function ProductsPage() {
             )}
           </div>
           <div className="min-w-0">
-            <p className="font-medium text-[#111827] truncate">{row.name}</p>
+            <p className={`font-medium truncate ${row.deletedAt ? 'text-[#9ca3af] line-through' : 'text-[#111827]'}`}>{row.name}</p>
             <p className="text-xs text-[#9ca3af]">SKU: {row.sku}</p>
           </div>
         </div>
@@ -184,7 +246,7 @@ export default function ProductsPage() {
     {
       id: 'status',
       header: 'Status',
-      accessor: (row) => <ProductStatusBadge isActive={row.isActive} stock={row.stockQuantity} />,
+      accessor: (row) => <ProductStatusBadge isActive={row.isActive} stock={row.stockQuantity} deletedAt={row.deletedAt} />,
       width: '12%',
     },
     {
@@ -212,6 +274,9 @@ export default function ProductsPage() {
             {row.stockQuantity}
           </span>
           <span className="text-[#9ca3af]"> in stock</span>
+          {row.stockQuantity > 0 && row.stockQuantity <= 5 && (
+            <AlertTriangle size={14} className="inline ml-1 text-[#f59e0b]" />
+          )}
         </div>
       ),
       width: '12%',
@@ -239,6 +304,13 @@ export default function ProductsPage() {
   return (
     <AdminLayout>
       <div className="space-y-6">
+        {/* Action Messages */}
+        {actionMessage && (
+          <Alert variant={actionMessage.type === 'success' ? 'success' : 'error'}>
+            {actionMessage.text}
+          </Alert>
+        )}
+
         {/* Page Header */}
         <PageHeader
           title="Products"
@@ -285,6 +357,7 @@ export default function ProductsPage() {
                 { value: 'all', label: 'All Status' },
                 { value: 'active', label: 'Active' },
                 { value: 'draft', label: 'Draft' },
+                { value: 'archived', label: 'Archived' },
                 { value: 'outOfStock', label: 'Out of Stock' },
                 { value: 'lowStock', label: 'Low Stock' },
               ]}
@@ -306,14 +379,17 @@ export default function ProductsPage() {
         <DataTable
           data={paginatedProducts}
           columns={columns}
-          loading={productsLoading}
+          loading={productsLoading || actionLoading}
           selectable
           selectedRows={selectedProducts}
           onSelectionChange={setSelectedProducts}
           getRowId={(row: any) => row.id as string}
           onRowClick={(row: any) => router.push(`/admin/v2/products/${row.id as string}`)}
           bulkActions={[
-            { label: 'Delete', onClick: handleBulkDelete, variant: 'danger' },
+            { label: 'Activate', onClick: (ids) => handleBulkAction('activate', ids), variant: 'primary' },
+            { label: 'Deactivate', onClick: (ids) => handleBulkAction('deactivate', ids), variant: 'primary' },
+            { label: 'Archive', onClick: (ids) => handleBulkAction('archive', ids), variant: 'danger' },
+            { label: 'Restore', onClick: (ids) => handleBulkAction('restore', ids), variant: 'primary' },
           ]}
           rowActions={(row: any) => (
             <TableActions>
@@ -335,19 +411,30 @@ export default function ProductsPage() {
               >
                 Duplicate
               </TableActionItem>
-              <TableActionItem
-                icon={<Archive size={16} />}
-                onClick={() => {}}
-              >
-                Archive
-              </TableActionItem>
-              <TableActionItem
-                icon={<Trash2 size={16} />}
-                onClick={() => handleDelete(row.id)}
-                variant="danger"
-              >
-                Delete
-              </TableActionItem>
+              {!row.deletedAt ? (
+                <TableActionItem
+                  icon={<Archive size={16} />}
+                  onClick={() => handleArchive(row.id)}
+                >
+                  Archive
+                </TableActionItem>
+              ) : (
+                <TableActionItem
+                  icon={<RotateCcw size={16} />}
+                  onClick={() => handleRestore(row.id)}
+                >
+                  Restore
+                </TableActionItem>
+              )}
+              {!row.deletedAt && (
+                <TableActionItem
+                  icon={<Trash2 size={16} />}
+                  onClick={() => handleDelete(row.id)}
+                  variant="danger"
+                >
+                  Delete
+                </TableActionItem>
+              )}
             </TableActions>
           )}
           pagination={{

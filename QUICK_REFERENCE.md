@@ -114,8 +114,6 @@ WEEK 4 COMPLETE: Customer Account Features Enhanced!
 └──────────────────────────────────────────────────────┘
 ```
 
----
-
 ## Payment Flow (Detailed)
 
 ```

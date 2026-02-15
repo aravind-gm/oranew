@@ -1,10 +1,29 @@
 'use client';
 
 import api from '@/lib/api';
+import { trackPurchase } from '@/lib/analytics';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useCartStore } from '@/store/cartStore';
+
+interface OrderItem {
+  id: string;
+  productId: string;
+  quantity: number;
+  unitPrice: number;
+  product?: { id: string; name: string; category?: { name: string } };
+}
+
+interface OrderDetails {
+  id: string;
+  orderNumber: string;
+  totalAmount: number;
+  subtotal: number;
+  taxAmount: number;
+  shippingCost: number;
+  items: OrderItem[];
+}
 
 interface PaymentStatus {
   paymentStatus: 'PENDING' | 'VERIFIED' | 'CONFIRMED' | 'FAILED' | 'REFUNDED';
@@ -26,6 +45,36 @@ function SuccessContent() {
   const [error, setError] = useState('');
   const [showConfetti, setShowConfetti] = useState(false);
   const clearCart = useCartStore((state) => state.clearCart);
+  const purchaseTrackedRef = useRef(false);
+
+  // ── Fetch order & fire purchase event once confirmed ──
+  const fireConversionEvent = async (status: PaymentStatus) => {
+    if (purchaseTrackedRef.current) return;
+    try {
+      const orderRes = await api.get(`/orders/${status.orderId}`);
+      const order: OrderDetails = orderRes.data.data || orderRes.data.order;
+      if (order) {
+        const fired = trackPurchase({
+          orderId: order.id,
+          orderNumber: order.orderNumber || status.orderNumber,
+          total: Number(order.totalAmount) || 0,
+          subtotal: Number(order.subtotal) || Number(order.totalAmount) || 0,
+          tax: Number(order.taxAmount) || 0,
+          shipping: Number(order.shippingCost) || 0,
+          items: (order.items || []).map((item) => ({
+            id: item.productId || item.id,
+            name: item.product?.name || 'Product',
+            price: Number(item.unitPrice) || 0,
+            quantity: item.quantity,
+            category: item.product?.category?.name,
+          })),
+        });
+        if (fired) purchaseTrackedRef.current = true;
+      }
+    } catch {
+      // Order fetch failed — don't block success UI
+    }
+  };
 
   // Poll for payment confirmation - CRITICAL: Only webhook decides truth
   useEffect(() => {
@@ -45,14 +94,7 @@ function SuccessContent() {
         const status = response.data.success ? response.data : response.data.data;
         setPaymentStatus(status);
 
-        console.log('[Success] Payment status check:', {
-          paymentStatus: status.paymentStatus,
-          orderPaymentStatus: status.orderPaymentStatus,
-          isConfirmed: status.isConfirmed,
-          isFailed: status.isFailed,
-          message: status.message,
-          attemptCount,
-        });
+        // Debug logging removed for production
 
         // ════════════════════════════════════════════════════════════
         // CRITICAL: Handle confirmed/failed states
@@ -61,19 +103,20 @@ function SuccessContent() {
         
         // SUCCESS: Payment confirmed by webhook
         if (status.isConfirmed && !status.isFailed) {
-          console.log('[Success] ✅ Payment CONFIRMED - showing success UI');
           // Clear the local cart state since backend already cleared the database cart
           clearCart();
-          console.log('[Success] ✅ Cart cleared');
           setLoading(false);
           setShowConfetti(true);
           clearInterval(pollInterval);
+
+          // Analytics: fire purchase conversion (with duplicate guard)
+          fireConversionEvent(status);
           return;
         }
         
         // FAILURE: Payment failed - redirect to failed page
         if (status.isFailed) {
-          console.log('[Success] ❌ Payment FAILED - redirecting to failed page');
+          // console.log('[Success] ❌ Payment FAILED - redirecting to failed page');
           clearInterval(pollInterval);
           router.replace(`/checkout/failed?orderId=${orderId}`);
           return;
@@ -81,7 +124,7 @@ function SuccessContent() {
         
         // TIMEOUT: Stop polling after max attempts
         if (attemptCount >= maxAttempts) {
-          console.log('[Success] ⚠️ Polling timeout reached');
+          // console.log('[Success] ⚠️ Polling timeout reached');
           setLoading(false);
           setError('Payment is taking longer than expected. Check your email for confirmation or contact support.');
           clearInterval(pollInterval);

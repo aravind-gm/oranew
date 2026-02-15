@@ -30,12 +30,12 @@ export default function AboutPage() {
               <p className="text-text-muted">Products</p>
             </div>
             <div className="bg-background-white rounded-luxury p-8 shadow-luxury text-center">
-              <div className="text-4xl font-serif font-bold text-primary mb-2">10K+</div>
-              <p className="text-text-muted">Happy Customers</p>
+              <div className="text-4xl font-serif font-bold text-primary mb-2">Since 2024</div>
+              <p className="text-text-muted">Crafting Excellence</p>
             </div>
             <div className="bg-background-white rounded-luxury p-8 shadow-luxury text-center">
-              <div className="text-4xl font-serif font-bold text-primary mb-2">4.8★</div>
-              <p className="text-text-muted">Average Rating</p>
+              <div className="text-4xl font-serif font-bold text-primary mb-2">Quality First</div>
+              <p className="text-text-muted">Premium Craftsmanship</p>
             </div>
           </div>
           

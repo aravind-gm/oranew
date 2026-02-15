@@ -70,6 +70,18 @@ export declare const reorderProductImages: (req: AuthRequest, res: Response, nex
  */
 export declare const checkR2Health: (req: AuthRequest, res: Response, next: NextFunction) => Promise<void>;
 /**
+ * Get all banners
+ * @route GET /api/r2/banners
+ * @access Private (Admin)
+ */
+export declare const getBanners: (req: AuthRequest, res: Response, next: NextFunction) => Promise<void>;
+/**
+ * Delete a banner
+ * @route DELETE /api/r2/banners/:bannerId
+ * @access Private (Admin)
+ */
+export declare const deleteBanner: (req: AuthRequest, res: Response, next: NextFunction) => Promise<void>;
+/**
  * Delete an image (legacy endpoint for backwards compatibility)
  * @route DELETE /api/upload/images
  * @access Private (Admin/Staff)

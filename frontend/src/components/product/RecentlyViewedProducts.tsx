@@ -61,7 +61,7 @@ export default function RecentlyViewedProducts({
             >
               <div className="aspect-square bg-neutral-100 rounded-xl overflow-hidden mb-3">
                 <Image
-                  src={product.image || '/placeholder.png'}
+                  src={product.image || '/oralogo.png'}
                   alt={product.name}
                   width={160}
                   height={160}
@@ -88,7 +88,7 @@ export default function RecentlyViewedProducts({
             >
               <div className="w-16 h-16 bg-neutral-200 rounded-lg overflow-hidden flex-shrink-0">
                 <Image
-                  src={product.image || '/placeholder.png'}
+                  src={product.image || '/oralogo.png'}
                   alt={product.name}
                   width={64}
                   height={64}

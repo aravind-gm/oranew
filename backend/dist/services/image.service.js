@@ -225,12 +225,7 @@ async function stripMetadata(buffer) {
  * Get dominant color from image (for placeholder/loading)
  */
 async function getDominantColor(buffer) {
-    const { dominant } = await (0, sharp_1.default)(buffer)
-        .resize(1, 1)
-        .raw()
-        .toBuffer({ resolveWithObject: true });
-    // This is a simplified version - for production, use a proper color extraction library
-    // Sharp's stats() can provide dominant color info
+    // Use sharp's stats() to get dominant color info
     const stats = await (0, sharp_1.default)(buffer).stats();
     const { r, g, b } = stats.dominant;
     return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;

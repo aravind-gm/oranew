@@ -279,7 +279,7 @@ export default function EditProductPage() {
         return;
       }
 
-      console.log('[Admin Edit] 📝 Submitting product update...');
+      // console.log('[Admin Edit] 📝 Submitting product update...');
 
       const productData = {
         name: form.name.trim(),
@@ -300,14 +300,14 @@ export default function EditProductPage() {
         images: allImages,
       };
 
-      console.log('[Admin Edit] 📤 Product data:', productData);
+      // console.log('[Admin Edit] 📤 Product data:', productData);
 
       const response = await api.put(`/admin/products/${params.id}`, productData);
       
-      console.log('[Admin Edit] ✅ Update response:', response.data);
+      // console.log('[Admin Edit] ✅ Update response:', response.data);
       
       if (response.data.success) {
-        console.log('[Admin Edit] ✅ Product updated successfully');
+        // console.log('[Admin Edit] ✅ Product updated successfully');
         router.push('/admin/products');
       }
     } catch (err: unknown) {

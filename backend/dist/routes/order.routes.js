@@ -10,7 +10,7 @@ router.get('/', order_controller_1.getOrders);
 router.get('/:id', order_controller_1.getOrderById);
 router.put('/:id/cancel', order_controller_1.cancelOrder);
 router.post('/:id/return', order_controller_1.requestReturn);
-// Admin only
-router.post('/return/process-refund', (0, auth_1.authorize)('ADMIN', 'STAFF'), order_controller_1.processRefund);
+// REMOVED: Fake refund endpoint that doesn't call Razorpay API
+// Use /api/payments/refund instead which properly processes refunds through Razorpay
 exports.default = router;
 //# sourceMappingURL=order.routes.js.map

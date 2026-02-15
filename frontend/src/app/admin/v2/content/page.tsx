@@ -324,7 +324,7 @@ export default function ContentPage() {
         setAnnouncements([
           {
             id: '1',
-            message: '🎉 Free shipping on orders above ₹5,000!',
+            message: '🎉 Free shipping on orders above ₹999!',
             type: 'shipping',
             bgColor: '#2D3748',
             textColor: '#FFFFFF',
@@ -643,7 +643,7 @@ export default function ContentPage() {
               <h3 className="font-semibold text-[var(--admin-text-primary)] mb-4">Quick Templates</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {[
-                  { message: 'Free shipping on orders above ₹5,000!', type: 'shipping', bg: '#2D3748' },
+                  { message: 'Free shipping on orders above ₹999!', type: 'shipping', bg: '#2D3748' },
                   { message: 'Summer Sale: Up to 30% off!', type: 'sale', bg: '#D4A574' },
                   { message: 'New arrivals are here!', type: 'info', bg: '#E8B4B8' },
                   { message: 'Limited time offer - Shop now!', type: 'custom', bg: '#9F7AEA' },

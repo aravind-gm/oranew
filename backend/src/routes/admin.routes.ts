@@ -1,13 +1,19 @@
 import { Router } from 'express';
 import {
     addProductImages,
+    archiveProduct,
+    bulkProductAction,
     bulkUpdateInventory,
     cleanupLocks,
     createCategory,
     deleteCategory,
     deleteProductImage,
+    deleteTaxConfig,
     getAdminProducts,
+    getAdminShippingConfig,
+    getAdminTaxConfigs,
     getAllOrders,
+    getAuditLogs,
     getCustomers,
     getDashboardStats,
     getInventory,
@@ -19,12 +25,22 @@ import {
     getReturns,
     getReturnStats,
     getRevenueReport,
+    restoreProduct,
     setPrimaryImage,
+    updateAdminShippingConfig,
     updateCategory,
     updateInventory,
     updateOrderStatus,
     updateReturnStatus,
+    upsertTaxConfig,
 } from '../controllers/admin.controller';
+import {
+    getBOGOCampaign,
+    updateBOGOCampaign,
+    getBOGOProducts,
+    updateProductBOGO,
+    getBOGOStats,
+} from '../controllers/bogo.controller';
 import {
     createProduct,
     deleteProduct,
@@ -73,6 +89,9 @@ router.get('/products/:id', getProductById);
 router.post('/products', createProduct);
 router.put('/products/:id', updateProduct);
 router.delete('/products/:id', authorize('ADMIN'), deleteProduct);
+router.put('/products/:id/archive', archiveProduct);
+router.put('/products/:id/restore', restoreProduct);
+router.post('/products/bulk-action', bulkProductAction);
 
 // Product Images
 router.post('/products/:id/images', addProductImages);
@@ -100,5 +119,32 @@ router.get('/returns', getReturns);
 router.get('/returns/stats', getReturnStats);
 router.get('/returns/:id', getReturnById);
 router.put('/returns/:id/status', updateReturnStatus);
+
+// ============================================
+// BOGO CAMPAIGN MANAGEMENT
+// ============================================
+router.get('/bogo/campaign', getBOGOCampaign);
+router.put('/bogo/campaign', updateBOGOCampaign);
+router.get('/bogo/products', getBOGOProducts);
+router.put('/bogo/products/:id', updateProductBOGO);
+router.get('/bogo/stats', getBOGOStats);
+
+// ============================================
+// SETTINGS: SHIPPING CONFIG
+// ============================================
+router.get('/settings/shipping', getAdminShippingConfig);
+router.put('/settings/shipping', updateAdminShippingConfig);
+
+// ============================================
+// SETTINGS: TAX CONFIG
+// ============================================
+router.get('/settings/taxes', getAdminTaxConfigs);
+router.put('/settings/taxes', upsertTaxConfig);
+router.delete('/settings/taxes/:id', deleteTaxConfig);
+
+// ============================================
+// AUDIT LOG
+// ============================================
+router.get('/audit-log', getAuditLogs);
 
 export default router;

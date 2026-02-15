@@ -44,12 +44,12 @@ export const addToCart = async (
       })
     ) as any;
 
-    if (!product || !(product as any).isActive) {
-      throw new AppError('Product not found', 404);
+    if (!product || !(product as any).isActive || (product as any).deletedAt) {
+      throw new AppError('Product not found or unavailable', 404);
     }
 
     if ((product as any).stockQuantity < quantity) {
-      throw new AppError('Insufficient stock', 400);
+      throw new AppError(`Only ${(product as any).stockQuantity} available for "${(product as any).name}"`, 400);
     }
 
     // Check if item already in cart
@@ -64,6 +64,28 @@ export const addToCart = async (
       })
     ) as any;
 
+    // Validate total quantity (existing + new) against stock
+    const existingQty = existingItem ? (existingItem as any).quantity : 0;
+    const newTotalQty = existingQty + quantity;
+
+    if (newTotalQty > (product as any).stockQuantity) {
+      const canAdd = (product as any).stockQuantity - existingQty;
+      throw new AppError(
+        canAdd > 0
+          ? `Cannot add ${quantity} more. Only ${canAdd} more available.`
+          : 'Maximum available stock already in cart.',
+        400
+      );
+    }
+
+    // Cap at max 10 per product
+    if (newTotalQty > 10) {
+      throw new AppError(
+        `Maximum 10 items per product allowed. You already have ${existingQty} in cart.`,
+        400
+      );
+    }
+
     let cartItem;
 
     if (existingItem) {
@@ -71,7 +93,7 @@ export const addToCart = async (
       cartItem = await withRetry(() =>
         prisma.cartItem.update({
           where: { id: (existingItem as any).id },
-          data: { quantity: (existingItem as any).quantity + quantity },
+          data: { quantity: newTotalQty },
           include: {
             product: {
               include: {
@@ -119,11 +141,29 @@ export const updateCartItem = async (
     const cartItem = await withRetry(() =>
       prisma.cartItem.findFirst({
         where: { id, userId: req.user!.id },
+        include: { product: true },
       })
     );
 
     if (!cartItem) {
       throw new AppError('Cart item not found', 404);
+    }
+
+    // Validate stock before updating quantity
+    if (quantity > (cartItem as any).product.stockQuantity) {
+      throw new AppError(
+        `Only ${(cartItem as any).product.stockQuantity} available for "${(cartItem as any).product.name}"`,
+        400
+      );
+    }
+
+    if (quantity < 1) {
+      throw new AppError('Quantity must be at least 1', 400);
+    }
+
+    // Cap at max 10 per product
+    if (quantity > 10) {
+      throw new AppError('Maximum 10 items per product allowed', 400);
     }
 
     const updatedItem = await withRetry(() =>
