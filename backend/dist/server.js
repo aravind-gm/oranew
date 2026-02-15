@@ -317,10 +317,29 @@ app.listen(PORT, async () => {
   ║   Mode: AUTO-WARMUP on cold start      ║
   ╚════════════════════════════════════════╝
   `);
+    // ============================================
+    // DATABASE CONNECTION HEALTH CHECK
+    // ============================================
+    // This test runs at server startup to:
+    // 1. Verify database connectivity BEFORE accepting requests
+    // 2. Exit gracefully if DB is unreachable (prevents silent failures)
+    // 3. Prevent connection pool exhaustion errors
+    console.log('\n[Startup] 🔍 Testing database connection health...');
+    try {
+        const { prisma } = await Promise.resolve().then(() => __importStar(require('./config/database')));
+        await prisma.$queryRaw `SELECT 1`;
+        console.log('[Startup] ✅ Database connection: HEALTHY');
+    }
+    catch (error) {
+        console.error('[Startup] 🔴 Database connection: FAILED');
+        console.error('[Startup] Error:', error instanceof Error ? error.message : String(error));
+        console.error('[Startup] Exiting server to prevent silent pool failures');
+        process.exit(1);
+    }
     // Warmup database connection on startup FIRST
     // This is especially important for Render free-tier
     // DB might also be waking up from sleep
-    console.log('\n[Startup] 🔥 Warming up database connection...');
+    console.log('[Startup] 🔥 Warming up database connection...');
     const dbWarmed = await (0, database_1.warmupDatabase)(30000); // Wait max 30 seconds
     if (dbWarmed) {
         console.log('[Startup] ✅ Database: READY');

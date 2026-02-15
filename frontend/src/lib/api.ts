@@ -46,7 +46,7 @@ api.interceptors.request.use((config) => {
 // Track if we're currently refreshing to prevent loops
 let isRefreshing = false;
 
-// 401 handler with token refresh attempt
+// 401 handler with token expiration handling
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
@@ -74,12 +74,28 @@ api.interceptors.response.use(
               error.config.headers.Authorization = `Bearer ${data.session.access_token}`;
               return api.request(error.config);
             }
+          } else {
+            // Token refresh failed — logout and redirect to login
+            console.warn('[API] 🔐 Token refresh failed. Auto-logging out.');
+            authStore.logout();
+            localStorage.removeItem('ora-token');
+            window.location.href = '/login';
+            return Promise.reject(error);
           }
-        } catch {
-          // Refresh failed silently — don't logout, let user continue browsing
+        } catch (refreshError) {
+          // Refresh failed — logout and redirect
+          console.warn('[API] 🔐 Token refresh error:', refreshError);
+          authStore.logout();
+          localStorage.removeItem('ora-token');
+          window.location.href = '/login';
         } finally {
           isRefreshing = false;
         }
+      } else {
+        // No token — redirect to login immediately
+        console.warn('[API] 🔐 No token found. Redirecting to login.');
+        localStorage.removeItem('ora-token');
+        window.location.href = '/login';
       }
     }
     

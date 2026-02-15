@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.warmupDatabase = exports.ensureDatabaseConnected = exports.checkDatabaseHealth = exports.prisma = void 0;
+exports.disconnectDatabase = exports.warmupDatabase = exports.ensureDatabaseConnected = exports.checkDatabaseHealth = exports.prisma = void 0;
 const client_1 = require("@prisma/client");
 // ============================================
 // PRISMA CLIENT SINGLETON (PRODUCTION-SAFE)
@@ -41,13 +41,22 @@ const getPrismaClient = () => {
             : ['error', 'warn'],
         errorFormat: 'pretty',
     });
+    // Connection lifecycle handlers for pgBouncer
+    // Ensures connections are properly released back to the pool
+    globalPrisma.$connect()
+        .then(() => {
+        console.log('[DB] ✅ Prisma connected successfully (pgBouncer mode)');
+    })
+        .catch((error) => {
+        console.error('[DB] ❌ Prisma connection failed:', error);
+    });
     return globalPrisma;
 };
-// Ensure we use the singleton
+// Ensure we use the singleton (prevent cold start leaks)
 exports.prisma = globalThis.prisma || getPrismaClient();
-if (process.env.NODE_ENV !== 'production') {
-    globalThis.prisma = exports.prisma;
-}
+// Always store to global in both dev and production
+// This prevents multiple PrismaClient instances on hot-reload or concurrent requests
+globalThis.prisma = exports.prisma;
 // ============================================
 // CONNECTION HEALTH CHECK
 // ============================================
@@ -161,5 +170,31 @@ const warmupDatabase = async (maxWaitMs = 30000) => {
     return false;
 };
 exports.warmupDatabase = warmupDatabase;
+// ============================================
+// GRACEFUL SHUTDOWN HANDLER
+// ============================================
+// Properly closes Prisma connection on server shutdown
+// Prevents "connection pool exhausted" errors on restart
+const disconnectDatabase = async () => {
+    try {
+        await exports.prisma.$disconnect();
+        console.log('[DB] 🔌 Prisma disconnected successfully');
+    }
+    catch (error) {
+        console.error('[DB] ❌ Disconnect error:', error);
+    }
+};
+exports.disconnectDatabase = disconnectDatabase;
+// Register shutdown handlers
+process.on('SIGINT', async () => {
+    console.log('[Process] Received SIGINT, shutting down...');
+    await (0, exports.disconnectDatabase)();
+    process.exit(0);
+});
+process.on('SIGTERM', async () => {
+    console.log('[Process] Received SIGTERM, shutting down...');
+    await (0, exports.disconnectDatabase)();
+    process.exit(0);
+});
 exports.default = exports.prisma;
 //# sourceMappingURL=database.js.map
