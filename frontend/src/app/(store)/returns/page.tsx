@@ -1,4 +1,23 @@
 import Link from 'next/link';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Returns & Refunds - 5-Day Hassle-Free Returns',
+  description: 'ORA Jewellery offers a 5-day return policy on all orders. Learn about our easy return process, eligibility criteria, and refund timeline.',
+  alternates: {
+    canonical: 'https://orashop.in/returns',
+  },
+  openGraph: {
+    title: 'Returns & Refunds - ORA Jewellery',
+    description: '5-day hassle-free returns on all jewellery purchases.',
+    url: 'https://orashop.in/returns',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Returns & Refunds - ORA Jewellery',
+  },
+};
 
 export default function ReturnsPage() {
   return (

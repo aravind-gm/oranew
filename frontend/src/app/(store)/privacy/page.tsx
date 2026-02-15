@@ -1,4 +1,23 @@
 import Link from 'next/link';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy - Data Protection & User Rights',
+  description: 'Read ORA Jewellery\'s Privacy Policy. Understand how we collect, use, and protect your personal information.',
+  alternates: {
+    canonical: 'https://orashop.in/privacy',
+  },
+  openGraph: {
+    title: 'Privacy Policy - ORA Jewellery',
+    description: 'Our Privacy Policy and data protection practices.',
+    url: 'https://orashop.in/privacy',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Privacy Policy - ORA Jewellery',
+  },
+};
 
 export default function PrivacyPage() {
   return (

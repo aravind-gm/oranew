@@ -1,4 +1,23 @@
 import Link from 'next/link';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Shipping Policy - Free Delivery Across India',
+  description: 'ORA Jewellery offers free shipping on all orders across India. Learn about delivery timelines, tracking, and packaging.',
+  alternates: {
+    canonical: 'https://orashop.in/shipping',
+  },
+  openGraph: {
+    title: 'Shipping Policy - ORA Jewellery',
+    description: 'Free delivery on all orders across India.',
+    url: 'https://orashop.in/shipping',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Shipping Policy - ORA Jewellery',
+  },
+};
 
 export default function ShippingPage() {
   return (

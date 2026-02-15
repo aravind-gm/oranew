@@ -31,6 +31,7 @@ export const metadata: Metadata = {
   },
   description: 'own. radiate. adorn. — Discover ORA\'s curated collection of premium fashion jewellery. Necklaces, bracelets, rings, earrings and more. Everyday luxury under ₹1,500.',
   keywords: 'jewellery, fashion jewellery, premium jewellery, necklaces, earrings, bracelets, rings, ORA, luxury jewellery, Indian jewellery, affordable jewellery',
+  viewport: 'width=device-width, initial-scale=1', // CRITICAL: Mobile responsiveness
   icons: {
     icon: '/oralogo.png',
     apple: '/oralogo.png',

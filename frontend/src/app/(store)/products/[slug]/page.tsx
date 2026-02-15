@@ -85,7 +85,7 @@ export async function generateMetadata({
           alt: primaryImage?.altText || product.name,
         },
       ],
-      type: 'website',
+      type: 'website', // Note: Next.js Metadata doesn't support og:type="product" yet - use schema.org Product instead
       locale: 'en_IN',
     },
     twitter: {

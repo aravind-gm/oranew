@@ -1,22 +1,11 @@
-'use client';
-
 /**
- * Redirect: /valentines-special → /collections/valentine-special
+ * Server-side Redirect: /valentines-special → /collections/valentine-special
+ * Using Next.js redirect() for SEO-friendly 308 permanent redirect
  */
 
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { redirect } from 'next/navigation';
 
 export default function ValentinesSpecialRedirect() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace('/collections/valentine-special');
-  }, [router]);
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
-      <p className="text-neutral-500 text-sm animate-pulse">Redirecting to Valentine&apos;s Special…</p>
-    </div>
-  );
+  redirect('/collections/valentine-special');
 }
+

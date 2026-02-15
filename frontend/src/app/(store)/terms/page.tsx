@@ -1,4 +1,23 @@
 import Link from 'next/link';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Terms of Service - Policies & Guidelines',
+  description: 'Read ORA Jewellery\'s Terms of Service. Understand your rights, responsibilities, and our platform policies.',
+  alternates: {
+    canonical: 'https://orashop.in/terms',
+  },
+  openGraph: {
+    title: 'Terms of Service - ORA Jewellery',
+    description: 'Our Terms of Service and platform policies.',
+    url: 'https://orashop.in/terms',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Terms of Service - ORA Jewellery',
+  },
+};
 
 export default function TermsPage() {
   return (

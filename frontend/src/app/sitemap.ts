@@ -70,6 +70,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
+      url: `${SITE_URL}/collections`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    {
       url: `${SITE_URL}/about`,
       lastModified: now,
       changeFrequency: 'monthly',
@@ -81,6 +87,42 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'monthly',
       priority: 0.5,
     },
+    {
+      url: `${SITE_URL}/care`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    {
+      url: `${SITE_URL}/faq`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    {
+      url: `${SITE_URL}/returns`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    {
+      url: `${SITE_URL}/shipping`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    {
+      url: `${SITE_URL}/terms`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.4,
+    },
+    {
+      url: `${SITE_URL}/privacy`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.4,
+    },
   ];
 
   // Product pages
@@ -91,13 +133,41 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  // Category pages
+  // Collection/Category pages (no query strings - use clean URLs)
   const categoryPages: MetadataRoute.Sitemap = categories.map((c) => ({
-    url: `${SITE_URL}/products?category=${c.slug}`,
+    url: `${SITE_URL}/collections/${c.slug}`,
     lastModified: c.updatedAt || now,
     changeFrequency: 'weekly' as const,
     priority: 0.7,
   }));
 
-  return [...staticPages, ...productPages, ...categoryPages];
+  // Special collections
+  const specialCollections: MetadataRoute.Sitemap = [
+    {
+      url: `${SITE_URL}/collections/new-arrivals`,
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.85,
+    },
+    {
+      url: `${SITE_URL}/collections/offers`,
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.85,
+    },
+    {
+      url: `${SITE_URL}/collections/combos`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.75,
+    },
+    {
+      url: `${SITE_URL}/collections/gifts-for-her`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.75,
+    },
+  ];
+
+  return [...staticPages, ...productPages, ...categoryPages, ...specialCollections];
 }

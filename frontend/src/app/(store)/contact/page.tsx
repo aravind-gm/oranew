@@ -10,6 +10,9 @@ import { motion } from 'framer-motion';
 import { Phone, Mail, MapPin, Clock, Truck, Shield, CheckCircle, Package } from 'lucide-react';
 import { useState } from 'react';
 
+// Metadata must be defined in a Server Component parent or layout
+// Since this is 'use client', metadata is inherited from layout.tsx
+
 export default function ContactPage() {
   const [formData, setFormData] = useState({
     fullName: '',

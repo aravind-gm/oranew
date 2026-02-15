@@ -1,4 +1,23 @@
 import Link from 'next/link';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Jewellery Care Guide - Keep Your Jewellery Sparkling',
+  description: 'Learn how to care for your ORA fashion jewellery. Expert tips on cleaning, storage, and maintenance to keep your pieces looking new.',
+  alternates: {
+    canonical: 'https://orashop.in/care',
+  },
+  openGraph: {
+    title: 'Jewellery Care Guide - ORA Jewellery',
+    description: 'Keep your ORA jewellery sparkling with expert care tips.',
+    url: 'https://orashop.in/care',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Jewellery Care Guide - ORA',
+  },
+};
 
 export default function CarePage() {
   return (
