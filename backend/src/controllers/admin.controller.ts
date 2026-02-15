@@ -1607,10 +1607,6 @@ export const updateAdminShippingConfig = async (
       },
     });
 
-    // Invalidate shipping cache
-    const { invalidateShippingCache } = await import('../utils/shipping');
-    invalidateShippingCache();
-
     console.log('[Admin] 🚚 Shipping config updated:', {
       freeThreshold: config.freeThreshold,
       standardFee: config.standardFee,

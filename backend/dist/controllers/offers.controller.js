@@ -109,7 +109,7 @@ const getOfferProducts = async (req, res, next) => {
                 total,
                 page: Number(page),
                 limit: Number(limit),
-                pages: Math.ceil(total / Number(limit)),
+                pages: Math.ceil(Number(total) / Number(limit)),
             },
         });
     }
@@ -345,7 +345,7 @@ const getAdminOfferProducts = async (req, res, next) => {
                 total,
                 page: Number(page),
                 limit: Number(limit),
-                pages: Math.ceil(total / Number(limit)),
+                pages: Math.ceil(Number(total) / Number(limit)),
             },
         });
     }

@@ -1351,9 +1351,6 @@ const updateAdminShippingConfig = async (req, res, next) => {
                 isActive: true,
             },
         });
-        // Invalidate shipping cache
-        const { invalidateShippingCache } = await Promise.resolve().then(() => __importStar(require('../utils/shipping')));
-        invalidateShippingCache();
         console.log('[Admin] 🚚 Shipping config updated:', {
             freeThreshold: config.freeThreshold,
             standardFee: config.standardFee,

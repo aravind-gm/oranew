@@ -125,7 +125,7 @@ export const getOfferProducts = async (
         total,
         page: Number(page),
         limit: Number(limit),
-        pages: Math.ceil(total / Number(limit)),
+        pages: Math.ceil(Number(total) / Number(limit)),
       },
     });
   } catch (error) {
@@ -412,7 +412,7 @@ export const getAdminOfferProducts = async (
         total,
         page: Number(page),
         limit: Number(limit),
-        pages: Math.ceil(total / Number(limit)),
+        pages: Math.ceil(Number(total) / Number(limit)),
       },
     });
   } catch (error) {
