@@ -28,7 +28,7 @@ const getApiUrl = () => {
 
 const api = axios.create({
   baseURL: getApiUrl(),
-  timeout: 10000, // 10s timeout (reduced from 30s)
+  timeout: 30000, // 30s timeout for checkout operations
 });
 
 // Setup custom interceptors for 503 retry and auth
