@@ -3,6 +3,10 @@ import { ReactNode } from 'react';
 import '../../globals.css';
 import './admin-v2-reset.css';
 
+// Force dynamic rendering to prevent static pre-rendering
+// Static pages can't access auth cookies, causing redirect loops
+export const dynamic = 'force-dynamic';
+
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',

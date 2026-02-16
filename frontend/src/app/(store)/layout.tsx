@@ -1,3 +1,7 @@
+// Force dynamic rendering for protected account routes
+// Static pre-rendering prevents cookies from being accessible
+export const dynamic = 'force-dynamic';
+
 export default function StoreLayout({
   children,
 }: {
