@@ -3,6 +3,7 @@ import { prisma } from '../config/database';
 import { withRetry } from '../utils/retry';
 import { AuthRequest } from '../middleware/auth';
 import { User } from '@prisma/client';
+import { sanitizeText, sanitizePhone } from '../utils/sanitize';
 
 // @desc    Complete user profile (for new users)
 // @route   PUT /api/users/complete-profile
@@ -26,8 +27,8 @@ export const completeProfile = async (
       prisma.user.update({
         where: { id: req.user!.id },
         data: {
-          fullName: fullName.trim(),
-          phone: phone || null,
+          fullName: sanitizeText(fullName),
+          phone: phone ? sanitizePhone(phone) : null,
           gender: gender || null,
           profileCompleted: true,
         },
@@ -102,9 +103,10 @@ export const updateProfile = async (
   try {
     const { fullName, phone, gender } = req.body;
 
+    // XSS SANITIZATION - Clean profile fields
     const updateData: any = {};
-    if (fullName) updateData.fullName = fullName.trim();
-    if (phone !== undefined) updateData.phone = phone;
+    if (fullName) updateData.fullName = sanitizeText(fullName);
+    if (phone !== undefined) updateData.phone = sanitizePhone(phone);
     if (gender !== undefined) updateData.gender = gender;
 
     const user = await withRetry<User>(() =>
@@ -169,6 +171,16 @@ export const createAddress = async (
       addressType,
     } = req.body;
 
+    // XSS SANITIZATION - Clean all address fields
+    const sanitizedFullName = sanitizeText(fullName);
+    const sanitizedPhone = sanitizePhone(phone);
+    const sanitizedAddressLine1 = sanitizeText(addressLine1);
+    const sanitizedAddressLine2 = addressLine2 ? sanitizeText(addressLine2) : null;
+    const sanitizedCity = sanitizeText(city);
+    const sanitizedState = sanitizeText(state);
+    const sanitizedPincode = sanitizeText(pincode);
+    const sanitizedCountry = sanitizeText(country || 'India');
+
     // If this is default, unset other defaults
     if (isDefault) {
       await withRetry(() =>
@@ -183,14 +195,14 @@ export const createAddress = async (
       prisma.address.create({
         data: {
           userId: req.user!.id,
-          fullName,
-          phone,
-          addressLine1,
-          addressLine2,
-          city,
-          state,
-          pincode,
-          country: country || 'India',
+          fullName: sanitizedFullName,
+          phone: sanitizedPhone,
+          addressLine1: sanitizedAddressLine1,
+          addressLine2: sanitizedAddressLine2,
+          city: sanitizedCity,
+          state: sanitizedState,
+          pincode: sanitizedPincode,
+          country: sanitizedCountry,
           isDefault,
           addressType,
         },
@@ -211,6 +223,16 @@ export const updateAddress = async (
   try {
     const { id } = req.params;
     const updateData = req.body;
+
+    // XSS SANITIZATION - Clean all address fields if provided
+    if (updateData.fullName) updateData.fullName = sanitizeText(updateData.fullName);
+    if (updateData.phone) updateData.phone = sanitizePhone(updateData.phone);
+    if (updateData.addressLine1) updateData.addressLine1 = sanitizeText(updateData.addressLine1);
+    if (updateData.addressLine2) updateData.addressLine2 = sanitizeText(updateData.addressLine2);
+    if (updateData.city) updateData.city = sanitizeText(updateData.city);
+    if (updateData.state) updateData.state = sanitizeText(updateData.state);
+    if (updateData.pincode) updateData.pincode = sanitizeText(updateData.pincode);
+    if (updateData.country) updateData.country = sanitizeText(updateData.country);
 
     // If setting as default, unset other defaults
     if (updateData.isDefault) {

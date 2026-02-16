@@ -9,6 +9,7 @@ const database_1 = require("../config/database");
 const email_1 = require("../utils/email");
 const jwt_1 = require("../utils/jwt");
 const refreshToken_1 = require("../utils/refreshToken");
+const sanitize_1 = require("../utils/sanitize");
 // ============================================
 // CUSTOM 8-DIGIT OTP AUTHENTICATION SYSTEM
 // ============================================
@@ -365,7 +366,10 @@ const register = async (req, res, next) => {
                 error: 'Email is required',
             });
         }
-        const emailLower = email.toLowerCase();
+        // XSS SANITIZATION - Clean all user inputs
+        const emailLower = (0, sanitize_1.sanitizeEmail)(email);
+        const sanitizedFullName = (0, sanitize_1.sanitizeText)(fullName);
+        const sanitizedPhone = phone ? (0, sanitize_1.sanitizePhone)(phone) : null;
         // Check if user already exists
         const existingUser = await database_1.prisma.user.findUnique({
             where: { email: emailLower },
@@ -379,6 +383,45 @@ const register = async (req, res, next) => {
         if (password) {
             // PASSWORD REGISTRATION
             console.log(`[Auth] 🔐 Password registration for: ${email}`);
+            // ============================================
+            // PASSWORD STRENGTH VALIDATION (Production Security)
+            // ============================================
+            // Minimum length check
+            if (password.length < 8) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Password must be at least 8 characters long',
+                });
+            }
+            // Uppercase letter check
+            if (!/[A-Z]/.test(password)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Password must contain at least one uppercase letter',
+                });
+            }
+            // Lowercase letter check
+            if (!/[a-z]/.test(password)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Password must contain at least one lowercase letter',
+                });
+            }
+            // Number check
+            if (!/[0-9]/.test(password)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Password must contain at least one number',
+                });
+            }
+            // Common password check
+            const commonPasswords = ['password', '12345678', 'admin123', 'welcome123', 'qwerty123'];
+            if (commonPasswords.includes(password.toLowerCase())) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Password is too common. Please choose a stronger password',
+                });
+            }
             // Hash password
             const passwordHash = await bcrypt_1.default.hash(password, 10);
             // Create user with password
@@ -386,8 +429,8 @@ const register = async (req, res, next) => {
                 data: {
                     email: emailLower,
                     passwordHash,
-                    fullName: fullName || '',
-                    phone: phone || null,
+                    fullName: sanitizedFullName || '',
+                    phone: sanitizedPhone,
                     role: 'CUSTOMER',
                     isVerified: true, // Auto-verify for password registration
                     profileCompleted: !!fullName,
@@ -443,8 +486,8 @@ const register = async (req, res, next) => {
                 data: {
                     email: emailLower,
                     passwordHash: null, // No password for OTP users
-                    fullName: fullName || '',
-                    phone: phone || null,
+                    fullName: sanitizedFullName || '',
+                    phone: sanitizedPhone,
                     role: 'CUSTOMER',
                     isVerified: false, // Must verify via OTP
                     profileCompleted: false,

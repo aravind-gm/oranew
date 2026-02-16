@@ -75,9 +75,12 @@ const PORT = process.env.PORT || 8000;
 // ============================================
 if (process.env.NODE_ENV === 'production') {
     console.log('[SECURITY] 🔐 Validating production secrets...');
-    // JWT Secret validation
-    if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
-        throw new Error('FATAL: JWT_SECRET is missing or too weak (must be at least 32 characters)');
+    // JWT Secret validation - MUST be 64+ characters for 256-bit security
+    if (!process.env.JWT_SECRET) {
+        throw new Error('FATAL: JWT_SECRET is missing');
+    }
+    if (process.env.JWT_SECRET.length < 64) {
+        throw new Error('FATAL: JWT_SECRET must be at least 64 characters (256-bit). Use: openssl rand -hex 32');
     }
     // Razorpay webhook secret validation
     if (!process.env.RAZORPAY_WEBHOOK_SECRET) {
@@ -139,7 +142,18 @@ if (process.env.NODE_ENV !== 'production' && process.env.FRONTEND_URL && !allowe
 }
 console.log('[CORS] 🔐 Allowed Origins:', allowedOrigins);
 app.use((0, cors_1.default)({
-    origin: 'https://orashop.in',
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps, curl, Postman)
+        if (!origin)
+            return callback(null, true);
+        if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+        }
+        else {
+            console.warn('[CORS] ⚠️  Blocked origin:', origin);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

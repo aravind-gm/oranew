@@ -3,6 +3,7 @@ import { prisma } from '../config/database';
 import { withRetry } from '../utils/retry';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
+import { sanitizeText } from '../utils/sanitize';
 
 export const getProductReviews = async (
   req: AuthRequest,
@@ -41,6 +42,10 @@ export const createReview = async (
   try {
     const { productId, rating, title, reviewText } = req.body;
 
+    // XSS SANITIZATION - Clean all user input
+    const sanitizedTitle = sanitizeText(title);
+    const sanitizedReviewText = sanitizeText(reviewText);
+
     // Check if user already reviewed
     const existingReview = await withRetry(() =>
       prisma.review.findFirst({
@@ -61,8 +66,8 @@ export const createReview = async (
           productId,
           userId: req.user!.id,
           rating,
-          title,
-          reviewText,
+          title: sanitizedTitle,
+          reviewText: sanitizedReviewText,
         },
       })
     );

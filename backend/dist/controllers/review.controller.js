@@ -4,6 +4,7 @@ exports.deleteReview = exports.updateReview = exports.createReview = exports.get
 const database_1 = require("../config/database");
 const retry_1 = require("../utils/retry");
 const errorHandler_1 = require("../middleware/errorHandler");
+const sanitize_1 = require("../utils/sanitize");
 const getProductReviews = async (req, res, next) => {
     try {
         const { productId } = req.params;
@@ -29,6 +30,9 @@ exports.getProductReviews = getProductReviews;
 const createReview = async (req, res, next) => {
     try {
         const { productId, rating, title, reviewText } = req.body;
+        // XSS SANITIZATION - Clean all user input
+        const sanitizedTitle = (0, sanitize_1.sanitizeText)(title);
+        const sanitizedReviewText = (0, sanitize_1.sanitizeText)(reviewText);
         // Check if user already reviewed
         const existingReview = await (0, retry_1.withRetry)(() => database_1.prisma.review.findFirst({
             where: {
@@ -44,8 +48,8 @@ const createReview = async (req, res, next) => {
                 productId,
                 userId: req.user.id,
                 rating,
-                title,
-                reviewText,
+                title: sanitizedTitle,
+                reviewText: sanitizedReviewText,
             },
         }));
         // Update product rating

@@ -9,8 +9,16 @@ const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
 
-// Database connection string
-const DATABASE_URL = 'postgresql://postgres.hgejomvgldqnqzkgffoi:9EtOmJae6YyUxXx2@db.hgejomvgldqnqzkgffoi.supabase.co:5432/postgres?sslmode=require';
+// SECURITY: Load database URL from environment variable
+require('dotenv').config({ path: path.join(__dirname, 'backend', '.env') });
+
+const DATABASE_URL = process.env.DIRECT_URL;
+
+if (!DATABASE_URL) {
+  console.error('❌ ERROR: DIRECT_URL not found in backend/.env');
+  console.error('   Please ensure backend/.env contains DIRECT_URL');
+  process.exit(1);
+}
 
 // Read migration SQL file
 const migrationPath = path.join(__dirname, 'backend', 'migrations', 'add_gift_collections.sql');

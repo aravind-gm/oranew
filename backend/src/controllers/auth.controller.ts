@@ -9,6 +9,7 @@ import { sendEmail } from '../utils/email';
 import { generateToken, verifyToken } from '../utils/jwt';
 import { getSupabaseAdmin } from '../config/supabase';
 import { generateRefreshToken, storeRefreshToken } from '../utils/refreshToken';
+import { sanitizeText, sanitizeEmail, sanitizePhone } from '../utils/sanitize';
 
 // ============================================
 // CUSTOM 8-DIGIT OTP AUTHENTICATION SYSTEM
@@ -424,7 +425,10 @@ export const register = async (
       });
     }
 
-    const emailLower = email.toLowerCase();
+    // XSS SANITIZATION - Clean all user inputs
+    const emailLower = sanitizeEmail(email);
+    const sanitizedFullName = sanitizeText(fullName);
+    const sanitizedPhone = phone ? sanitizePhone(phone) : null;
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -442,6 +446,50 @@ export const register = async (
       // PASSWORD REGISTRATION
       console.log(`[Auth] 🔐 Password registration for: ${email}`);
       
+      // ============================================
+      // PASSWORD STRENGTH VALIDATION (Production Security)
+      // ============================================
+      // Minimum length check
+      if (password.length < 8) {
+        return res.status(400).json({
+          success: false,
+          error: 'Password must be at least 8 characters long',
+        });
+      }
+
+      // Uppercase letter check
+      if (!/[A-Z]/.test(password)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Password must contain at least one uppercase letter',
+        });
+      }
+
+      // Lowercase letter check
+      if (!/[a-z]/.test(password)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Password must contain at least one lowercase letter',
+        });
+      }
+
+      // Number check
+      if (!/[0-9]/.test(password)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Password must contain at least one number',
+        });
+      }
+
+      // Common password check
+      const commonPasswords = ['password', '12345678', 'admin123', 'welcome123', 'qwerty123'];
+      if (commonPasswords.includes(password.toLowerCase())) {
+        return res.status(400).json({
+          success: false,
+          error: 'Password is too common. Please choose a stronger password',
+        });
+      }
+      
       // Hash password
       const passwordHash = await bcrypt.hash(password, 10);
 
@@ -450,8 +498,8 @@ export const register = async (
         data: {
           email: emailLower,
           passwordHash,
-          fullName: fullName || '',
-          phone: phone || null,
+          fullName: sanitizedFullName || '',
+          phone: sanitizedPhone,
           role: 'CUSTOMER',
           isVerified: true, // Auto-verify for password registration
           profileCompleted: !!fullName,
@@ -512,8 +560,8 @@ export const register = async (
         data: {
           email: emailLower,
           passwordHash: null, // No password for OTP users
-          fullName: fullName || '',
-          phone: phone || null,
+          fullName: sanitizedFullName || '',
+          phone: sanitizedPhone,
           role: 'CUSTOMER',
           isVerified: false, // Must verify via OTP
           profileCompleted: false,
