@@ -28,7 +28,7 @@ interface Pagination {
 
 export default function InventoryPage() {
   const router = useRouter();
-  const { token, user, isHydrated } = useAuthStore();
+  const { user } = useAuthStore();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -60,15 +60,14 @@ export default function InventoryPage() {
 
   // Check auth on hydration
   useEffect(() => {
-    if (!isHydrated) return;
     
-    if (!token || user?.role !== 'ADMIN') {
+    if (user?.role !== 'ADMIN') {
       router.push('/admin/login');
       return;
     }
     
     fetchInventory();
-  }, [isHydrated, token, user, router, fetchInventory]);
+  }, [user, router, fetchInventory]);
 
   const handleStockChange = (productId: string, value: string) => {
     const numValue = parseInt(value) || 0;
@@ -77,7 +76,7 @@ export default function InventoryPage() {
 
   const saveStock = async (productId: string) => {
     if (editedStock[productId] === undefined) return;
-    if (!token || !isHydrated) {
+    if (user?.role !== 'ADMIN') {
       console.error('Not authenticated or hydration incomplete');
       return;
     }
@@ -117,7 +116,7 @@ export default function InventoryPage() {
     return { label: 'In Stock', color: 'bg-green-500/20 text-green-400 border-green-500/50' };
   };
 
-  if (!token || user?.role !== 'ADMIN') {
+  if (user?.role !== 'ADMIN') {
     return null;
   }
 

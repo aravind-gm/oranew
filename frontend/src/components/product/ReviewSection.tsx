@@ -21,7 +21,7 @@ export default function ReviewSection({
   averageRating: initialRating = 0,
   reviewCount: initialCount = 0,
 }: ReviewSectionProps) {
-  const { token } = useAuthStore();
+  const { user } = useAuthStore();
   const { reviews, stats, loading, fetchReviews, deleteReview } = useReviewStore();
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [sortBy, setSortBy] = useState<'recent' | 'rating'>('recent');
@@ -70,7 +70,7 @@ export default function ReviewSection({
         <h2 className="text-2xl font-serif font-semibold text-gray-900">
           Customer Reviews
         </h2>
-        {token && !showReviewForm && (
+        {user && !showReviewForm && (
           <button
             onClick={() => setShowReviewForm(true)}
             className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg font-medium hover:bg-amber-700 transition-colors"
@@ -136,7 +136,7 @@ export default function ReviewSection({
       )}
 
       {/* Write Review CTA (for non-logged in users) */}
-      {!token && !showReviewForm && (
+      {!user && !showReviewForm && (
         <ReviewForm productId={productId} productName={productName} />
       )}
 
@@ -185,7 +185,7 @@ export default function ReviewSection({
             <p className="text-gray-600 mb-6">
               Be the first to share your experience with {productName}
             </p>
-            {token ? (
+            {user ? (
               <button
                 onClick={() => setShowReviewForm(true)}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-lg font-medium hover:bg-amber-700 transition-colors"

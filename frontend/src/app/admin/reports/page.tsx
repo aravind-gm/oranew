@@ -27,7 +27,7 @@ interface PaymentStats {
 
 export default function ReportsPage() {
   const router = useRouter();
-  const { token, user, isHydrated } = useAuthStore();
+  const { user } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [revenueData, setRevenueData] = useState<RevenueData | null>(null);
@@ -60,14 +60,13 @@ export default function ReportsPage() {
   }, [period]);
 
   useEffect(() => {
-    if (!isHydrated) return;
     
-    if (!token || user?.role !== 'ADMIN') {
+    if (user?.role !== 'ADMIN') {
       router.push('/admin/login');
       return;
     }
     fetchReports();
-  }, [isHydrated, token, user, router, fetchReports]);
+  }, [user, router, fetchReports]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -95,7 +94,7 @@ export default function ReportsPage() {
     }
   };
 
-  if (!token || user?.role !== 'ADMIN') {
+  if (user?.role !== 'ADMIN') {
     return null;
   }
 

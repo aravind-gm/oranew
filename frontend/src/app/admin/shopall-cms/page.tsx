@@ -277,7 +277,7 @@ function Toast({ message, type }: { message: string; type: 'success' | 'error' }
 
 export default function ShopAllCmsPage() {
   const router = useRouter();
-  const { user, token } = useAuthStore();
+  const { user } = useAuthStore();
   const [config, setConfig] = useState<ShopAllConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -285,10 +285,10 @@ export default function ShopAllCmsPage() {
 
   // Auth check
   useEffect(() => {
-    if (!token || user?.role !== 'ADMIN') {
+    if (user?.role !== 'ADMIN') {
       router.replace('/admin/login');
     }
-  }, [token, user, router]);
+  }, [user, router]);
 
   // Fetch config
   useEffect(() => {

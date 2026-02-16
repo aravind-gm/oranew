@@ -18,7 +18,7 @@ interface Category {
 
 export default function CategoriesPage() {
   const router = useRouter();
-  const { token, user, isHydrated } = useAuthStore();
+  const { user } = useAuthStore();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -28,15 +28,14 @@ export default function CategoriesPage() {
   const [editForm, setEditForm] = useState({ name: '', description: '' });
 
   useEffect(() => {
-    if (!isHydrated) return;
     
-    if (!token || user?.role !== 'ADMIN') {
+    if (user?.role !== 'ADMIN') {
       router.push('/admin/login');
       return;
     }
 
     fetchCategories();
-  }, [isHydrated, token, user, router]);
+  }, [user, router]);
 
   const fetchCategories = async () => {
     try {
@@ -58,7 +57,7 @@ export default function CategoriesPage() {
     e.preventDefault();
     if (!newCategory.name.trim()) return;
 
-    if (!token || !isHydrated) {
+    if (user?.role !== 'ADMIN') {
       setError('Authentication not ready. Please refresh and try again.');
       return;
     }
@@ -89,7 +88,7 @@ export default function CategoriesPage() {
   const handleEdit = async (categoryId: string) => {
     if (!editForm.name.trim()) return;
 
-    if (!token || !isHydrated) {
+    if (user?.role !== 'ADMIN') {
       setError('Authentication not ready. Please refresh and try again.');
       return;
     }
@@ -121,7 +120,7 @@ export default function CategoriesPage() {
   const handleDelete = async (categoryId: string) => {
     if (!window.confirm('Are you sure you want to delete this category?')) return;
 
-    if (!token || !isHydrated) {
+    if (user?.role !== 'ADMIN') {
       setError('Authentication not ready. Please refresh and try again.');
       return;
     }
@@ -145,7 +144,7 @@ export default function CategoriesPage() {
     setEditForm({ name: category.name, description: category.description || '' });
   };
 
-  if (!token || user?.role !== 'ADMIN') {
+  if (user?.role !== 'ADMIN') {
     return null;
   }
 

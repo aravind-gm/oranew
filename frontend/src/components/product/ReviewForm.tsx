@@ -20,7 +20,7 @@ export default function ReviewForm({
   onSuccess,
   onCancel,
 }: ReviewFormProps) {
-  const { token } = useAuthStore();
+  const { user } = useAuthStore();
   const { createReview, submitting, error, clearError } = useReviewStore();
 
   const [rating, setRating] = useState(0);
@@ -67,7 +67,7 @@ export default function ReviewForm({
   };
 
   // Not logged in
-  if (!token) {
+  if (!user) {
     return (
       <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center bg-gray-50">
         <MessageSquarePlus className="mx-auto mb-4 text-gray-400" size={40} />

@@ -18,7 +18,7 @@ type LoginStep = 'form' | 'otp-verify';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, user, token, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { login, user, isAuthenticated, isLoading: authLoading } = useAuth();
   const authStore = useAuthStore();
 
   // Mode: Login or Signup
@@ -105,7 +105,7 @@ export default function LoginPage() {
         throw new Error(response.data?.error || 'Login failed');
       }
 
-      const { user: userData, token: jwtToken } = response.data;
+      const { user: userData } = response.data;
 
       // console.log('[Auth] ✅ Password login successful:', userData.email);
 
@@ -118,12 +118,8 @@ export default function LoginPage() {
         profileCompleted: userData.profileCompleted,
       };
 
-      // Store in AuthContext (for display purposes)
-      login(userPayload, jwtToken);
-
-      // CRITICAL: Also update AuthStore for Header to detect login
-      // Cookie-based auth: tokens handled by backend via HttpOnly cookies
-      authStore.login(userPayload, jwtToken);
+      // Store user in AuthStore (cookies already set by backend)
+      authStore.setUser(userPayload);
 
       setMessage('Welcome back! ✨');
 
@@ -215,7 +211,7 @@ export default function LoginPage() {
         throw new Error(response.data?.error || 'Verification failed');
       }
 
-      const { user: userData, token: jwtToken, isNewUser } = response.data;
+      const { user: userData, isNewUser } = response.data;
 
       // console.log('[Auth] ✅ OTP verified:', { userId: userData.id, isNewUser });
 
@@ -228,11 +224,8 @@ export default function LoginPage() {
         profileCompleted: userData.profileCompleted,
       };
 
-      // Store in AuthContext
-      login(userPayload, jwtToken);
-
-      // CRITICAL: Also update AuthStore for Header to detect login
-      authStore.login(userPayload, jwtToken);
+      // Store user in AuthStore (cookies already set by backend)
+      authStore.setUser(userPayload);
 
       setMessage('Welcome to ORA! ✨');
 
@@ -298,7 +291,7 @@ export default function LoginPage() {
         throw new Error(response.data?.error || 'Registration failed');
       }
 
-      const { user: userData, token: jwtToken } = response.data;
+      const { user: userData } = response.data;
 
       // console.log('[Auth] ✅ Signup successful:', userData.email);
 
@@ -311,11 +304,8 @@ export default function LoginPage() {
         profileCompleted: userData.profileCompleted,
       };
 
-      // Store in AuthContext
-      login(userPayload, jwtToken);
-
-      // CRITICAL: Also update AuthStore for Header to detect login
-      authStore.login(userPayload, jwtToken);
+      // Store user in AuthStore (cookies already set by backend)
+      authStore.setUser(userPayload);
 
       setMessage('Account created successfully! Welcome to ORA! ✨');
 

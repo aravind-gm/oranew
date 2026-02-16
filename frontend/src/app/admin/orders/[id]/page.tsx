@@ -74,7 +74,7 @@ const ORDER_STATUSES = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVE
 export default function AdminOrderDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const { token, user, isHydrated } = useAuthStore();
+  const { user } = useAuthStore();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
@@ -104,20 +104,19 @@ export default function AdminOrderDetailPage() {
   }, [params.id]);
 
   useEffect(() => {
-    if (!isHydrated) return;
     
-    if (!token || user?.role !== 'ADMIN') {
+    if (user?.role !== 'ADMIN') {
       router.push('/admin/login');
       return;
     }
 
     fetchOrder();
-  }, [isHydrated, token, user, router, fetchOrder]);
+  }, [user, router, fetchOrder]);
 
   const handleUpdateStatus = async () => {
     if (!order || status === order.status) return;
 
-    if (!token || !isHydrated) {
+    if (user?.role !== 'ADMIN') {
       setError('Authentication not ready. Please refresh and try again.');
       return;
     }
@@ -186,7 +185,7 @@ export default function AdminOrderDetailPage() {
     }).format(amount);
   };
 
-  if (!token || user?.role !== 'ADMIN') {
+  if (user?.role !== 'ADMIN') {
     return null;
   }
 

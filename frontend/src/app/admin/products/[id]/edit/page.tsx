@@ -46,7 +46,7 @@ interface Product {
 export default function EditProductPage() {
   const router = useRouter();
   const params = useParams();
-  const { token, user, isHydrated } = useAuthStore();
+  const { user } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -119,21 +119,20 @@ export default function EditProductPage() {
   }, [params.id]);
 
   useEffect(() => {
-    if (!isHydrated) return;
     
-    if (!token || user?.role !== 'ADMIN') {
+    if (user?.role !== 'ADMIN') {
       router.push('/admin/login');
       return;
     }
     fetchProduct();
     fetchCategories();
-  }, [isHydrated, token, user, router, fetchProduct]);
+  }, [user, router, fetchProduct]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    if (!token || !isHydrated) {
+    if (user?.role !== 'ADMIN') {
       setError('Authentication not ready. Please refresh and try again.');
       return;
     }
@@ -216,7 +215,7 @@ export default function EditProductPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!token || !isHydrated) {
+    if (user?.role !== 'ADMIN') {
       setError('Authentication not ready. Please refresh and try again.');
       return;
     }
@@ -343,7 +342,7 @@ export default function EditProductPage() {
     }
   };
 
-  if (!token || user?.role !== 'ADMIN') {
+  if (user?.role !== 'ADMIN') {
     return null;
   }
 

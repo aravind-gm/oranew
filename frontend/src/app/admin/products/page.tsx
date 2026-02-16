@@ -58,7 +58,7 @@ interface Pagination {
 
 export default function AdminProductsPage() {
   const router = useRouter();
-  const { token, user, isHydrated } = useAuthStore();
+  const { user } = useAuthStore();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,14 +82,13 @@ export default function AdminProductsPage() {
   const [actionError, setActionError] = useState('');
 
   useEffect(() => {
-    if (!isHydrated) return;
     
-    if (!token || user?.role !== 'ADMIN') {
+    if (user?.role !== 'ADMIN') {
       router.push('/admin/login');
       return;
     }
     fetchCategories();
-  }, [isHydrated, token, user, router]);
+  }, [user, router]);
 
   const fetchCategories = async () => {
     try {
@@ -131,12 +130,11 @@ export default function AdminProductsPage() {
   }, [searchQuery, categoryFilter, stockFilter, statusFilter]);
 
   useEffect(() => {
-    if (!isHydrated) return;
     
-    if (token && user?.role === 'ADMIN') {
+    if (user?.role === 'ADMIN') {
       fetchProducts();
     }
-  }, [isHydrated, token, user, fetchProducts]);
+  }, [user, fetchProducts]);
 
   // Handle search with debounce
   useEffect(() => {
@@ -171,7 +169,7 @@ export default function AdminProductsPage() {
   const handleDelete = async () => {
     if (!deleteTarget) return;
 
-    if (!token || !isHydrated) {
+    if (user?.role !== 'ADMIN') {
       setActionError('Authentication not ready. Please refresh and try again.');
       return;
     }
@@ -206,7 +204,7 @@ export default function AdminProductsPage() {
   const handleBulkStatusToggle = async (activate: boolean) => {
     if (selectedProducts.size === 0) return;
 
-    if (!token || !isHydrated) {
+    if (user?.role !== 'ADMIN') {
       setActionError('Authentication not ready. Please refresh and try again.');
       return;
     }
@@ -263,7 +261,7 @@ export default function AdminProductsPage() {
     return <span className="px-2 py-1 text-xs rounded-full bg-green-900/50 text-green-300">{qty} in stock</span>;
   };
 
-  if (!token || user?.role !== 'ADMIN') {
+  if (user?.role !== 'ADMIN') {
     return null;
   }
 

@@ -15,100 +15,32 @@ interface User {
 
 interface AuthState {
   user: User | null;
-  token: string | null;
-  isAuthenticated: boolean;
-  isHydrated: boolean;
   
   // Actions
-  login: (user: User, token: string) => void;
+  setUser: (user: User | null) => void;
   logout: () => void;
   updateUser: (user: User) => void;
-  setToken: (token: string) => void;
-  setUser: (user: User) => void;
-  setHydrated: (hydrated: boolean) => void;
-  
-  // Explicit hydration check
-  ensureHydrated: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,
-      token: null,
-      isAuthenticated: false,
-      isHydrated: false,
       
-      login: (user, token) => {
-        // Cookie-based auth: token stored in HttpOnly cookie by backend
-        // Keep token in memory for immediate display, but don't persist
-        set({ user, token, isAuthenticated: true, isHydrated: true });
-      },
-      
-      logout: () => {
-        // Cookie-based auth: HttpOnly cookies cleared by backend
-        try {
-          const { supabase } = require('@/lib/supabase');
-          supabase.auth.signOut().catch((err: any) => {
-            console.error('[AuthStore] Error signing out from Supabase:', err);
-          });
-        } catch (err) {
-          // Supabase client may not be available
-        }
-        set({ user: null, token: null, isAuthenticated: false, isHydrated: true });
-      },
-      
-      updateUser: (user) => {
-        // console.log('[AuthStore] 👤 Updating user:', { email: user.email });
+      setUser: (user) => {
+        // User data fetched from /api/auth/me
+        // Only persist user info, never tokens (HttpOnly cookies)
         set({ user });
       },
       
-      setToken: (token) => {
-        // Cookie-based auth: don't persist token to localStorage
-        set({ token, isAuthenticated: true });
+      logout: () => {
+        // Clear user state (cookies cleared by backend)
+        set({ user: null });
       },
       
-      setUser: (user) => {
-        // console.log('[AuthStore] 👥 Setting user:', { email: user.email });
-        set({ user, isAuthenticated: true });
-      },
-      
-      setHydrated: (hydrated) => {
-        if (hydrated && !get().isHydrated) {
-          // Debug logging removed for production
-        }
-        set({ isHydrated: hydrated });
-      },
-      
-      // Explicitly wait for hydration - useful in components
-      ensureHydrated: async () => {
-        const state = get();
-        if (state.isHydrated) return;
-        
-        // Wait up to 3 seconds for hydration
-        return new Promise<void>((resolve) => {
-          let resolved = false;
-          let lastIsHydrated = false;
-          
-          const unsubscribe = useAuthStore.subscribe(
-            (state) => {
-              if (!resolved && state.isHydrated && !lastIsHydrated) {
-                resolved = true;
-                unsubscribe();
-                resolve();
-              }
-              lastIsHydrated = state.isHydrated;
-            }
-          );
-          
-          setTimeout(() => {
-            if (!resolved) {
-              resolved = true;
-              unsubscribe();
-              resolve();
-            }
-          }, 3000);
-        });
+      updateUser: (user) => {
+        // Update user profile data
+        set({ user });
       },
     }),
     {
@@ -144,16 +76,9 @@ export const useAuthStore = create<AuthState>()(
           },
         };
       })(),
-      onRehydrateStorage: () => (state) => {
-        if (state) {
-          state.setHydrated(true);
-        }
-      },
-      // Only persist user data, not token (stored in HttpOnly cookies)
+      // Only persist user data, never tokens
       partialize: (state) => ({
         user: state.user,
-        isAuthenticated: state.isAuthenticated,
-        isHydrated: state.isHydrated,
       }),
     }
   )

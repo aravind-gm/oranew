@@ -12,7 +12,7 @@ import Link from 'next/link';
 
 export default function CompleteProfilePage() {
   const router = useRouter();
-  const { user, token, setUser, isHydrated } = useAuthStore();
+  const { user, setUser } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [checkingProfile, setCheckingProfile] = useState(true);
@@ -25,10 +25,8 @@ export default function CompleteProfilePage() {
 
   // 🔒 CHECK AUTH STATUS
   useEffect(() => {
-    if (!isHydrated) return;
-
     // No auth = redirect to login
-    if (!user || !token) {
+    if (user?.role !== 'ADMIN') {
       // console.log('[Profile] ❌ Not authenticated, redirecting to login');
       if (!hasRedirectedRef.current) {
         hasRedirectedRef.current = true;
@@ -54,7 +52,7 @@ export default function CompleteProfilePage() {
     if (user.phone) setPhone(user.phone);
 
     setCheckingProfile(false);
-  }, [isHydrated, user, token, router]);
+  }, [user, router]);
 
   const validatePhone = (phoneValue: string) => {
     const digits = phoneValue.replace(/\D/g, '');

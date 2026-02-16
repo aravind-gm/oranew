@@ -62,7 +62,7 @@ const RETURN_STATUSES = ['ALL', 'REQUESTED', 'APPROVED', 'REJECTED', 'REFUNDED']
 
 export default function AdminReturnsPage() {
   const router = useRouter();
-  const { token, user, isHydrated } = useAuthStore();
+  const { user } = useAuthStore();
   const [returns, setReturns] = useState<ReturnItem[]>([]);
   const [stats, setStats] = useState<ReturnStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,14 +79,13 @@ export default function AdminReturnsPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!isHydrated) return;
     
-    if (!token || user?.role !== 'ADMIN') {
+    if (user?.role !== 'ADMIN') {
       router.push('/admin/login');
       return;
     }
     fetchStats();
-  }, [isHydrated, token, user, router]);
+  }, [user, router]);
 
   const fetchStats = async () => {
     try {
@@ -121,17 +120,16 @@ export default function AdminReturnsPage() {
   }, [statusFilter]);
 
   useEffect(() => {
-    if (!isHydrated) return;
     
-    if (token && user?.role === 'ADMIN') {
+    if (user?.role === 'ADMIN') {
       fetchReturns();
     }
-  }, [isHydrated, token, user, fetchReturns]);
+  }, [user, fetchReturns]);
 
   const handleAction = async () => {
     if (!selectedReturn || !actionType) return;
 
-    if (!token || !isHydrated) {
+    if (user?.role !== 'ADMIN') {
       setError('Authentication not ready. Please refresh and try again.');
       return;
     }
@@ -234,7 +232,7 @@ export default function AdminReturnsPage() {
     }).format(amount);
   };
 
-  if (!token || user?.role !== 'ADMIN') {
+  if (user?.role !== 'ADMIN') {
     return null;
   }
 

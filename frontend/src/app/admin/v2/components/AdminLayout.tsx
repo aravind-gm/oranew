@@ -527,17 +527,16 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { token, user, isHydrated } = useAuthStore();
+  const { user } = useAuthStore();
   const router = useRouter();
 
   // Auth check
   useEffect(() => {
-    if (!isHydrated) return;
     
-    if (!token || user?.role !== 'ADMIN') {
+    if (user?.role !== 'ADMIN') {
       router.push('/admin/login');
     }
-  }, [isHydrated, token, user, router]);
+  }, [user, router]);
 
   const toggleSidebar = () => setSidebarCollapsed(!sidebarCollapsed);
 
@@ -549,7 +548,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   };
 
   // Don't render until auth is verified
-  if (!isHydrated || !token || user?.role !== 'ADMIN') {
+  if (user?.role !== 'ADMIN') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f6f7f9]">
         <div className="flex flex-col items-center gap-4">

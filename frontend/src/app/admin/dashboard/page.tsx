@@ -66,19 +66,18 @@ interface DashboardData {
 
 export default function AdminDashboardPage() {
   const router = useRouter();
-  const { token, user, isHydrated, logout } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!isHydrated) return;
-    if (!token || user?.role !== 'ADMIN') {
+    if (user?.role !== 'ADMIN') {
       router.push('/admin/login');
     }
-  }, [isHydrated, token, user, router]);
+  }, [user, router]);
 
   useEffect(() => {
-    if (!isHydrated || !token || user?.role !== 'ADMIN') return;
+    if (user?.role !== 'ADMIN') return;
 
     const fetchDashboard = async () => {
       try {
@@ -93,9 +92,9 @@ export default function AdminDashboardPage() {
     };
 
     fetchDashboard();
-  }, [isHydrated, token, user]);
+  }, [user]);
 
-  if (!token || user?.role !== 'ADMIN') return null;
+  if (user?.role !== 'ADMIN') return null;
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('en-IN', {

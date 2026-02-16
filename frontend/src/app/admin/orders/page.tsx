@@ -31,7 +31,7 @@ const ORDER_STATUSES = ['ALL', 'PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 
 export default function AdminOrdersPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { token, user, isHydrated } = useAuthStore();
+  const { user } = useAuthStore();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState<Pagination | null>(null);
@@ -59,15 +59,14 @@ export default function AdminOrdersPage() {
   }, [statusFilter]);
 
   useEffect(() => {
-    if (!isHydrated) return;
     
-    if (!token || user?.role !== 'ADMIN') {
+    if (user?.role !== 'ADMIN') {
       router.push('/admin/login');
       return;
     }
 
     fetchOrders();
-  }, [isHydrated, token, user, router, fetchOrders]);
+  }, [user, router, fetchOrders]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -109,7 +108,7 @@ export default function AdminOrdersPage() {
     }).format(amount);
   };
 
-  if (!token || user?.role !== 'ADMIN') {
+  if (user?.role !== 'ADMIN') {
     return null;
   }
 
