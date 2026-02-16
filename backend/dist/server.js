@@ -139,31 +139,12 @@ if (process.env.NODE_ENV !== 'production' && process.env.FRONTEND_URL && !allowe
 }
 console.log('[CORS] 🔐 Allowed Origins:', allowedOrigins);
 app.use((0, cors_1.default)({
-    origin: (origin, callback) => {
-        // Allow requests with no origin (mobile apps, Postman, etc.)
-        if (!origin)
-            return callback(null, true);
-        // In production, strictly validate origins
-        if (process.env.NODE_ENV === 'production') {
-            // SECURITY: Production strict mode - only allow whitelisted domains
-            const productionDomains = [
-                'https://orashop.in',
-                'https://www.orashop.in',
-            ];
-            if (productionDomains.includes(origin)) {
-                callback(null, true);
-            }
-            else {
-                console.warn('[SECURITY:CORS] ⚠️ Blocked unauthorized origin:', {
-                    origin,
-                    ip: undefined, // Available in route handlers
-                    timestamp: new Date().toISOString(),
-                });
-                callback(new Error('Not allowed by CORS'));
-            }
-        }
-        else {
+    origin: process.env.NODE_ENV === 'production'
+        ? 'https://orashop.in'
+        : (origin, callback) => {
             // Development: allow all localhost origins + staging
+            if (!origin)
+                return callback(null, true);
             if (allowedOrigins.includes(origin)) {
                 callback(null, true);
             }
@@ -171,8 +152,7 @@ app.use((0, cors_1.default)({
                 console.warn('[CORS] ⚠️ Blocked request from unauthorized origin:', origin);
                 callback(new Error('Not allowed by CORS'));
             }
-        }
-    },
+        },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

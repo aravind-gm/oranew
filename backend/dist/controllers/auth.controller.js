@@ -8,6 +8,7 @@ const bcrypt_1 = __importDefault(require("bcrypt"));
 const database_1 = require("../config/database");
 const email_1 = require("../utils/email");
 const jwt_1 = require("../utils/jwt");
+const refreshToken_1 = require("../utils/refreshToken");
 // ============================================
 // CUSTOM 8-DIGIT OTP AUTHENTICATION SYSTEM
 // ============================================
@@ -172,11 +173,27 @@ const verifyOtp = async (req, res, next) => {
                 });
             }
         }
-        // Generate JWT token for backend session
-        const token = (0, jwt_1.generateToken)({
+        // Generate access token (30m expiry)
+        const accessToken = (0, jwt_1.generateToken)({
             id: user.id,
             email: user.email,
             role: user.role,
+        });
+        // Generate refresh token (7d expiry)
+        const refreshToken = (0, refreshToken_1.generateRefreshToken)();
+        await (0, refreshToken_1.storeRefreshToken)(user.id, refreshToken);
+        // Set HttpOnly cookies
+        res.cookie('access_token', accessToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            maxAge: 30 * 60 * 1000, // 30 minutes
+        });
+        res.cookie('refresh_token', refreshToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
         console.log(`[Auth] ✅ User logged in via OTP: ${email} (isNewUser: ${isNewUser})`);
         return res.status(200).json({
@@ -190,7 +207,6 @@ const verifyOtp = async (req, res, next) => {
                 isVerified: user.isVerified,
                 profileCompleted: user.profileCompleted,
             },
-            token,
             isNewUser,
         });
     }
@@ -244,11 +260,27 @@ const login = async (req, res, next) => {
                     error: 'Invalid email or password',
                 });
             }
-            // Generate JWT token
-            const token = (0, jwt_1.generateToken)({
+            // Generate access token (30m expiry)
+            const accessToken = (0, jwt_1.generateToken)({
                 id: user.id,
                 email: user.email,
                 role: user.role,
+            });
+            // Generate refresh token (7d expiry)
+            const refreshToken = (0, refreshToken_1.generateRefreshToken)();
+            await (0, refreshToken_1.storeRefreshToken)(user.id, refreshToken);
+            // Set HttpOnly cookies
+            res.cookie('access_token', accessToken, {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'none',
+                maxAge: 30 * 60 * 1000, // 30 minutes
+            });
+            res.cookie('refresh_token', refreshToken, {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'none',
+                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
             });
             console.log(`[Auth] ✅ User logged in with password: ${email}`);
             return res.status(200).json({
@@ -262,7 +294,6 @@ const login = async (req, res, next) => {
                     isVerified: user.isVerified,
                     profileCompleted: user.profileCompleted,
                 },
-                token,
                 isNewUser: false,
             });
         }
@@ -354,11 +385,27 @@ const register = async (req, res, next) => {
                     profileCompleted: !!fullName,
                 },
             });
-            // Generate JWT token
-            const token = (0, jwt_1.generateToken)({
+            // Generate access token (30m expiry)
+            const accessToken = (0, jwt_1.generateToken)({
                 id: user.id,
                 email: user.email,
                 role: user.role,
+            });
+            // Generate refresh token (7d expiry)
+            const refreshToken = (0, refreshToken_1.generateRefreshToken)();
+            await (0, refreshToken_1.storeRefreshToken)(user.id, refreshToken);
+            // Set HttpOnly cookies
+            res.cookie('access_token', accessToken, {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'none',
+                maxAge: 30 * 60 * 1000, // 30 minutes
+            });
+            res.cookie('refresh_token', refreshToken, {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'none',
+                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
             });
             console.log(`[Auth] ✅ User registered with password: ${email}`);
             return res.status(201).json({
@@ -373,7 +420,6 @@ const register = async (req, res, next) => {
                     isVerified: user.isVerified,
                     profileCompleted: user.profileCompleted,
                 },
-                token,
                 isNewUser: true,
             });
         }
@@ -478,11 +524,27 @@ const passwordLogin = async (req, res, next) => {
                 error: 'Invalid email or password',
             });
         }
-        // Generate JWT token
-        const token = (0, jwt_1.generateToken)({
+        // Generate access token (30m expiry)
+        const accessToken = (0, jwt_1.generateToken)({
             id: user.id,
             email: user.email,
             role: user.role,
+        });
+        // Generate refresh token (7d expiry)
+        const refreshToken = (0, refreshToken_1.generateRefreshToken)();
+        await (0, refreshToken_1.storeRefreshToken)(user.id, refreshToken);
+        // Set HttpOnly cookies
+        res.cookie('access_token', accessToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            maxAge: 30 * 60 * 1000, // 30 minutes
+        });
+        res.cookie('refresh_token', refreshToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
         console.log(`[Auth] ✅ User logged in with password: ${email}`);
         return res.status(200).json({
@@ -496,7 +558,6 @@ const passwordLogin = async (req, res, next) => {
                 isVerified: user.isVerified,
                 profileCompleted: user.profileCompleted,
             },
-            token,
             isNewUser: false,
         });
     }
