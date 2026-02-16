@@ -21,29 +21,14 @@ import { useEffect } from 'react';
 
 export default function AdminPage() {
   const router = useRouter();
-  const { token, user, logout, isHydrated } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const { stats, statsLoading, fetchDashboardStats, lowStockProducts, lowStockLoading, fetchLowStockProducts } = useAdminStore();
 
+  // Fetch data on mount - middleware already validated authentication
   useEffect(() => {
-    if (!isHydrated) return;
-    
-    if (!token || user?.role !== 'ADMIN') {
-      router.push('/admin/login');
-    }
-  }, [isHydrated, token, user, router]);
-
-  useEffect(() => {
-    if (!isHydrated) return;
-    
-    if (token && user?.role === 'ADMIN') {
-      fetchDashboardStats();
-      fetchLowStockProducts();
-    }
-  }, [isHydrated, token, user, fetchDashboardStats, fetchLowStockProducts]);
-
-  if (!token || user?.role !== 'ADMIN') {
-    return null;
-  }
+    fetchDashboardStats();
+    fetchLowStockProducts();
+  }, [fetchDashboardStats, fetchLowStockProducts]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {

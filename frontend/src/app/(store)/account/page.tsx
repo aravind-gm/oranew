@@ -20,32 +20,15 @@ interface UserProfile {
 
 export default function AccountPage() {
   const router = useRouter();
-  const { isAuthenticated, user, isLoading, logout } = useAuth();
+  const { user, logout: authLogout } = useAuth();
   const authStore = useAuthStore();
   const [orderStats, setOrderStats] = useState<OrderStats>({ total: 0, pending: 0, delivered: 0 });
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
-  const [authCheckDone, setAuthCheckDone] = useState(false);
 
+  // Fetch data on mount - middleware already validated authentication
   useEffect(() => {
-    // console.log('[AccountPage] Auth state:', { isLoading, isAuthenticated, userEmail: user?.email });
-    
-    if (!isLoading) {
-      setAuthCheckDone(true);
-      
-      // Redirect immediately if not authenticated, don't wait
-      if (!isAuthenticated) {
-        // console.log('[AccountPage] ❌ Not authenticated, redirecting to login');
-        router.replace('/auth/login');
-      } else {
-        // console.log('[AccountPage] ✅ Authenticated, user:', user?.email);
-      }
-    }
-  }, [isAuthenticated, isLoading, router, user]);
-
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      // Fetch order stats from API
+    if (user) {
       fetchOrderStats();
       // Set profile info
       const displayName = user.fullName || 
@@ -59,7 +42,7 @@ export default function AccountPage() {
         memberSince: new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }),
       });
     }
-  }, [isAuthenticated, user]);
+  }, [user]);
 
   const fetchOrderStats = async () => {
     try {
@@ -86,27 +69,12 @@ export default function AccountPage() {
   };
 
   const handleLogout = () => {
-    logout();
-    // CRITICAL: Also update AuthStore for Header to detect logout
+    authLogout();
+    // Also update AuthStore for Header to detect logout
     authStore.logout();
     router.push('/');
     router.refresh();
   };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-rose-50 via-pink-50 to-amber-50">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-rose-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading your account...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated || !user) {
-    return null;
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-amber-50 py-8 md:py-12">
@@ -118,13 +86,13 @@ export default function AccountPage() {
             {/* User Info */}
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center text-white text-2xl md:text-3xl font-serif font-bold shadow-lg">
-                {(profile?.name?.[0] || user.email?.[0] || 'U').toUpperCase()}
+                {(profile?.name?.[0] || user?.email?.[0] || 'U').toUpperCase()}
               </div>
               <div>
                 <h1 className="font-serif text-2xl md:text-3xl lg:text-4xl font-bold text-gray-800">
                   Hello, {profile?.name || 'there'}! 👋
                 </h1>
-                <p className="text-gray-600 text-sm md:text-base">{user.email}</p>
+                <p className="text-gray-600 text-sm md:text-base">{user?.email}</p>
                 <p className="text-gray-500 text-xs mt-1">Member since {profile?.memberSince}</p>
               </div>
             </div>
