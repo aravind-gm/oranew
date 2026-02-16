@@ -13,7 +13,8 @@ const emptySubscribe = () => () => {};
 export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
-  const { token, user, logout, isHydrated } = useAuthStore();
+  const authStore = useAuthStore();
+  const { token, user, logout } = authStore;
   const { items } = useCartStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,7 +32,7 @@ export default function Header() {
     () => false
   );
 
-  // Ensure component is mounted and auth store is hydrated
+  // Ensure component is mounted
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -87,10 +88,10 @@ export default function Header() {
   }, [isMobileMenuOpen]);
 
   // Prevent hydration mismatch by using consistent values during SSR
-  // Wait for both client-side mount AND auth store hydration
-  const isLoggedIn = mounted && isHydrated && token && user;
-  const isAdmin = mounted && isHydrated && user?.role === 'ADMIN';
-  const cartCount = mounted && isHydrated ? items.length : 0;
+  // We're logged in if we have both token and user (isHydrated is implicit)
+  const isLoggedIn = mounted && token && user;
+  const isAdmin = mounted && user?.role === 'ADMIN';
+  const cartCount = mounted ? items.length : 0;
 
   const menuItems = [
     { label: 'Shop All', href: '/collections' },

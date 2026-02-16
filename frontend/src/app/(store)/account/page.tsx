@@ -33,17 +33,13 @@ export default function AccountPage() {
     if (!isLoading) {
       setAuthCheckDone(true);
       
-      // Delay the redirect check slightly to ensure auth state is fully propagated
-      const timer = setTimeout(() => {
-        if (!isAuthenticated) {
-          // console.log('[AccountPage] ❌ Not authenticated, redirecting to login');
-          router.replace('/auth/login');
-        } else {
-          // console.log('[AccountPage] ✅ Authenticated, user:', user?.email);
-        }
-      }, 100);
-      
-      return () => clearTimeout(timer);
+      // Redirect immediately if not authenticated, don't wait
+      if (!isAuthenticated) {
+        // console.log('[AccountPage] ❌ Not authenticated, redirecting to login');
+        router.replace('/auth/login');
+      } else {
+        // console.log('[AccountPage] ✅ Authenticated, user:', user?.email);
+      }
     }
   }, [isAuthenticated, isLoading, router, user]);
 

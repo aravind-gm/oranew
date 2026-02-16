@@ -122,21 +122,20 @@ export default function LoginPage() {
       login(userPayload, jwtToken);
 
       // CRITICAL: Also update AuthStore for Header to detect login
+      // This stores auth state in localStorage for persistence
       authStore.login(userPayload, jwtToken);
 
       setMessage('Welcome back! ✨');
 
-      // Redirect based on role
-      setTimeout(() => {
-        if (userData.role === 'ADMIN') {
-          router.push('/admin');
-        } else if (!userData.profileCompleted || !userData.fullName) {
-          router.push('/auth/complete-profile');
-        } else {
-          router.push('/account');
-        }
-        router.refresh();
-      }, 500);
+      // Redirect based on role - use Promise.resolve() to ensure state update completes
+      Promise.resolve().then(() => {
+        const redirectPath = 
+          userData.role === 'ADMIN' ? '/admin' :
+          (!userData.profileCompleted || !userData.fullName) ? '/auth/complete-profile' :
+          '/account';
+        
+        router.replace(redirectPath);
+      });
 
     } catch (err: unknown) {
       const error = err as { response?: { data?: { error?: string } }; message?: string };
@@ -238,16 +237,14 @@ export default function LoginPage() {
       setMessage('Welcome to ORA! ✨');
 
       // Redirect based on role
-      setTimeout(() => {
-        if (userData.role === 'ADMIN') {
-          router.push('/admin');
-        } else if (isNewUser || !userData.profileCompleted || !userData.fullName) {
-          router.push('/auth/complete-profile');
-        } else {
-          router.push('/account');
-        }
-        router.refresh();
-      }, 500);
+      Promise.resolve().then(() => {
+        const redirectPath = 
+          userData.role === 'ADMIN' ? '/admin' :
+          (isNewUser || !userData.profileCompleted || !userData.fullName) ? '/auth/complete-profile' :
+          '/account';
+        
+        router.replace(redirectPath);
+      });
 
     } catch (err: unknown) {
       const error = err as { response?: { data?: { error?: string } }; message?: string };
@@ -322,11 +319,14 @@ export default function LoginPage() {
 
       setMessage('Account created successfully! Welcome to ORA! ✨');
 
-      // Redirect to account page
-      setTimeout(() => {
-        router.push('/account');
-        router.refresh();
-      }, 1000);
+      // Redirect to account page or complete-profile if needed
+      Promise.resolve().then(() => {
+        const redirectPath = 
+          (!userData.profileCompleted || !userData.fullName) ? '/auth/complete-profile' :
+          '/account';
+        
+        router.replace(redirectPath);
+      });
 
     } catch (err: unknown) {
       const error = err as { response?: { data?: { error?: string } }; message?: string };
