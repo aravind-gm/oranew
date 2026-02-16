@@ -1,10 +1,10 @@
 /**
  * Axios Interceptors for Production-Ready Error Handling
  * Handles 503 errors gracefully without logging out users
+ * Cookie-based authentication - no manual token injection needed
  */
 
 import { AxiosError, AxiosInstance } from 'axios';
-import { useAuthStore } from '@/store/authStore';
 
 // Track retry state per endpoint to avoid infinite loops
 const retryMap = new Map<string, number>();
@@ -69,21 +69,13 @@ export function setupErrorInterceptor(api: AxiosInstance) {
 }
 
 /**
- * Setup request interceptor to log API calls
+ * Setup request interceptor to configure credentials
  */
 export function setupRequestInterceptor(api: AxiosInstance) {
   api.interceptors.request.use(
     (config) => {
-      // Add auth token if available
-      if (typeof window !== 'undefined') {
-        const authStore = useAuthStore.getState();
-        const token = authStore.token || localStorage.getItem('ora_token');
-
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-      }
-
+      // Enable credentials for cookie-based authentication
+      config.withCredentials = true;
       return config;
     },
     (error) => Promise.reject(error)

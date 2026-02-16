@@ -40,15 +40,13 @@ export const useAuthStore = create<AuthState>()(
       isHydrated: false,
       
       login: (user, token) => {
-        // console.log('[AuthStore] 🔐 Logging in user:', { email: user.email, role: user.role });
-        localStorage.setItem('ora_token', token);
+        // Cookie-based auth: token stored in HttpOnly cookie by backend
+        // Keep token in memory for immediate display, but don't persist
         set({ user, token, isAuthenticated: true, isHydrated: true });
       },
       
       logout: () => {
-        // console.log('[AuthStore] 🚪 Logging out user');
-        localStorage.removeItem('ora_token');
-        // Also clear Supabase session
+        // Cookie-based auth: HttpOnly cookies cleared by backend
         try {
           const { supabase } = require('@/lib/supabase');
           supabase.auth.signOut().catch((err: any) => {
@@ -66,8 +64,7 @@ export const useAuthStore = create<AuthState>()(
       },
       
       setToken: (token) => {
-        // console.log('[AuthStore] 🔑 Setting token');
-        localStorage.setItem('ora_token', token);
+        // Cookie-based auth: don't persist token to localStorage
         set({ token, isAuthenticated: true });
       },
       
@@ -152,10 +149,9 @@ export const useAuthStore = create<AuthState>()(
           state.setHydrated(true);
         }
       },
-      // Only rehydrate specific properties, not every state change
+      // Only persist user data, not token (stored in HttpOnly cookies)
       partialize: (state) => ({
         user: state.user,
-        token: state.token,
         isAuthenticated: state.isAuthenticated,
         isHydrated: state.isHydrated,
       }),

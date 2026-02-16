@@ -174,7 +174,8 @@ export default function OffersManagementPage() {
   const fetchCampaign = useCallback(async () => {
     try {
       const res = await fetch(`${API_URL}/offers/admin/campaign`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
       });
       if (res.ok) {
         const data = await res.json();
@@ -199,7 +200,8 @@ export default function OffersManagementPage() {
       if (productFilter !== 'all') params.set('offerType', productFilter);
 
       const res = await fetch(`${API_URL}/offers/admin/products?${params}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
       });
       if (res.ok) {
         const data = await res.json();
@@ -225,9 +227,9 @@ export default function OffersManagementPage() {
     try {
       const res = await fetch(`${API_URL}/offers/admin/campaign`, {
         method: 'PUT',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify(campaign),
       });
@@ -254,9 +256,9 @@ export default function OffersManagementPage() {
     try {
       const res = await fetch(`${API_URL}/offers/admin/products/${productId}`, {
         method: 'PUT',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify(updates),
       });

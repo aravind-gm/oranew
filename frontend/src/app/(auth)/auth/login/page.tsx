@@ -118,11 +118,11 @@ export default function LoginPage() {
         profileCompleted: userData.profileCompleted,
       };
 
-      // Store in AuthContext (this syncs to localStorage)
+      // Store in AuthContext (for display purposes)
       login(userPayload, jwtToken);
 
       // CRITICAL: Also update AuthStore for Header to detect login
-      // This stores auth state in localStorage for persistence
+      // Cookie-based auth: tokens handled by backend via HttpOnly cookies
       authStore.login(userPayload, jwtToken);
 
       setMessage('Welcome back! ✨');

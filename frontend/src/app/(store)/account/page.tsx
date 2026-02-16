@@ -64,8 +64,9 @@ export default function AccountPage() {
   const fetchOrderStats = async () => {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/orders`, {
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('ora_token')}`,
+          'Content-Type': 'application/json',
         },
       });
       if (response.ok) {

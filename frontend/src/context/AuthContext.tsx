@@ -33,42 +33,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load auth state from localStorage on mount
+  // Load auth state from memory on mount
   useEffect(() => {
-    // console.log('[AuthContext] 💧 Hydrating auth state from localStorage...');
+    // console.log('[AuthContext] 💧 Initializing auth state...');
     
     try {
-      const storedToken = localStorage.getItem('ora_token');
-      const storedUser = localStorage.getItem('ora_user');
-
-      if (storedToken && storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        // Session found — debug removed for production
-        setToken(storedToken);
-        setUser(parsedUser);
-      } else {
-        // console.log('[AuthContext] ℹ️ No existing session found');
-      }
-    } catch (error) {
-      console.error('[AuthContext] ❌ Error loading auth state:', error);
-    } finally {
+      // Note: HttpOnly cookies are automatically sent by browser
+      // We don't store tokens in localStorage anymore
+      // Auth state will be populated by /api/auth/me endpoint
       setIsLoading(false);
-      // console.log('[AuthContext] ✅ Hydration complete');
+    } catch (error) {
+      console.error('[AuthContext] ❌ Error initializing auth:', error);
+      setIsLoading(false);
     }
   }, []);
 
   const login = (userData: User, authToken: string) => {
-    // Login — debug removed for production
+    // Cookie-based auth: token is handled by backend via HttpOnly cookies
+    // We don't store tokens in localStorage
     
-    // Save to state
+    // Save user data to state only (for display purposes)
     setUser(userData);
-    setToken(authToken);
+    setToken(authToken); // Keep in memory only, not persisted
     
-    // Persist to localStorage
-    localStorage.setItem('ora_token', authToken);
+    // Still store user in localStorage for display (name, email, etc)
     localStorage.setItem('ora_user', JSON.stringify(userData));
     
-    // console.log('[AuthContext] ✅ Login successful, state persisted');
+    // console.log('[AuthContext] ✅ Login successful, user state updated');
   };
 
   const logout = () => {
@@ -78,13 +69,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setToken(null);
     
-    // Clear localStorage
-    localStorage.removeItem('ora_token');
+    // Clear localStorage (keep only user data until fully cleared)
     localStorage.removeItem('ora_user');
     
-    // Also clear old token format if exists
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    // HttpOnly cookies are cleared by backend on /auth/logout endpoint
     
     // console.log('[AuthContext] ✅ Logout complete');
   };
