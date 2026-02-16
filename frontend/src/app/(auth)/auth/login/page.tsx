@@ -50,8 +50,8 @@ export default function LoginPage() {
     if (authLoading) return;
 
     if (isAuthenticated && user) {
-      // console.log('[Auth] ✅ User already authenticated, redirecting to home');
-      router.replace('/'); // Redirect to home page
+      // console.log('[Auth] ✅ User already authenticated, redirecting to account');
+      router.replace('/account');
     }
   }, [authLoading, isAuthenticated, user, router]);
 
@@ -133,7 +133,7 @@ export default function LoginPage() {
         } else if (!userData.profileCompleted || !userData.fullName) {
           router.push('/auth/complete-profile');
         } else {
-          router.push('/'); // Redirect to home page
+          router.push('/account');
         }
         router.refresh();
       }, 500);
@@ -244,7 +244,7 @@ export default function LoginPage() {
         } else if (isNewUser || !userData.profileCompleted || !userData.fullName) {
           router.push('/auth/complete-profile');
         } else {
-          router.push('/'); // Redirect to home page
+          router.push('/account');
         }
         router.refresh();
       }, 500);
@@ -322,9 +322,9 @@ export default function LoginPage() {
 
       setMessage('Account created successfully! Welcome to ORA! ✨');
 
-      // Redirect to home page
+      // Redirect to account page
       setTimeout(() => {
-        router.push('/'); // Redirect to home page
+        router.push('/account');
         router.refresh();
       }, 1000);
 
