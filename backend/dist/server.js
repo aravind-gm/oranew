@@ -139,20 +139,7 @@ if (process.env.NODE_ENV !== 'production' && process.env.FRONTEND_URL && !allowe
 }
 console.log('[CORS] 🔐 Allowed Origins:', allowedOrigins);
 app.use((0, cors_1.default)({
-    origin: process.env.NODE_ENV === 'production'
-        ? 'https://orashop.in'
-        : (origin, callback) => {
-            // Development: allow all localhost origins + staging
-            if (!origin)
-                return callback(null, true);
-            if (allowedOrigins.includes(origin)) {
-                callback(null, true);
-            }
-            else {
-                console.warn('[CORS] ⚠️ Blocked request from unauthorized origin:', origin);
-                callback(new Error('Not allowed by CORS'));
-            }
-        },
+    origin: 'https://orashop.in',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

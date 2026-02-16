@@ -10,12 +10,13 @@ const database_1 = require("../config/database");
  * SECURITY: HttpOnly prevents XSS attacks, Secure ensures HTTPS only
  */
 const setAuthCookies = (res, accessToken, refreshToken) => {
-    const isProduction = process.env.NODE_ENV === 'production';
     // Access token cookie (30 minutes)
     res.cookie('access_token', accessToken, {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
+        domain: '.orashop.in',
+        path: '/',
         maxAge: 30 * 60 * 1000, // 30 minutes
     });
     // Refresh token cookie (7 days)
@@ -23,6 +24,8 @@ const setAuthCookies = (res, accessToken, refreshToken) => {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
+        domain: '.orashop.in',
+        path: '/',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 };
@@ -35,11 +38,15 @@ const clearAuthCookies = (res) => {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
+        domain: '.orashop.in',
+        path: '/',
     });
     res.clearCookie('refresh_token', {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
+        domain: '.orashop.in',
+        path: '/',
     });
 };
 exports.clearAuthCookies = clearAuthCookies;

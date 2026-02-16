@@ -182,17 +182,21 @@ const verifyOtp = async (req, res, next) => {
         // Generate refresh token (7d expiry)
         const refreshToken = (0, refreshToken_1.generateRefreshToken)();
         await (0, refreshToken_1.storeRefreshToken)(user.id, refreshToken);
-        // Set HttpOnly cookies
+        // Set HttpOnly cookies with subdomain support
         res.cookie('access_token', accessToken, {
             httpOnly: true,
             secure: true,
             sameSite: 'none',
+            domain: '.orashop.in',
+            path: '/',
             maxAge: 30 * 60 * 1000, // 30 minutes
         });
         res.cookie('refresh_token', refreshToken, {
             httpOnly: true,
             secure: true,
             sameSite: 'none',
+            domain: '.orashop.in',
+            path: '/',
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
         console.log(`[Auth] ✅ User logged in via OTP: ${email} (isNewUser: ${isNewUser})`);
@@ -269,17 +273,21 @@ const login = async (req, res, next) => {
             // Generate refresh token (7d expiry)
             const refreshToken = (0, refreshToken_1.generateRefreshToken)();
             await (0, refreshToken_1.storeRefreshToken)(user.id, refreshToken);
-            // Set HttpOnly cookies
+            // Set HttpOnly cookies with subdomain support
             res.cookie('access_token', accessToken, {
                 httpOnly: true,
                 secure: true,
                 sameSite: 'none',
+                domain: '.orashop.in',
+                path: '/',
                 maxAge: 30 * 60 * 1000, // 30 minutes
             });
             res.cookie('refresh_token', refreshToken, {
                 httpOnly: true,
                 secure: true,
                 sameSite: 'none',
+                domain: '.orashop.in',
+                path: '/',
                 maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
             });
             console.log(`[Auth] ✅ User logged in with password: ${email}`);
@@ -394,17 +402,21 @@ const register = async (req, res, next) => {
             // Generate refresh token (7d expiry)
             const refreshToken = (0, refreshToken_1.generateRefreshToken)();
             await (0, refreshToken_1.storeRefreshToken)(user.id, refreshToken);
-            // Set HttpOnly cookies
+            // Set HttpOnly cookies with subdomain support
             res.cookie('access_token', accessToken, {
                 httpOnly: true,
                 secure: true,
                 sameSite: 'none',
+                domain: '.orashop.in',
+                path: '/',
                 maxAge: 30 * 60 * 1000, // 30 minutes
             });
             res.cookie('refresh_token', refreshToken, {
                 httpOnly: true,
                 secure: true,
                 sameSite: 'none',
+                domain: '.orashop.in',
+                path: '/',
                 maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
             });
             console.log(`[Auth] ✅ User registered with password: ${email}`);
@@ -663,7 +675,21 @@ exports.getMe = getMe;
 // @access  Private
 const logout = async (req, res, next) => {
     try {
-        // Clear any backend sessions if needed
+        // Clear authentication cookies with subdomain support
+        res.clearCookie('access_token', {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            domain: '.orashop.in',
+            path: '/',
+        });
+        res.clearCookie('refresh_token', {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            domain: '.orashop.in',
+            path: '/',
+        });
         console.log(`[Auth] ✅ User logged out: ${req.user.email}`);
         return res.status(200).json({
             success: true,
