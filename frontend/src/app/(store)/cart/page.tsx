@@ -19,7 +19,6 @@
  * ✓ Sticky mobile checkout bar
  */
 
-import { useAuth } from '@/context/AuthContext';
 import { useCartStore } from '@/store/cartStore';
 import { trackViewCart } from '@/lib/analytics';
 import RelatedProductsCart from '@/components/RelatedProductsCart';
@@ -297,7 +296,6 @@ function TrustBadges() {
 export default function CartPage() {
   const router = useRouter();
   const { items, removeItem, updateQuantity, validateStock, stockErrors, stockValidating } = useCartStore();
-  const { isAuthenticated } = useAuth();
 
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
@@ -360,11 +358,6 @@ export default function CartPage() {
         return;
       }
 
-      if (!isAuthenticated) {
-        router.push('/auth/login?redirect=/checkout');
-        return;
-      }
-      
       router.push('/checkout');
     } catch (error) {
       console.error('Checkout error:', error);
