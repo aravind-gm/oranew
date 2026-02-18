@@ -1,7 +1,8 @@
 'use client';
 
 import api from '@/lib/api';
-import { useAuth } from '@/context/AuthContext';
+import { loadRazorpayScript } from '@/lib/razorpay';
+import { useAuthStore } from '@/store/authStore';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -9,10 +10,6 @@ interface RazorpayResponse {
   razorpay_payment_id: string;
   razorpay_order_id: string;
   razorpay_signature: string;
-}
-
-interface RazorpayKeyResponse {
-  keyId: string;
 }
 
 interface OrderData {
@@ -25,7 +22,7 @@ export default function CheckoutPaymentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const orderId = searchParams.get('orderId');
-  const { token, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuthStore();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -43,34 +40,25 @@ export default function CheckoutPaymentPage() {
 
   // Auth check
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+    if (!authLoading && !user) {
       router.replace('/auth/login?redirect=/checkout');
     }
-  }, [authLoading, isAuthenticated, router]);
+  }, [authLoading, user, router]);
 
-  // Check auth and load Razorpay script on mount
+  // Load order data once auth is confirmed
   useEffect(() => {
-    // Wait for auth loading
     if (authLoading) return;
-
-    // If no token, redirect handled by auth check effect
-    if (!token) return;
+    if (!user) return; // auth redirect handled by effect above
 
     if (!orderId) {
       router.push('/checkout');
       return;
     }
 
-    // Load Razorpay script
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    document.body.appendChild(script);
-
     // Fetch order data
     void fetchOrderData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, token, orderId]);
+  }, [authLoading, user, orderId]);
 
   const handlePayment = async (): Promise<void> => {
     setLoading(true);
@@ -79,49 +67,36 @@ export default function CheckoutPaymentPage() {
     try {
       if (!orderId) throw new Error('Order ID not found');
 
+      // Ensure Razorpay script is loaded before calling the API
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        throw new Error('Failed to load payment gateway. Please check your connection and try again.');
+      }
+
       // console.log('[Payment] Starting payment with orderId:', orderId);
 
-      // IMPORTANT: DO NOT check token here. Let Axios handle it.
-      // - Request interceptor will attach token automatically
-      // - If token missing: Axios 401 interceptor will redirect to login
-      // - If token present but invalid: Axios will reject (not redirect)
-      // This prevents duplicate auth logic and redirect conflicts.
-
-      // Step 1: Create Razorpay payment order
-      const paymentResponse = await api.post('/payments/create', {
-        orderId,
-      });
-
-      // console.log('[Payment] Payment response:', paymentResponse.status, paymentResponse.data);
+      // Step 1: Create Razorpay order on backend
+      // Cookies are sent automatically via withCredentials: true
+      const paymentResponse = await api.post('/payments/create', { orderId });
 
       if (!paymentResponse.data.success) {
         throw new Error(paymentResponse.data.error?.message || 'Failed to create payment');
       }
 
-      const { razorpayOrderId, razorpayKeyId } = paymentResponse.data;
+      // Backend returns: razorpayOrderId, razorpayKeyId, amount (paise), currency
+      const { razorpayOrderId, razorpayKeyId, amount, currency } = paymentResponse.data;
 
-      // Step 2: Get Razorpay Key ID if not provided
-      let keyId = razorpayKeyId;
+      // Step 2: Resolve key — backend is authoritative, env var is fallback
+      const keyId = razorpayKeyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
       if (!keyId) {
-        try {
-          const keyResponse = await api.get('/payments/razorpay-key');
-          keyId = (keyResponse.data as RazorpayKeyResponse).keyId;
-        } catch {
-          console.warn('Failed to get Razorpay key from API, using env var');
-          keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-        }
+        throw new Error('Razorpay key not configured. Set NEXT_PUBLIC_RAZORPAY_KEY_ID.');
       }
 
-      if (!keyId) {
-        throw new Error('Razorpay key not configured');
-      }
-
-      // Step 3: Open Razorpay checkout
-      const amount = orderData?.totalAmount || 0;
+      // Step 3: Open Razorpay modal
       const options = {
         key: keyId,
-        amount: Math.round(amount * 100), // Razorpay expects amount in paise
-        currency: 'INR',
+        amount,           // Already in paise — backend uses razorpayOrder.amount
+        currency: currency || 'INR',
         order_id: razorpayOrderId,
         name: 'ORA Jewellery',
         description: `Order #${orderId}`,
@@ -150,9 +125,6 @@ export default function CheckoutPaymentPage() {
     } catch (err: unknown) {
       console.error('[Payment Error]', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to initialize payment';
-      // Note: 401 with no token will be handled by Axios interceptor (already redirects)
-      // 401 with token present means token is invalid/expired - show error
-      // Other errors are business logic errors
       setError(errorMessage);
       setLoading(false);
     }
@@ -182,7 +154,7 @@ export default function CheckoutPaymentPage() {
     }
   };
 
-  if (!token || !orderId) {
+  if (authLoading || !user || !orderId) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">

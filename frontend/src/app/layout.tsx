@@ -5,7 +5,6 @@ import AuthStateSync from '@/components/AuthStateSync';
 import PromotionalAds from '@/components/PromotionalAds';
 import Footer from '@/components/Footer';
 import Header from '@/components/Header';
-import { AuthProvider } from '@/context/AuthContext';
 import type { Metadata } from 'next';
 import { Cormorant_Garamond, Inter } from 'next/font/google';
 import './globals.css';
@@ -130,25 +129,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AuthProvider>
-      <html lang="en" className="smooth-scroll">
-        <head>
-          <GoogleAnalytics />
-          <MetaPixel />
-          <OrganizationJsonLd />
-          <WebSiteJsonLd />
-        </head>
-        <body className={`${inter.variable} ${cormorant.variable} font-sans antialiased bg-background text-foreground`}>
-          <AuthStateSync />
-          <Header />
-          <main className="min-h-screen">
-            {children}
-          </main>
-          <Footer />
-          <AddToCartPopup />
-          <PromotionalAds />
-        </body>
-      </html>
-    </AuthProvider>
+    <html lang="en" className="smooth-scroll">
+      <head>
+        <GoogleAnalytics />
+        <MetaPixel />
+        <OrganizationJsonLd />
+        <WebSiteJsonLd />
+      </head>
+      <body className={`${inter.variable} ${cormorant.variable} font-sans antialiased bg-background text-foreground`}>
+        <AuthStateSync />
+        <Header />
+        <main className="min-h-screen">
+          {children}
+        </main>
+        <Footer />
+        <AddToCartPopup />
+        <PromotionalAds />
+      </body>
+    </html>
   );
 }
