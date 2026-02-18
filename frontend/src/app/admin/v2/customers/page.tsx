@@ -8,7 +8,7 @@
  * segments, and customer tags
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '../components/AdminLayout';
@@ -17,18 +17,14 @@ import { DataTable, TableActions, TableActionItem, Column } from '../components/
 import {
   Search,
   Download,
-  Upload,
   Eye,
   Mail,
   Crown,
   Users,
-  User,
   ShoppingBag,
   Heart,
-  Calendar,
-  Phone,
-  MapPin,
 } from 'lucide-react';
+import { useAdminStore } from '@/store/adminStore';
 
 // ============================================
 // TYPES
@@ -80,53 +76,46 @@ const CustomerTags = ({ tags }: { tags: string[] }) => {
 
 export default function CustomersPage() {
   const router = useRouter();
+  const { customers, customersLoading, customersPagination, fetchCustomers } = useAdminStore();
   
   // State
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [tagFilter, setTagFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
 
-  // Fetch customers
+  // Fetch customers with server-side search
   useEffect(() => {
-    const fetchCustomersData = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch('/api/admin/customers');
-        if (!response.ok) throw new Error('Failed to fetch customers');
-        
-        const data = await response.json();
-        
-        // Transform API response to Customer format
-        const transformedCustomers = (data.data || data || []).map((customer: any) => ({
-          id: customer.id,
-          fullName: customer.fullName || customer.name || '',
-          email: customer.email || '',
-          phone: customer.phone || '',
-          gender: customer.gender || '',
-          isVerified: customer.isVerified || false,
-          totalOrders: customer.totalOrders || 0,
-          totalSpent: customer.totalSpent || 0,
-          tags: customer.tags || [],
-          lastOrderDate: customer.lastOrderDate,
-          createdAt: customer.createdAt,
-        }));
-        
-        setCustomers(transformedCustomers);
-      } catch (error) {
-        console.error('Error fetching customers:', error);
-        // Fallback to empty state if API fails
-        setCustomers([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+    fetchCustomers(page, searchQuery || undefined);
+  }, [fetchCustomers, page]);
 
-    fetchCustomersData();
-  }, []);
+  // Debounced search
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value);
+    if (searchTimeout) clearTimeout(searchTimeout);
+    const timeout = setTimeout(() => {
+      setPage(1);
+      fetchCustomers(1, value || undefined);
+    }, 400);
+    setSearchTimeout(timeout);
+    return () => clearTimeout(timeout);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchCustomers, searchTimeout]);
+
+  // Transform API customers to local format
+  const transformedCustomers: Customer[] = (customers || []).map((c: any) => ({
+    id: c.id,
+    fullName: c.fullName || '',
+    email: c.email || '',
+    phone: c.phone || '',
+    gender: c.gender || '',
+    isVerified: c.isVerified || false,
+    totalOrders: c.totalOrders || 0,
+    totalSpent: Number(c.totalSpent) || 0,
+    tags: [],
+    lastOrderDate: c.orders?.[0]?.id ? c.createdAt : undefined,
+    createdAt: c.createdAt,
+  }));
 
   // Format currency
   const formatCurrency = (amount: number) => {
@@ -146,36 +135,26 @@ export default function CustomersPage() {
     });
   };
 
-  // Filter customers
-  const filteredCustomers = customers.filter((customer) => {
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      if (
-        !customer.fullName.toLowerCase().includes(query) &&
-        !customer.email.toLowerCase().includes(query) &&
-        !customer.phone.includes(query)
-      ) {
-        return false;
-      }
-    }
+  // Stats from server-side pagination
+  const totalCustomers = customersPagination.total;
+  const vipCustomers = transformedCustomers.filter(c => c.totalSpent > 50000).length;
+  const repeatBuyers = transformedCustomers.filter(c => c.totalOrders > 1).length;
 
-    if (tagFilter !== 'all' && !customer.tags.includes(tagFilter)) {
-      return false;
-    }
-
-    return true;
-  });
-
-  // Paginated customers
-  const paginatedCustomers = filteredCustomers.slice(
-    (page - 1) * pageSize,
-    page * pageSize
-  );
-
-  // Stats
-  const totalCustomers = customers.length;
-  const vipCustomers = customers.filter(c => c.tags.includes('VIP')).length;
-  const repeatBuyers = customers.filter(c => c.tags.includes('Repeat Buyer')).length;
+  // Export customers to CSV
+  const handleExportCSV = () => {
+    if (transformedCustomers.length === 0) return;
+    const header = 'Name,Email,Phone,Orders,Total Spent,Joined\n';
+    const rows = transformedCustomers.map(c =>
+      `"${c.fullName}","${c.email}","${c.phone || ''}",${c.totalOrders},${c.totalSpent},"${c.createdAt}"`
+    ).join('\n');
+    const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ora-customers-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // Table columns
   const columns: Column<any>[] = [
@@ -265,7 +244,7 @@ export default function CustomersPage() {
           ]}
           actions={
             <>
-              <Button variant="secondary" leftIcon={<Download size={18} />}>
+              <Button variant="secondary" leftIcon={<Download size={18} />} onClick={handleExportCSV}>
                 Export
               </Button>
             </>
@@ -314,39 +293,30 @@ export default function CustomersPage() {
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 max-w-md">
               <Input
-                placeholder="Search by name, email or phone..."
+                placeholder="Search by name or email..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 leftIcon={<Search size={18} />}
               />
             </div>
-            <Select
-              value={tagFilter}
-              onChange={(e) => setTagFilter(e.target.value)}
-              options={[
-                { value: 'all', label: 'All Tags' },
-                { value: 'VIP', label: 'VIP' },
-                { value: 'Repeat Buyer', label: 'Repeat Buyer' },
-                { value: 'New Customer', label: 'New Customer' },
-                { value: 'High Value', label: 'High Value' },
-              ]}
-            />
           </div>
         </Card>
 
         {/* Customers Table */}
         <DataTable
-          data={paginatedCustomers}
+          data={transformedCustomers}
           columns={columns}
-          loading={loading}
+          loading={customersLoading}
           selectable
           selectedRows={selectedCustomers}
           onSelectionChange={setSelectedCustomers}
           getRowId={(row) => row.id}
           onRowClick={(row) => router.push(`/admin/v2/customers/${row.id}`)}
           bulkActions={[
-            { label: 'Send Email', onClick: () => {} },
-            { label: 'Add Tag', onClick: () => {} },
+            { label: 'Email Selected', onClick: (ids) => {
+              const emails = transformedCustomers.filter(c => ids.includes(c.id)).map(c => c.email).join(',');
+              if (emails) window.open(`mailto:${emails}`);
+            }},
           ]}
           rowActions={(row) => (
             <TableActions>
@@ -364,24 +334,18 @@ export default function CustomersPage() {
               </TableActionItem>
               <TableActionItem
                 icon={<Mail size={16} />}
-                onClick={() => {}}
+                onClick={() => window.open(`mailto:${row.email}`)}
               >
                 Send Email
-              </TableActionItem>
-              <TableActionItem
-                icon={<Crown size={16} />}
-                onClick={() => {}}
-              >
-                {row.tags.includes('VIP') ? 'Remove VIP' : 'Mark as VIP'}
               </TableActionItem>
             </TableActions>
           )}
           pagination={{
             page,
-            pageSize,
-            total: filteredCustomers.length,
+            pageSize: 20,
+            total: customersPagination.total,
             onPageChange: setPage,
-            onPageSizeChange: setPageSize,
+            onPageSizeChange: () => {},
           }}
           emptyState={
             <div className="text-center py-12">

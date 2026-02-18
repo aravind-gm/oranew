@@ -73,7 +73,7 @@ interface AbandonedCart {
 // ============================================
 
 export default function MarketingPage() {
-  // Mock data
+  // Static stats for the marketing overview hub
   const stats = {
     activeDiscounts: 5,
     totalCouponsUsed: 234,

@@ -510,7 +510,7 @@ export default function ProductsPage() {
             <div className="text-center lg:text-left">
               <p className="font-medium text-text-primary mb-2">Free Shipping</p>
               <p className="text-sm text-text-secondary leading-relaxed">
-                All orders over ₹999 ship free. Fast, secure, and beautifully packaged.
+                Free shipping on all orders. Fast, secure, and beautifully packaged.
               </p>
             </div>
           </motion.div>

@@ -8,7 +8,7 @@
  *  - Headline: "Own. Radiate. Adorn."
  *  - Subtext: Jewellery crafted for the modern woman.
  *  - Dual CTAs: Shop Bestsellers | Explore Combos
- *  - Trust line: ✨ 50,000+ Happy Customers | Free Shipping Above ₹999
+ *  - Trust line: ✨ 50,000+ Happy Customers | Free Shipping on All Orders
  *  - Minimal, luxury, no heavy overlays
  */
 

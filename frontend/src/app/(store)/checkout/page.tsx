@@ -212,12 +212,11 @@ function Select({ label, name, value, onChange, options, placeholder, required, 
 // ORDER SUMMARY COMPONENT
 // ============================================================================
 
-const SHIPPING_THRESHOLD = 999;
-const SHIPPING_FEE = 99;
+// Shipping is always FREE — backend is source of truth, frontend only displays
+const SHIPPING_COST = 0;
 
 function OrderSummary({ items, totalPrice }: { items: Array<{ productId: string; name: string; image: string; price: number; quantity: number }>; totalPrice: number }) {
-  const shippingCost = totalPrice >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
-  const displayTotal = totalPrice + shippingCost;
+  const displayTotal = totalPrice;
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 lg:sticky lg:top-28">
       <h2 className="font-semibold text-lg text-gray-900 mb-6">Order Summary</h2>
@@ -257,11 +256,7 @@ function OrderSummary({ items, totalPrice }: { items: Array<{ productId: string;
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-gray-600">Shipping</span>
-          {shippingCost === 0 ? (
-            <span className="text-emerald-600 font-medium">FREE</span>
-          ) : (
-            <span className="font-medium text-gray-900">₹{shippingCost}</span>
-          )}
+          <span className="text-emerald-600 font-medium">FREE</span>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-gray-600">Tax</span>

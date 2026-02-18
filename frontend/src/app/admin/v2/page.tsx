@@ -8,7 +8,7 @@
  * top products, low stock alerts, and quick actions
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import AdminLayout from './components/AdminLayout';
 import { Card, CardHeader, CardTitle, StatCard, Badge, Button, Spinner } from './components/ui';
@@ -16,8 +16,6 @@ import {
   ShoppingCart,
   Package,
   Users,
-  TrendingUp,
-  TrendingDown,
   ArrowRight,
   Plus,
   AlertTriangle,
@@ -25,7 +23,6 @@ import {
   Clock,
   CheckCircle,
   Truck,
-  XCircle,
   Image,
   Tag,
   Gift,
@@ -391,18 +388,19 @@ const TopProducts = ({ products, loading }: TopProductsProps) => {
 // ============================================
 
 export default function DashboardPage() {
-  const { stats, statsLoading, fetchDashboardStats, lowStockProducts, lowStockLoading, fetchLowStockProducts } = useAdminStore();
-  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
-  const [ordersLoading, setOrdersLoading] = useState(true);
+  const {
+    stats, statsLoading, fetchDashboardStats,
+    lowStockProducts, lowStockLoading, fetchLowStockProducts,
+    orders, ordersLoading, fetchOrders,
+    orderStatusReport, orderStatusReportLoading, fetchOrderStatusReport,
+  } = useAdminStore();
 
   useEffect(() => {
     fetchDashboardStats();
     fetchLowStockProducts();
-    
-    // Fetch recent orders (mock for now, will connect to API)
-    setOrdersLoading(false);
-    setRecentOrders([]);
-  }, [fetchDashboardStats, fetchLowStockProducts]);
+    fetchOrders(1); // Fetch page 1 for recent orders
+    fetchOrderStatusReport(); // Get per-status counts
+  }, [fetchDashboardStats, fetchLowStockProducts, fetchOrders, fetchOrderStatusReport]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -412,6 +410,16 @@ export default function DashboardPage() {
     }).format(amount);
   };
 
+  // Transform orders to RecentOrder format (show latest 8)
+  const recentOrders: RecentOrder[] = (orders || []).slice(0, 8).map((o) => ({
+    id: o.id,
+    orderNumber: o.orderNumber,
+    customerName: o.user?.fullName || 'Guest',
+    total: Number(o.totalAmount) || 0,
+    status: o.status as RecentOrder['status'],
+    createdAt: o.createdAt,
+  }));
+
   // Transform low stock products to the expected format
   const lowStockItems: LowStockItem[] = lowStockProducts.map(p => ({
     id: p.id,
@@ -420,6 +428,29 @@ export default function DashboardPage() {
     category: p.category?.name || 'Uncategorized',
   }));
 
+  // Transform dashboard topProducts to the UI format
+  const topProductsList: TopProduct[] = (stats?.topProducts || []).slice(0, 5).map((p) => ({
+    id: p.productId,
+    name: p.name,
+    image: '',
+    sales: p.totalSold,
+    revenue: p.totalRevenue,
+  }));
+
+  // Calculate real trend: todayRevenue vs average daily revenue this month
+  const avgDailyRevenue = stats?.monthRevenue ? Number(stats.monthRevenue) / 30 : 0;
+  const todayRev = Number(stats?.todayRevenue) || 0;
+  const revenueTrend = avgDailyRevenue > 0
+    ? Math.round(((todayRev - avgDailyRevenue) / avgDailyRevenue) * 100 * 10) / 10
+    : 0;
+
+  // Order status counts from the report API
+  const statusCounts = orderStatusReport?.orderStats || {};
+  const pendingCount = (statusCounts['PENDING']?.count || 0);
+  const processingCount = (statusCounts['CONFIRMED']?.count || 0) + (statusCounts['PROCESSING']?.count || 0);
+  const shippedCount = (statusCounts['SHIPPED']?.count || 0);
+  const deliveredCount = (statusCounts['DELIVERED']?.count || 0);
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -427,7 +458,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-2xl font-bold text-[#111827]">Dashboard</h1>
           <p className="text-sm text-[#9ca3af] mt-1">
-            Welcome back! Here's what's happening with your store today.
+            Welcome back! Here&apos;s what&apos;s happening with your store today.
           </p>
         </div>
 
@@ -436,21 +467,19 @@ export default function DashboardPage() {
           <StatCard
             title="Total Revenue"
             value={formatCurrency(Number(stats?.totalRevenue) || 0)}
-            change={{ value: 12.5, trend: 'up' }}
+            change={revenueTrend !== 0 ? { value: Math.abs(revenueTrend), trend: revenueTrend >= 0 ? 'up' : 'down' } : undefined}
             icon={<IndianRupee size={24} className="text-[#16a34a]" />}
             variant="success"
           />
           <StatCard
-            title="Total Orders"
-            value={stats?.totalOrders || 0}
-            change={{ value: 8.2, trend: 'up' }}
+            title="Today&apos;s Orders"
+            value={stats?.todayOrders || 0}
             icon={<ShoppingCart size={24} className="text-[#d4af37]" />}
             variant="primary"
           />
           <StatCard
             title="Total Customers"
             value={stats?.totalCustomers || 0}
-            change={{ value: 15.3, trend: 'up' }}
             icon={<Users size={24} className="text-[#d4af37]" />}
             variant="gold"
           />
@@ -465,10 +494,10 @@ export default function DashboardPage() {
         {/* Order Status Cards */}
         <OrderStatusCards
           stats={{
-            pending: stats?.pendingOrders || 0,
-            processing: stats?.pendingOrders || 0,  // Fallback to pending if not available
-            shipped: stats?.pendingOrders || 0,    // Fallback to pending if not available
-            delivered: stats?.pendingOrders || 0,  // Fallback to pending if not available
+            pending: pendingCount || (stats?.pendingOrders || 0),
+            processing: processingCount,
+            shipped: shippedCount,
+            delivered: deliveredCount,
           }}
         />
 
@@ -476,7 +505,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Recent Orders - Takes 2 columns */}
           <div className="lg:col-span-2">
-            <RecentOrders orders={recentOrders} loading={ordersLoading} />
+            <RecentOrders orders={recentOrders} loading={ordersLoading || statsLoading} />
           </div>
 
           {/* Quick Actions */}
@@ -488,7 +517,7 @@ export default function DashboardPage() {
         {/* Secondary Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Top Products */}
-          <TopProducts products={[]} loading={false} />
+          <TopProducts products={topProductsList} loading={statsLoading} />
 
           {/* Low Stock Alert */}
           <LowStockAlert items={lowStockItems} loading={lowStockLoading} />

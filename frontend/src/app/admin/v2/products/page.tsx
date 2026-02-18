@@ -17,7 +17,6 @@ import { DataTable, TableActions, TableActionItem, Column } from '../components/
 import {
   Plus,
   Search,
-  Filter,
   Download,
   Upload,
   Edit,
@@ -25,12 +24,8 @@ import {
   Eye,
   Copy,
   Archive,
-  MoreHorizontal,
   Package,
-  Image as ImageIcon,
   RotateCcw,
-  CheckCircle,
-  XCircle,
   AlertTriangle,
 } from 'lucide-react';
 import { useAdminStore } from '@/store/adminStore';
@@ -91,22 +86,55 @@ const ProductStatusBadge = ({ isActive, stock, deletedAt }: { isActive: boolean;
 export default function ProductsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { products, productsLoading, fetchProducts } = useAdminStore();
+  const { products, productsLoading, productsPagination, fetchProducts } = useAdminStore();
   
   // State
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize] = useState(20);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Fetch products on mount and when filters change
+  // Build server-side query params
+  const buildParams = useCallback(() => {
+    const params: Record<string, string> = {};
+    if (searchQuery) params.search = searchQuery;
+    if (categoryFilter !== 'all') params.category = categoryFilter;
+    if (statusFilter === 'archived') params.archived = 'true';
+    else if (statusFilter === 'active') params.isActive = 'true';
+    else if (statusFilter === 'draft') params.isActive = 'false';
+    else if (statusFilter === 'outOfStock') params.outOfStock = 'true';
+    else if (statusFilter === 'lowStock') params.lowStock = 'true';
+    return params;
+  }, [searchQuery, categoryFilter, statusFilter]);
+
+  // Fetch products with server-side params
   useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+    fetchProducts(page, buildParams());
+  }, [fetchProducts, page, buildParams]);
+
+  // Load categories once
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const response = await api.get('/categories');
+        const cats = response.data.data || response.data || [];
+        setCategories(Array.isArray(cats) ? cats : []);
+      } catch {
+        // Categories are optional, silently fail
+      }
+    };
+    loadCategories();
+  }, []);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, statusFilter, categoryFilter]);
 
   // Auto-dismiss messages
   useEffect(() => {
@@ -135,7 +163,7 @@ export default function ProductsPage() {
     try {
       await api.put(`/admin/products/${productId}/archive`);
       setActionMessage({ type: 'success', text: 'Product archived successfully' });
-      fetchProducts();
+      fetchProducts(page, buildParams());
     } catch (err: any) {
       setActionMessage({ type: 'error', text: err.response?.data?.message || 'Failed to archive product' });
     } finally {
@@ -148,7 +176,7 @@ export default function ProductsPage() {
     try {
       await api.put(`/admin/products/${productId}/restore`);
       setActionMessage({ type: 'success', text: 'Product restored as draft' });
-      fetchProducts();
+      fetchProducts(page, buildParams());
     } catch (err: any) {
       setActionMessage({ type: 'error', text: err.response?.data?.message || 'Failed to restore product' });
     } finally {
@@ -171,7 +199,7 @@ export default function ProductsPage() {
       await api.post('/admin/products/bulk-action', { action, productIds: ids });
       setActionMessage({ type: 'success', text: `${ids.length} product(s) ${actionLabel}d successfully` });
       setSelectedProducts([]);
-      fetchProducts();
+      fetchProducts(page, buildParams());
     } catch (err: any) {
       setActionMessage({ type: 'error', text: err.response?.data?.message || `Failed to ${actionLabel} products` });
     } finally {
@@ -179,41 +207,22 @@ export default function ProductsPage() {
     }
   };
 
-  // Filter products
-  const filteredProducts = (products || []).filter((product: any) => {
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      if (
-        !product.name.toLowerCase().includes(query) &&
-        !product.sku.toLowerCase().includes(query)
-      ) {
-        return false;
-      }
-    }
-
-    // Status filter
-    if (statusFilter !== 'all') {
-      if (statusFilter === 'active' && (!product.isActive || product.deletedAt)) return false;
-      if (statusFilter === 'draft' && (product.isActive || product.deletedAt)) return false;
-      if (statusFilter === 'archived' && !product.deletedAt) return false;
-      if (statusFilter === 'outOfStock' && (product.stockQuantity > 0 || product.deletedAt)) return false;
-      if (statusFilter === 'lowStock' && (product.stockQuantity === 0 || product.stockQuantity > 5 || product.deletedAt)) return false;
-    }
-
-    // Category filter
-    if (categoryFilter !== 'all' && product.category?.id !== categoryFilter) {
-      return false;
-    }
-
-    return true;
-  });
-
-  // Paginated products
-  const paginatedProducts = filteredProducts.slice(
-    (page - 1) * pageSize,
-    page * pageSize
-  );
+  // Export products to CSV
+  const handleExportCSV = () => {
+    const rows = (products || []);
+    if (rows.length === 0) return;
+    const header = 'Name,SKU,Price,Stock,Status,Category\n';
+    const csvRows = rows.map((p: any) =>
+      `"${p.name}","${p.sku || ''}",${p.price},${p.stockQuantity},${p.isActive ? 'Active' : 'Draft'},"${p.category?.name || 'Uncategorized'}"`
+    ).join('\n');
+    const blob = new Blob([header + csvRows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ora-products-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // Table columns
   const columns: Column<any>[] = [
@@ -321,7 +330,7 @@ export default function ProductsPage() {
           ]}
           actions={
             <>
-              <Button variant="secondary" leftIcon={<Download size={18} />}>
+              <Button variant="secondary" leftIcon={<Download size={18} />} onClick={handleExportCSV}>
                 Export
               </Button>
               <Button variant="secondary" leftIcon={<Upload size={18} />}>
@@ -369,7 +378,7 @@ export default function ProductsPage() {
               onChange={(e) => setCategoryFilter(e.target.value)}
               options={[
                 { value: 'all', label: 'All Categories' },
-                // Categories will be loaded from API
+                ...categories.map(c => ({ value: c.id, label: c.name })),
               ]}
             />
           </div>
@@ -377,7 +386,7 @@ export default function ProductsPage() {
 
         {/* Products Table */}
         <DataTable
-          data={paginatedProducts}
+          data={products || []}
           columns={columns}
           loading={productsLoading || actionLoading}
           selectable
@@ -440,9 +449,9 @@ export default function ProductsPage() {
           pagination={{
             page,
             pageSize,
-            total: filteredProducts.length,
+            total: productsPagination.total,
             onPageChange: setPage,
-            onPageSizeChange: setPageSize,
+            onPageSizeChange: () => {},
           }}
           emptyState={
             <div className="text-center py-12">

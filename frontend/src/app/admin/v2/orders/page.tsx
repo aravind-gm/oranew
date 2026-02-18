@@ -16,7 +16,6 @@ import { PageHeader, Button, Badge, Input, Select, Card, Spinner } from '../comp
 import { DataTable, TableActions, TableActionItem, Column } from '../components/ui/DataTable';
 import {
   Search,
-  Filter,
   Download,
   Eye,
   Truck,
@@ -28,7 +27,6 @@ import {
   FileText,
   ShoppingCart,
   Package,
-  Calendar,
 } from 'lucide-react';
 import { useAdminStore } from '@/store/adminStore';
 
@@ -165,20 +163,23 @@ const StatusTabs = ({ activeStatus, onStatusChange, counts }: StatusTabsProps) =
 export default function OrdersPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { orders, ordersLoading, fetchOrders, updateOrderStatus } = useAdminStore();
+  const { orders, ordersLoading, ordersPagination, fetchOrders, updateOrderStatus } = useAdminStore();
   
   // State
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('status') || 'all');
-  const [dateRange, setDateRange] = useState<string>('all');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
 
-  // Fetch orders on mount
+  // Fetch orders with server-side status filter
   useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+    fetchOrders(page, statusFilter !== 'all' ? statusFilter : undefined);
+  }, [fetchOrders, page, statusFilter]);
+
+  // Reset page on filter change
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter]);
 
   // Format currency
   const formatCurrency = (amount: number) => {
@@ -200,47 +201,45 @@ export default function OrdersPage() {
     });
   };
 
-  // Filter orders
-  const filteredOrders = (orders || []).filter((order: any) => {
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      if (
-        !order.orderNumber.toLowerCase().includes(query) &&
-        !order.customer?.name?.toLowerCase().includes(query) &&
-        !order.customer?.email?.toLowerCase().includes(query)
-      ) {
-        return false;
-      }
-    }
-
-    // Status filter
-    if (statusFilter !== 'all' && order.status.toLowerCase() !== statusFilter) {
-      return false;
-    }
-
-    return true;
+  // Client-side search filtering (search is local against fetched page)
+  const displayOrders = (orders || []).filter((order: any) => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      order.orderNumber?.toLowerCase().includes(query) ||
+      order.user?.fullName?.toLowerCase().includes(query) ||
+      order.user?.email?.toLowerCase().includes(query)
+    );
   });
 
-  // Calculate status counts
+  // Status counts from current data (approximate from server response)
   const statusCounts: Record<string, number> = {
-    all: orders?.length || 0,
-    pending: orders?.filter((o: any) => o.status === 'PENDING').length || 0,
-    processing: orders?.filter((o: any) => o.status === 'PROCESSING' || o.status === 'CONFIRMED').length || 0,
-    shipped: orders?.filter((o: any) => o.status === 'SHIPPED').length || 0,
-    delivered: orders?.filter((o: any) => o.status === 'DELIVERED').length || 0,
-    cancelled: orders?.filter((o: any) => o.status === 'CANCELLED' || o.status === 'RETURNED').length || 0,
+    all: ordersPagination.total || orders?.length || 0,
   };
 
-  // Paginated orders
-  const paginatedOrders = filteredOrders.slice(
-    (page - 1) * pageSize,
-    page * pageSize
-  );
-
   // Handle status update
-  const handleStatusUpdate = async (orderId: string, newStatus: Order['status']) => {
-    await updateOrderStatus(orderId, newStatus);
+  const handleStatusUpdate = async (orderId: string, newStatus: string) => {
+    const success = await updateOrderStatus(orderId, newStatus);
+    if (success) {
+      fetchOrders(page, statusFilter !== 'all' ? statusFilter : undefined);
+    }
+  };
+
+  // Export orders to CSV
+  const handleExportCSV = () => {
+    const rows = displayOrders;
+    if (rows.length === 0) return;
+    const header = 'Order #,Customer,Email,Status,Payment,Total,Date\n';
+    const csvRows = rows.map((o: any) =>
+      `"${o.orderNumber}","${o.user?.fullName || 'Guest'}","${o.user?.email || ''}","${o.status}","${o.paymentStatus}",${o.totalAmount},"${o.createdAt}"`
+    ).join('\n');
+    const blob = new Blob([header + csvRows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ora-orders-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   // Table columns
@@ -268,8 +267,8 @@ export default function OrdersPage() {
       header: 'Customer',
       accessor: (row) => (
         <div>
-          <p className="font-medium text-[#111827]">{row.customer?.name || 'Guest'}</p>
-          <p className="text-xs text-[#9ca3af]">{row.customer?.email}</p>
+          <p className="font-medium text-[#111827]">{row.user?.fullName || 'Guest'}</p>
+          <p className="text-xs text-[#9ca3af]">{row.user?.email}</p>
         </div>
       ),
       width: '20%',
@@ -333,7 +332,7 @@ export default function OrdersPage() {
           ]}
           actions={
             <>
-              <Button variant="secondary" leftIcon={<Download size={18} />}>
+              <Button variant="secondary" leftIcon={<Download size={18} />} onClick={handleExportCSV}>
                 Export
               </Button>
             </>
@@ -362,25 +361,12 @@ export default function OrdersPage() {
                 leftIcon={<Search size={18} />}
               />
             </div>
-
-            {/* Date Range */}
-            <Select
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
-              options={[
-                { value: 'all', label: 'All Time' },
-                { value: 'today', label: 'Today' },
-                { value: 'week', label: 'This Week' },
-                { value: 'month', label: 'This Month' },
-                { value: 'quarter', label: 'This Quarter' },
-              ]}
-            />
           </div>
         </Card>
 
         {/* Orders Table */}
         <DataTable
-          data={paginatedOrders}
+          data={displayOrders}
           columns={columns}
           loading={ordersLoading}
           selectable
@@ -396,6 +382,7 @@ export default function OrdersPage() {
                   await handleStatusUpdate(id, 'PROCESSING');
                 }
                 setSelectedOrders([]);
+                fetchOrders(page, statusFilter !== 'all' ? statusFilter : undefined);
               }
             },
             { 
@@ -405,6 +392,7 @@ export default function OrdersPage() {
                   await handleStatusUpdate(id, 'SHIPPED');
                 }
                 setSelectedOrders([]);
+                fetchOrders(page, statusFilter !== 'all' ? statusFilter : undefined);
               }
             },
           ]}
@@ -418,15 +406,18 @@ export default function OrdersPage() {
               </TableActionItem>
               <TableActionItem
                 icon={<FileText size={16} />}
-                onClick={() => {}}
+                onClick={() => router.push(`/admin/v2/orders/${row.id}`)}
               >
-                Download Invoice
+                View Invoice
               </TableActionItem>
               <TableActionItem
                 icon={<Mail size={16} />}
-                onClick={() => {}}
+                onClick={() => {
+                  const email = row.user?.email;
+                  if (email) window.open(`mailto:${email}?subject=Order%20%23${row.orderNumber}`);
+                }}
               >
-                Send Email
+                Email Customer
               </TableActionItem>
               {row.status === 'PENDING' && (
                 <TableActionItem
@@ -465,10 +456,10 @@ export default function OrdersPage() {
           )}
           pagination={{
             page,
-            pageSize,
-            total: filteredOrders.length,
+            pageSize: 20,
+            total: ordersPagination.total,
             onPageChange: setPage,
-            onPageSizeChange: setPageSize,
+            onPageSizeChange: () => {},
           }}
           emptyState={
             <div className="text-center py-12">

@@ -26,6 +26,10 @@ export const protect = async (
     let token: string | undefined;
     let tokenSource: 'cookie' | 'header' | 'none' = 'none';
 
+    // 🧪 DEBUG: Log all cookies received
+    console.log('[Auth Middleware] 🍪 All cookies received:', req.cookies);
+    console.log('[Auth Middleware] 🔍 access_token cookie:', req.cookies?.access_token);
+
     // 🔐 PRIORITY 1: Check HttpOnly cookie (NEW - more secure)
     if (req.cookies && req.cookies.access_token) {
       token = req.cookies.access_token;
@@ -54,6 +58,7 @@ export const protect = async (
         endpoint: req.method + ' ' + req.path,
         authHeader: req.headers.authorization ? 'Present' : 'MISSING',
         cookiePresent: !!req.cookies?.access_token,
+        allCookies: Object.keys(req.cookies || {}),
         timestamp: new Date().toISOString(),
       });
       throw new AppError('Not authorized, no token provided', 401);

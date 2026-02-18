@@ -279,13 +279,23 @@ export const login = async (
     if (password) {
       // PASSWORD LOGIN FLOW
       console.log(`[Auth] 🔐 Password login attempt for: ${email}`);
+      console.log(`[Auth] 📧 Email received:`, email);
+      console.log(`[Auth] 🔑 Password length:`, password?.length);
       
       // Find user by email
       const user = await prisma.user.findUnique({
         where: { email: emailLower },
       });
 
+      console.log(`[Auth] 👤 User found:`, !!user);
+      if (user) {
+        console.log(`[Auth] 🔐 Has passwordHash:`, !!user.passwordHash);
+        console.log(`[Auth] 📝 User ID:`, user.id);
+        console.log(`[Auth] ✉️  User email:`, user.email);
+      }
+
       if (!user) {
+        console.log(`[Auth] ❌ LOGIN FAILED: User not found for email: ${emailLower}`);
         return res.status(401).json({
           success: false,
           error: 'Invalid email or password',
@@ -294,6 +304,7 @@ export const login = async (
 
       // Check if user has password set
       if (!user.passwordHash) {
+        console.log(`[Auth] ❌ LOGIN FAILED: Account is OTP-only (no password set)`);
         return res.status(401).json({
           success: false,
           error: 'This account uses OTP login. Please use the OTP option instead.',
@@ -302,8 +313,10 @@ export const login = async (
 
       // Verify password
       const passwordMatch = await bcrypt.compare(password, user.passwordHash);
+      console.log(`[Auth] 🔑 Password match result:`, passwordMatch);
 
       if (!passwordMatch) {
+        console.log(`[Auth] ❌ LOGIN FAILED: Password mismatch for ${email}`);
         return res.status(401).json({
           success: false,
           error: 'Invalid email or password',
@@ -341,6 +354,14 @@ export const login = async (
       });
 
       console.log(`[Auth] ✅ User logged in with password: ${email}`);
+      console.log(`[Auth] 🍪 Cookies set:`, {
+        access_token: 'SET',
+        refresh_token: 'SET',
+        domain: '.orashop.in',
+        sameSite: 'none',
+        secure: true,
+      });
+      
       return res.status(200).json({
         success: true,
         user: {

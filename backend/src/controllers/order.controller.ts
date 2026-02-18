@@ -6,7 +6,10 @@ import { AuthRequest } from '../middleware/auth';
 import { sendOrderPlacedEmail } from '../services/email.service';
 import { AppError, asyncHandler, generateOrderNumber } from '../utils/helpers';
 import { lockInventory, releaseInventoryLocks, restockInventory } from '../utils/inventory';
-import { calculateShippingFee } from '../utils/shipping';
+// Shipping — single source of truth: always FREE
+function calculateShipping(): number {
+  return 0;
+}
 import { getGSTRate, calculateGSTAmount } from '../utils/tax';
 
 interface ShippingAddressInput {
@@ -304,7 +307,23 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
     }
   }
 
-  // ====== GST CALCULATION (Step 5 — per-item configurable GST) ======
+  // ====== DISCOUNT STACKING PROTECTION (max 70% of subtotal) ======
+  const MAX_DISCOUNT_PERCENT = 70;
+  if (subtotal > 0) {
+    const totalDiscountPercent = (discountAmount / subtotal) * 100;
+    if (totalDiscountPercent > MAX_DISCOUNT_PERCENT) {
+      console.warn('[Checkout] ⚠️ Discount exceeds cap:', { totalDiscountPercent, discountAmount, subtotal });
+      discountAmount = Math.floor((subtotal * MAX_DISCOUNT_PERCENT) / 100);
+      console.log('[Checkout] Discount capped to:', discountAmount);
+    }
+  }
+
+  // Discount can never exceed subtotal
+  if (discountAmount > subtotal) {
+    discountAmount = subtotal;
+  }
+
+  // ====== GST CALCULATION (per-item configurable GST) ======
   let gstAmount = 0;
   const itemGstRates: number[] = [];
   for (const item of cartItems) {
@@ -324,11 +343,20 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
     gstAmount = Math.round(gstAmount * 100) / 100;
   }
 
-  // ====== SHIPPING (Step 1 — server-side source of truth) ======
-  const shippingFee = await calculateShippingFee(subtotal - discountAmount);
+  // ====== SHIPPING (server-side source of truth — always FREE) ======
+  const shippingFee = calculateShipping();
 
-  // ====== TOTAL WITH NEGATIVE PREVENTION (Step 4) ======
-  const totalAmount = Math.max(0, subtotal - discountAmount + gstAmount + shippingFee);
+  // ====== TOTAL CALCULATION WITH NEGATIVE PREVENTION ======
+  const computedTotal = subtotal - discountAmount + gstAmount + shippingFee;
+  if (computedTotal < 0) {
+    throw new AppError('Invalid order amount: total cannot be negative', 400);
+  }
+  const totalAmount = Math.max(0, computedTotal);
+
+  // Final safety: Razorpay requires amount > 0
+  if (totalAmount <= 0) {
+    throw new AppError('Order total must be greater than zero', 400);
+  }
 
   // ====== TRANSACTIONAL ORDER + INVENTORY LOCK CREATION (CRITICAL) ======
   // ALL stock checks, order creation, inventory locks, and coupon updates
@@ -353,13 +381,14 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
       }
     }
 
-    // 2️⃣ Create order
+    // 2️⃣ Create order (server-computed values only — never trust frontend)
     const newOrder = await tx.order.create({
       data: {
         orderNumber: generateOrderNumber(),
         userId: req.user!.id,
         subtotal: new Decimal(subtotal),
         discountAmount: new Decimal(discountAmount),
+        couponCode: appliedCouponCode || null,
         gstAmount: new Decimal(gstAmount),
         shippingFee: new Decimal(shippingFee),
         totalAmount: new Decimal(totalAmount),

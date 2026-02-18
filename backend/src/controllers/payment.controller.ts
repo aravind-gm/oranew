@@ -637,9 +637,32 @@ async function handlePaymentCaptured(event: any, res: Response) {
       });
       console.log('[Webhook:Captured] ✓ Order updated to CONFIRMED');
 
-      // 3. Deduct inventory for each item
+      // 3. Deduct inventory for each item (with stock floor check)
       for (const item of order.items) {
         console.log('[Webhook:Captured] Deducting inventory:', item.productId, 'qty:', item.quantity);
+
+        // STOCK FLOOR CHECK: Verify stock won't go negative
+        const currentProduct = await tx.product.findUnique({
+          where: { id: item.productId },
+          select: { stockQuantity: true, name: true },
+        });
+
+        if (!currentProduct) {
+          console.error('[Webhook:Captured] ❌ Product not found:', item.productId);
+          throw new Error(`Product ${item.productId} not found during inventory deduction`);
+        }
+
+        if (currentProduct.stockQuantity < item.quantity) {
+          console.error('[Webhook:Captured] ❌ STOCK FLOOR BREACH:', {
+            product: currentProduct.name,
+            available: currentProduct.stockQuantity,
+            requested: item.quantity,
+          });
+          throw new Error(
+            `Insufficient stock for "${currentProduct.name}": available=${currentProduct.stockQuantity}, needed=${item.quantity}`
+          );
+        }
+
         await tx.product.update({
           where: { id: item.productId },
           data: {
@@ -649,7 +672,7 @@ async function handlePaymentCaptured(event: any, res: Response) {
           },
         });
       }
-      console.log('[Webhook:Captured] ✓ Inventory deducted');
+      console.log('[Webhook:Captured] ✓ Inventory deducted (all floor checks passed)');
 
       // 4. Clear user's cart
       console.log('[Webhook:Captured] Clearing cart for user:', order.userId);

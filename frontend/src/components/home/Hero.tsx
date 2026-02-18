@@ -108,7 +108,7 @@ export default function Hero() {
               >
                 <div className="flex items-center gap-2">
                   <Truck className="w-4 h-4 text-accent" />
-                  <span>Free Shipping on ₹999+</span>
+                  <span>Free Shipping on All Orders</span>
                 </div>
                 <div className="hidden sm:block w-px h-4 bg-border" />
                 <div className="flex items-center gap-2">
