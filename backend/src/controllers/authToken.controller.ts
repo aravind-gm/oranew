@@ -24,7 +24,6 @@ export const setAuthCookies = (
     httpOnly: true,
     secure: true,
     sameSite: 'lax',
-    domain: 'orashop.in',
     path: '/',
     maxAge: 30 * 60 * 1000, // 30 minutes
   });
@@ -34,7 +33,6 @@ export const setAuthCookies = (
     httpOnly: true,
     secure: true,
     sameSite: 'lax',
-    domain: 'orashop.in',
     path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
@@ -48,7 +46,6 @@ export const clearAuthCookies = (res: Response) => {
     httpOnly: true,
     secure: true,
     sameSite: 'lax',
-    domain: 'orashop.in',
     path: '/',
   });
 
@@ -56,7 +53,6 @@ export const clearAuthCookies = (res: Response) => {
     httpOnly: true,
     secure: true,
     sameSite: 'lax',
-    domain: 'orashop.in',
     path: '/',
   });
 };

@@ -213,12 +213,11 @@ export const verifyOtp = async (
     const refreshToken = generateRefreshToken();
     await storeRefreshToken(user.id, refreshToken);
 
-    // Set HttpOnly cookies with subdomain support
+    // Set HttpOnly cookies (host-only, tied to api.orashop.in)
     res.cookie('access_token', accessToken, {
       httpOnly: true,
       secure: true,
       sameSite: 'lax',
-      domain: 'orashop.in',
       path: '/',
       maxAge: 30 * 60 * 1000, // 30 minutes
     });
@@ -227,7 +226,6 @@ export const verifyOtp = async (
       httpOnly: true,
       secure: true,
       sameSite: 'lax',
-      domain: 'orashop.in',
       path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
@@ -334,12 +332,11 @@ export const login = async (
       const refreshToken = generateRefreshToken();
       await storeRefreshToken(user.id, refreshToken);
 
-      // Set HttpOnly cookies with subdomain support
+      // Set HttpOnly cookies (host-only, tied to api.orashop.in)
       res.cookie('access_token', accessToken, {
         httpOnly: true,
         secure: true,
         sameSite: 'lax',
-        domain: 'orashop.in',
         path: '/',
         maxAge: 30 * 60 * 1000, // 30 minutes
       });
@@ -348,7 +345,6 @@ export const login = async (
         httpOnly: true,
         secure: true,
         sameSite: 'lax',
-        domain: 'orashop.in',
         path: '/',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
@@ -357,7 +353,7 @@ export const login = async (
       console.log(`[Auth] 🍪 Cookies set:`, {
         access_token: 'SET',
         refresh_token: 'SET',
-        domain: 'orashop.in',
+        hostOnly: true,
         sameSite: 'lax',
         secure: true,
       });
@@ -538,12 +534,11 @@ export const register = async (
       const refreshToken = generateRefreshToken();
       await storeRefreshToken(user.id, refreshToken);
 
-      // Set HttpOnly cookies with subdomain support
+      // Set HttpOnly cookies (host-only, tied to api.orashop.in)
       res.cookie('access_token', accessToken, {
         httpOnly: true,
         secure: true,
         sameSite: 'lax',
-        domain: 'orashop.in',
         path: '/',
         maxAge: 30 * 60 * 1000, // 30 minutes
       });
@@ -552,7 +547,6 @@ export const register = async (
         httpOnly: true,
         secure: true,
         sameSite: 'lax',
-        domain: 'orashop.in',
         path: '/',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
@@ -700,12 +694,11 @@ export const passwordLogin = async (
     const refreshToken = generateRefreshToken();
     await storeRefreshToken(user.id, refreshToken);
 
-    // Set HttpOnly cookies
+    // Set HttpOnly cookies (host-only, tied to api.orashop.in)
     res.cookie('access_token', accessToken, {
       httpOnly: true,
       secure: true,
       sameSite: 'lax',
-      domain: 'orashop.in',
       path: '/',
       maxAge: 30 * 60 * 1000, // 30 minutes
     });
@@ -714,7 +707,6 @@ export const passwordLogin = async (
       httpOnly: true,
       secure: true,
       sameSite: 'lax',
-      domain: 'orashop.in',
       path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
@@ -856,12 +848,11 @@ export const logout = async (
   next: NextFunction
 ) => {
   try {
-    // Clear authentication cookies with subdomain support
+    // Clear authentication cookies (host-only)
     res.clearCookie('access_token', {
       httpOnly: true,
       secure: true,
       sameSite: 'lax',
-      domain: 'orashop.in',
       path: '/',
     });
 
@@ -869,7 +860,6 @@ export const logout = async (
       httpOnly: true,
       secure: true,
       sameSite: 'lax',
-      domain: 'orashop.in',
       path: '/',
     });
 
