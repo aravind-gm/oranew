@@ -4,7 +4,6 @@
 // Two-way authentication: Password + OTP
 // Deploy: 2026-02-05
 
-import { useAuth } from '@/context/AuthContext';
 import { useAuthStore } from '@/store/authStore';
 import api from '@/lib/api';
 import Link from 'next/link';
@@ -18,8 +17,7 @@ type LoginStep = 'form' | 'otp-verify';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const authStore = useAuthStore();
+  const { setUser } = useAuthStore();
 
   // Mode: Login or Signup
   const [authMode, setAuthMode] = useState<AuthMode>('login');
@@ -44,16 +42,6 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [otpTimer, setOtpTimer] = useState(0);
-
-  // 🔒 REDIRECT IF ALREADY LOGGED IN
-  useEffect(() => {
-    if (authLoading) return;
-
-    if (isAuthenticated && user) {
-      // console.log('[Auth] ✅ User already authenticated, redirecting to account');
-      router.replace('/account');
-    }
-  }, [authLoading, isAuthenticated, user, router]);
 
   // OTP TIMER
   useEffect(() => {
@@ -119,19 +107,15 @@ export default function LoginPage() {
       };
 
       // Store user in AuthStore (cookies already set by backend)
-      authStore.setUser(userPayload);
+      setUser(userPayload);
 
       setMessage('Welcome back! ✨');
 
-      // Redirect based on role - use Promise.resolve() to ensure state update completes
-      Promise.resolve().then(() => {
-        const redirectPath = 
-          userData.role === 'ADMIN' ? '/admin' :
-          (!userData.profileCompleted || !userData.fullName) ? '/auth/complete-profile' :
-          '/account';
-        
-        router.replace(redirectPath);
-      });
+      const redirectPath =
+        userData.role === 'ADMIN' ? '/admin' :
+        (!userData.profileCompleted || !userData.fullName) ? '/auth/complete-profile' :
+        '/account';
+      router.push(redirectPath);
 
     } catch (err: unknown) {
       const error = err as { response?: { data?: { error?: string } }; message?: string };
@@ -225,19 +209,16 @@ export default function LoginPage() {
       };
 
       // Store user in AuthStore (cookies already set by backend)
-      authStore.setUser(userPayload);
+      setUser(userPayload);
 
       setMessage('Welcome to ORA! ✨');
 
       // Redirect based on role
-      Promise.resolve().then(() => {
-        const redirectPath = 
-          userData.role === 'ADMIN' ? '/admin' :
-          (isNewUser || !userData.profileCompleted || !userData.fullName) ? '/auth/complete-profile' :
-          '/account';
-        
-        router.replace(redirectPath);
-      });
+      const redirectPath =
+        userData.role === 'ADMIN' ? '/admin' :
+        (isNewUser || !userData.profileCompleted || !userData.fullName) ? '/auth/complete-profile' :
+        '/account';
+      router.push(redirectPath);
 
     } catch (err: unknown) {
       const error = err as { response?: { data?: { error?: string } }; message?: string };
@@ -305,18 +286,15 @@ export default function LoginPage() {
       };
 
       // Store user in AuthStore (cookies already set by backend)
-      authStore.setUser(userPayload);
+      setUser(userPayload);
 
       setMessage('Account created successfully! Welcome to ORA! ✨');
 
       // Redirect to account page or complete-profile if needed
-      Promise.resolve().then(() => {
-        const redirectPath = 
-          (!userData.profileCompleted || !userData.fullName) ? '/auth/complete-profile' :
-          '/account';
-        
-        router.replace(redirectPath);
-      });
+      const redirectPath =
+        (!userData.profileCompleted || !userData.fullName) ? '/auth/complete-profile' :
+        '/account';
+      router.push(redirectPath);
 
     } catch (err: unknown) {
       const error = err as { response?: { data?: { error?: string } }; message?: string };

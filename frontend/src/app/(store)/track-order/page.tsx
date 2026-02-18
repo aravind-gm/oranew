@@ -1,9 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 export default function TrackOrderPage() {
+  const router = useRouter();
   const [orderId, setOrderId] = useState('');
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,7 +23,7 @@ export default function TrackOrderPage() {
     // For logged-in users, redirect to account orders
     setLoading(true);
     setTimeout(() => {
-      window.location.href = '/account/orders';
+      router.push('/account/orders');
     }, 500);
   };
 

@@ -12,7 +12,7 @@ import Link from 'next/link';
 
 export default function CompleteProfilePage() {
   const router = useRouter();
-  const { user, setUser } = useAuthStore();
+  const { user, loading: authLoading, setUser } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [checkingProfile, setCheckingProfile] = useState(true);
@@ -23,11 +23,12 @@ export default function CompleteProfilePage() {
   const [phone, setPhone] = useState('');
   const [gender, setGender] = useState('');
 
-  // 🔒 CHECK AUTH STATUS
+  // 🔒 CHECK AUTH STATUS - wait for auth loading before deciding
   useEffect(() => {
-    // No auth = redirect to login
-    if (user?.role !== 'ADMIN') {
-      // console.log('[Profile] ❌ Not authenticated, redirecting to login');
+    if (authLoading) return; // wait for fetchUser() to complete
+
+    // No user at all = not authenticated
+    if (!user) {
       if (!hasRedirectedRef.current) {
         hasRedirectedRef.current = true;
         router.replace('/auth/login');
@@ -35,11 +36,8 @@ export default function CompleteProfilePage() {
       return;
     }
 
-    // console.log('[Profile] ✅ User verified:', user.email);
-    
     // Admin bypass
-    if (user.role === 'ADMIN' || user.role === 'admin') {
-      // console.log('[Profile] 🛡️ Admin detected, skipping profile completion');
+    if (user.role === 'ADMIN') {
       if (!hasRedirectedRef.current) {
         hasRedirectedRef.current = true;
         router.replace('/admin');
@@ -52,7 +50,7 @@ export default function CompleteProfilePage() {
     if (user.phone) setPhone(user.phone);
 
     setCheckingProfile(false);
-  }, [user, router]);
+  }, [user, authLoading, router]);
 
   const validatePhone = (phoneValue: string) => {
     const digits = phoneValue.replace(/\D/g, '');
@@ -103,7 +101,6 @@ export default function CompleteProfilePage() {
 
       // Redirect to account page
       router.replace('/account');
-      router.refresh();
     } catch (err: unknown) {
       const error = err as { response?: { data?: { error?: string } }; message?: string };
       console.error('[Profile Submit Error]', err);

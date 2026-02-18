@@ -53,7 +53,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       console.error('[Auth] Logout error:', error);
     } finally {
       set({ user: null, loading: false });
-      window.location.href = '/auth/login';
+      // Navigation after logout is handled by the calling component via router.push
     }
   },
   

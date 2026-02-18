@@ -38,6 +38,7 @@ export default function Header() {
 
   const handleLogout = async () => {
     await logout();
+    router.push('/');
   };
 
   const handleSearch = (e: React.FormEvent) => {

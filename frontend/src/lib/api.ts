@@ -42,27 +42,17 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Track if we're currently handling 401 to prevent loops
-let isHandling401 = false;
-
-// 401 handler - redirect to login for cookie-based auth
+// 401 handler - just propagate the error.
+// Individual pages and the middleware handle unauthenticated state.
+// DO NOT use window.location here — it causes a full page reload on every
+// unauthenticated /auth/me check, which is the source of the auto-refresh loop.
 api.interceptors.response.use(
   (response) => response,
-  async (error: AxiosError) => {
-    if (typeof window !== 'undefined' && error.response?.status === 401 && !isHandling401) {
-      isHandling401 = true;
-      try {
-        // Cookie-based auth: 401 means session expired
-        // Backend handles cookie refresh automatically
-        // Redirect to login for re-authentication
-        console.warn('[API] 🔐 Unauthorized (401). Redirecting to login.');
-        window.location.href = '/auth/login';
-        return Promise.reject(error);
-      } finally {
-        isHandling401 = false;
-      }
+  (error: AxiosError) => {
+    if (error.response?.status === 401) {
+      // Let the calling code handle 401 — no global redirect
+      return Promise.reject(error);
     }
-    
     return Promise.reject(error);
   }
 );
