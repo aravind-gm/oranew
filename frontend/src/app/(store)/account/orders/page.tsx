@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from '@/context/AuthContext';
+import { useAuthStore } from '@/store/authStore';
 import { useOrderStore } from '@/store/orderStore';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -10,19 +10,19 @@ export default function OrdersPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const statusFilter = searchParams.get('status');
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, loading: isLoading } = useAuthStore();
   const { orders, loading, error, fetchOrders } = useOrderStore();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!isLoading && !user) {
       router.replace('/auth/login');
       return;
     }
 
-    if (isAuthenticated) {
+    if (user) {
       fetchOrders();
     }
-  }, [isAuthenticated, isLoading, router, fetchOrders]);
+  }, [user, isLoading, router, fetchOrders]);
 
   // Filter orders based on status query param
   const filteredOrders = useMemo(() => {
@@ -38,7 +38,7 @@ export default function OrdersPage() {
     return orders.filter(order => allowedStatuses.includes(order.status));
   }, [orders, statusFilter]);
 
-  if (!isAuthenticated || isLoading) {
+  if (!user || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">

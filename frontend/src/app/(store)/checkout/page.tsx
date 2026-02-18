@@ -487,8 +487,8 @@ export default function CheckoutPage() {
     }
   };
 
-  // Loading state
-  if (authLoading || !user || items.length === 0) {
+  // Loading state — only show spinner while auth is still loading
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -497,6 +497,16 @@ export default function CheckoutPage() {
         </div>
       </div>
     );
+  }
+
+  // After auth resolves: if no user, useEffect above will redirect; render nothing meanwhile
+  if (!user) {
+    return null;
+  }
+
+  // Empty cart — useEffect above handles redirect, but guard render
+  if (items.length === 0) {
+    return null;
   }
 
   return (

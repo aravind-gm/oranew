@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from '@/context/AuthContext';
+import { useAuthStore } from '@/store/authStore';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -17,27 +17,27 @@ interface PaymentMethod {
 
 export default function PaymentsPage() {
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, loading: isLoading } = useAuthStore();
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddCard, setShowAddCard] = useState(false);
   const [showAddUpi, setShowAddUpi] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!isLoading && !user) {
       router.replace('/auth/login');
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [user, isLoading, router]);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (user) {
       // Simulate fetching payment methods
       setTimeout(() => {
         setPaymentMethods([]);
         setLoading(false);
       }, 500);
     }
-  }, [isAuthenticated]);
+  }, [user]);
 
   if (isLoading || loading) {
     return (
@@ -50,7 +50,7 @@ export default function PaymentsPage() {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!user) {
     return null;
   }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from '@/context/AuthContext';
+import { useAuthStore } from '@/store/authStore';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -20,19 +20,19 @@ interface Coupon {
 
 export default function CouponsPage() {
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, loading: isLoading } = useAuthStore();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!isLoading && !user) {
       router.replace('/auth/login');
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [user, isLoading, router]);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (user) {
       // Simulate fetching coupons
       setTimeout(() => {
         setCoupons([
@@ -75,7 +75,7 @@ export default function CouponsPage() {
         setLoading(false);
       }, 500);
     }
-  }, [isAuthenticated]);
+  }, [user]);
 
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -101,7 +101,7 @@ export default function CouponsPage() {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!user) {
     return null;
   }
 

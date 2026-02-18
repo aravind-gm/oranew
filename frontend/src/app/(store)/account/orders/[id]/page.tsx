@@ -1,7 +1,7 @@
 'use client';
 
 import api from '@/lib/api';
-import { useAuth } from '@/context/AuthContext';
+import { useAuthStore } from '@/store/authStore';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -56,7 +56,7 @@ export default function OrderDetailPage() {
   const router = useRouter();
   const orderId = params.id as string;
   
-  const { token, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuthStore();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,15 +69,13 @@ export default function OrderDetailPage() {
 
   // Auth check
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+    if (!authLoading && !user) {
       router.replace('/auth/login');
     }
-  }, [authLoading, isAuthenticated, router]);
+  }, [authLoading, user, router]);
 
   // Fetch order details
   const fetchOrder = useCallback(async () => {
-    if (!token) return;
-    
     try {
       setLoading(true);
       setError(null);
@@ -98,13 +96,11 @@ export default function OrderDetailPage() {
   }, [orderId]);
 
   useEffect(() => {
-    if (!token) {
-      router.push('/auth/login');
-      return;
-    }
+    if (authLoading) return;
+    if (!user) return;
 
     fetchOrder();
-  }, [token, orderId, router, fetchOrder]);
+  }, [user, authLoading, orderId, fetchOrder]);
 
   const handleCancelOrder = async () => {
     if (!cancelReason.trim()) {
@@ -158,7 +154,7 @@ export default function OrderDetailPage() {
     }
   };
 
-  if (!token) {
+  if (!user) {
     return null;
   }
 

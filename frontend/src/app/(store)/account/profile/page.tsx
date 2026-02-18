@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from '@/context/AuthContext';
+import { useAuthStore } from '@/store/authStore';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -15,7 +15,7 @@ interface ProfileData {
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { isAuthenticated, user, isLoading } = useAuth();
+  const { user, loading: isLoading } = useAuthStore();
   const [profile, setProfile] = useState<ProfileData>({
     name: '',
     email: '',
@@ -29,10 +29,10 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications'>('profile');
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!isLoading && !user) {
       router.replace('/auth/login');
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [user, isLoading, router]);
 
   useEffect(() => {
     if (user) {
@@ -91,7 +91,7 @@ export default function SettingsPage() {
     );
   }
 
-  if (!isAuthenticated || !user) {
+  if (!user) {
     return null;
   }
 
