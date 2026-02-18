@@ -102,46 +102,38 @@ app.use(helmet({
 }));
 
 // CORS - MUST be after helmet
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://127.0.0.1:3000',
-  'http://127.0.0.1:3001',
-  'https://oranew.vercel.app',
-  'https://orashop.vercel.app',
-  'https://oranew-staging.vercel.app',
+// Static origin whitelist — no callback, eliminates inconsistencies
+const allowedOrigins: string[] = [
   'https://orashop.in',
-  'https://www.orashop.in', // Include www subdomain
+  'https://www.orashop.in',
 ];
 
-// Add FRONTEND_URL if set in env (only in development)
-if (process.env.NODE_ENV !== 'production' && process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL)) {
-  allowedOrigins.push(process.env.FRONTEND_URL);
+// Dev origins (only in non-production)
+if (process.env.NODE_ENV !== 'production') {
+  allowedOrigins.push(
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001',
+    'https://oranew.vercel.app',
+    'https://orashop.vercel.app',
+    'https://oranew-staging.vercel.app',
+  );
+  if (process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL)) {
+    allowedOrigins.push(process.env.FRONTEND_URL);
+  }
 }
 
 console.log('[CORS] 🔐 Allowed Origins:', allowedOrigins);
 
 app.use(
   cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps, curl, Postman)
-      if (!origin) return callback(null, true);
-      
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        console.warn('[CORS] ⚠️  Blocked origin:', origin);
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
+    origin: allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
-
-// Handle preflight requests
-app.options('*', cors());
 
 // ============================================
 // PATH NORMALIZATION (fix double slashes from ngrok/Razorpay)

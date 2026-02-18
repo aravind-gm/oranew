@@ -23,8 +23,8 @@ export const setAuthCookies = (
   res.cookie('access_token', accessToken, {
     httpOnly: true,
     secure: true,
-    sameSite: 'none',
-    domain: '.orashop.in',
+    sameSite: 'lax',
+    domain: 'orashop.in',
     path: '/',
     maxAge: 30 * 60 * 1000, // 30 minutes
   });
@@ -33,8 +33,8 @@ export const setAuthCookies = (
   res.cookie('refresh_token', refreshToken, {
     httpOnly: true,
     secure: true,
-    sameSite: 'none',
-    domain: '.orashop.in',
+    sameSite: 'lax',
+    domain: 'orashop.in',
     path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
@@ -47,16 +47,16 @@ export const clearAuthCookies = (res: Response) => {
   res.clearCookie('access_token', {
     httpOnly: true,
     secure: true,
-    sameSite: 'none',
-    domain: '.orashop.in',
+    sameSite: 'lax',
+    domain: 'orashop.in',
     path: '/',
   });
 
   res.clearCookie('refresh_token', {
     httpOnly: true,
     secure: true,
-    sameSite: 'none',
-    domain: '.orashop.in',
+    sameSite: 'lax',
+    domain: 'orashop.in',
     path: '/',
   });
 };
