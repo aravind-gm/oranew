@@ -213,19 +213,21 @@ export const verifyOtp = async (
     const refreshToken = generateRefreshToken();
     await storeRefreshToken(user.id, refreshToken);
 
-    // Set HttpOnly cookies (host-only, tied to api.orashop.in)
+    // Set HttpOnly cookies (shared across orashop.in subdomains)
     res.cookie('access_token', accessToken, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
+      domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
       path: '/',
       maxAge: 30 * 60 * 1000, // 30 minutes
     });
 
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
+      domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
       path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
@@ -332,19 +334,21 @@ export const login = async (
       const refreshToken = generateRefreshToken();
       await storeRefreshToken(user.id, refreshToken);
 
-      // Set HttpOnly cookies (host-only, tied to api.orashop.in)
+      // Set HttpOnly cookies (shared across orashop.in subdomains)
       res.cookie('access_token', accessToken, {
         httpOnly: true,
-        secure: true,
+        secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
+        domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
         path: '/',
         maxAge: 30 * 60 * 1000, // 30 minutes
       });
 
       res.cookie('refresh_token', refreshToken, {
         httpOnly: true,
-        secure: true,
+        secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
+        domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
         path: '/',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
@@ -353,9 +357,9 @@ export const login = async (
       console.log(`[Auth] 🍪 Cookies set:`, {
         access_token: 'SET',
         refresh_token: 'SET',
-        hostOnly: true,
+        domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : 'localhost',
         sameSite: 'lax',
-        secure: true,
+        secure: process.env.NODE_ENV === 'production',
       });
       
       return res.status(200).json({
@@ -534,19 +538,21 @@ export const register = async (
       const refreshToken = generateRefreshToken();
       await storeRefreshToken(user.id, refreshToken);
 
-      // Set HttpOnly cookies (host-only, tied to api.orashop.in)
+      // Set HttpOnly cookies (shared across orashop.in subdomains)
       res.cookie('access_token', accessToken, {
         httpOnly: true,
-        secure: true,
+        secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
+        domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
         path: '/',
         maxAge: 30 * 60 * 1000, // 30 minutes
       });
 
       res.cookie('refresh_token', refreshToken, {
         httpOnly: true,
-        secure: true,
+        secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
+        domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
         path: '/',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
@@ -694,19 +700,21 @@ export const passwordLogin = async (
     const refreshToken = generateRefreshToken();
     await storeRefreshToken(user.id, refreshToken);
 
-    // Set HttpOnly cookies (host-only, tied to api.orashop.in)
+    // Set HttpOnly cookies (shared across orashop.in subdomains)
     res.cookie('access_token', accessToken, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
+      domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
       path: '/',
       maxAge: 30 * 60 * 1000, // 30 minutes
     });
 
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
+      domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
       path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
@@ -848,18 +856,20 @@ export const logout = async (
   next: NextFunction
 ) => {
   try {
-    // Clear authentication cookies (host-only)
+    // Clear authentication cookies (shared across subdomains)
     res.clearCookie('access_token', {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
+      domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
       path: '/',
     });
 
     res.clearCookie('refresh_token', {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
+      domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
       path: '/',
     });
 
