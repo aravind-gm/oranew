@@ -10,20 +10,16 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 // Subscribe function for useSyncExternalStore to detect client-side hydration
 const emptySubscribe = () => () => {};
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-
 export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
-  const authStore = useAuthStore();
-  const { user, setUser, logout: storeLogout } = authStore;
+  const { user, loading, logout } = useAuthStore();
   const { items } = useCartStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [mounted, setMounted] = useState(false);
-  const [authChecked, setAuthChecked] = useState(false);
   
   // Hide menu bar on admin v2 pages
   const isAdminPage = pathname?.startsWith('/admin/v2');
@@ -40,61 +36,8 @@ export default function Header() {
     setMounted(true);
   }, []);
 
-  // Fetch user data from /api/auth/me on mount
-  useEffect(() => {
-    if (!mounted) return;
-
-    const fetchUser = async () => {
-      try {
-        const response = await fetch(`${API_URL}/auth/me`, {
-          method: 'GET',
-          credentials: 'include', // Include HttpOnly cookies
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.user) {
-            setUser(data.user);
-          } else {
-            // No user logged in
-            setUser(null);
-          }
-        } else {
-          // Not authenticated
-          setUser(null);
-        }
-      } catch (error) {
-        console.error('[Header] Failed to fetch user:', error);
-        setUser(null);
-      } finally {
-        setAuthChecked(true);
-      }
-    };
-
-    fetchUser();
-  }, [mounted, setUser]);
-
   const handleLogout = async () => {
-    try {
-      // Call backend logout endpoint to clear cookies
-      await fetch(`${API_URL}/auth/logout`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-    } catch (error) {
-      console.error('[Header] Logout error:', error);
-    } finally {
-      // Clear local state
-      storeLogout();
-      router.replace('/');
-      router.refresh();
-    }
+    await logout();
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -144,8 +87,8 @@ export default function Header() {
 
   // Prevent hydration mismatch by using consistent values during SSR
   // User data comes from /api/auth/me, not from localStorage
-  const isLoggedIn = mounted && authChecked && !!user;
-  const isAdmin = mounted && user?.role === 'ADMIN';
+  const isLoggedIn = mounted && !loading && !!user;
+  const isAdmin = mounted && !loading && user?.role === 'ADMIN';
   const cartCount = mounted ? items.length : 0;
 
   const menuItems = [

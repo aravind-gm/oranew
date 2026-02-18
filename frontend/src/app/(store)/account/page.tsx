@@ -1,6 +1,5 @@
 'use client';
 
-import { useAuth } from '@/context/AuthContext';
 import { useAuthStore } from '@/store/authStore';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -20,15 +19,21 @@ interface UserProfile {
 
 export default function AccountPage() {
   const router = useRouter();
-  const { user, logout: authLogout } = useAuth();
-  const authStore = useAuthStore();
+  const { user, loading, logout } = useAuthStore();
   const [orderStats, setOrderStats] = useState<OrderStats>({ total: 0, pending: 0, delivered: 0 });
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
 
-  // Fetch data on mount - middleware already validated authentication
+  // Redirect if not authenticated after loading completes
   useEffect(() => {
-    if (user) {
+    if (!loading && !user) {
+      router.push('/auth/login');
+    }
+  }, [user, loading, router]);
+
+  // Fetch data on mount - only after user is loaded
+  useEffect(() => {
+    if (user && !loading) {
       fetchOrderStats();
       // Set profile info
       const displayName = user.fullName || 
@@ -42,7 +47,7 @@ export default function AccountPage() {
         memberSince: new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }),
       });
     }
-  }, [user]);
+  }, [user, loading]);
 
   const fetchOrderStats = async () => {
     try {
@@ -68,13 +73,26 @@ export default function AccountPage() {
     }
   };
 
-  const handleLogout = () => {
-    authLogout();
-    // Also update AuthStore for Header to detect logout
-    authStore.logout();
-    router.push('/');
-    router.refresh();
+  const handleLogout = async () => {
+    await logout();
   };
+
+  // Show loading state while auth is being checked
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-amber-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-rose-200 border-t-rose-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your account...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If not authenticated, return null (redirect will happen via useEffect)
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-amber-50 py-8 md:py-12">

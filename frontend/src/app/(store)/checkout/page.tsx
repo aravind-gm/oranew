@@ -21,7 +21,7 @@
 import api from '@/lib/api';
 import { getStateNames, getDistrictsByState, validatePhoneNumber, validatePincode } from '@/lib/addressData';
 import { trackBeginCheckout, trackAddPaymentInfo, setEnhancedConversions } from '@/lib/analytics';
-import { useAuth } from '@/context/AuthContext';
+import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, ChevronDown, ChevronUp, Lock, Shield, Truck, CreditCard, AlertCircle, Package } from 'lucide-react';
@@ -305,7 +305,7 @@ function OrderSummary({ items, totalPrice }: { items: Array<{ productId: string;
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuthStore();
   const { items, totalPrice } = useCartStore();
 
   // State
@@ -328,10 +328,10 @@ export default function CheckoutPage() {
 
   // Auth redirect
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+    if (!authLoading && !user) {
       router.replace('/auth/login?redirect=/checkout');
     }
-  }, [authLoading, isAuthenticated, router]);
+  }, [authLoading, user, router]);
 
   // Empty cart redirect
   useEffect(() => {
@@ -488,7 +488,7 @@ export default function CheckoutPage() {
   };
 
   // Loading state
-  if (authLoading || !isAuthenticated || items.length === 0) {
+  if (authLoading || !user || items.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">

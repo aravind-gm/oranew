@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import api from '@/lib/api';
 
 interface User {
   id: string;
@@ -15,71 +15,49 @@ interface User {
 
 interface AuthState {
   user: User | null;
+  loading: boolean;
   
   // Actions
+  fetchUser: () => Promise<void>;
   setUser: (user: User | null) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   updateUser: (user: User) => void;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set, get) => ({
-      user: null,
-      
-      setUser: (user) => {
-        // User data fetched from /api/auth/me
-        // Only persist user info, never tokens (HttpOnly cookies)
-        set({ user });
-      },
-      
-      logout: () => {
-        // Clear user state (cookies cleared by backend)
-        set({ user: null });
-      },
-      
-      updateUser: (user) => {
-        // Update user profile data
-        set({ user });
-      },
-    }),
-    {
-      name: 'ora-auth',
-      storage: (() => {
-        // Custom storage with explicit write control
-        return {
-          getItem: (name: string) => {
-            if (typeof window === 'undefined') return null;
-            try {
-              const item = localStorage.getItem(name);
-              return item ? JSON.parse(item) : null;
-            } catch (error) {
-              console.error('[AuthStore Storage] Failed to parse localStorage:', error);
-              return null;
-            }
-          },
-          setItem: (name: string, value: any) => {
-            if (typeof window === 'undefined') return;
-            try {
-              localStorage.setItem(name, JSON.stringify(value));
-            } catch (error) {
-              console.error('[AuthStore Storage] Failed to write to localStorage:', error);
-            }
-          },
-          removeItem: (name: string) => {
-            if (typeof window === 'undefined') return;
-            try {
-              localStorage.removeItem(name);
-            } catch (error) {
-              console.error('[AuthStore Storage] Failed to remove from localStorage:', error);
-            }
-          },
-        };
-      })(),
-      // Only persist user data, never tokens
-      partialize: (state) => ({
-        user: state.user,
-      }),
+export const useAuthStore = create<AuthState>()((set) => ({
+  user: null,
+  loading: true,
+  
+  fetchUser: async () => {
+    try {
+      const res = await api.get('/auth/me');
+      if (res.data.success && res.data.user) {
+        set({ user: res.data.user, loading: false });
+      } else {
+        set({ user: null, loading: false });
+      }
+    } catch (error) {
+      // 401 or network error = not authenticated
+      set({ user: null, loading: false });
     }
-  )
-);
+  },
+  
+  setUser: (user) => {
+    set({ user, loading: false });
+  },
+  
+  logout: async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (error) {
+      console.error('[Auth] Logout error:', error);
+    } finally {
+      set({ user: null, loading: false });
+      window.location.href = '/auth/login';
+    }
+  },
+  
+  updateUser: (user) => {
+    set({ user });
+  },
+}));
