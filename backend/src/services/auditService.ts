@@ -73,11 +73,11 @@ export const auditService = {
     try {
       const redactedDetails = {
         reason: details?.reason,
-        before: details?.before ? redactSensitiveFields(details.before) : undefined,
-        after: details?.after ? redactSensitiveFields(details.after) : undefined,
+        before: details?.before ? redactSensitiveFields(details.before) as Record<string, any> : undefined,
+        after: details?.after ? redactSensitiveFields(details.after) as Record<string, any> : undefined,
       };
 
-      await logAdminAction(req, action, 'PRODUCT', productId, redactedDetails);
+      await logAdminAction(req, action, 'PRODUCT', productId, redactedDetails as Record<string, any>);
     } catch (error) {
       console.error('[AuditService] Failed to log product action:', error);
       captureException(error, { context: 'product_audit' });
@@ -94,7 +94,7 @@ export const auditService = {
     details?: Record<string, any>
   ): Promise<void> {
     try {
-      const redactedDetails = redactSensitiveFields(details);
+      const redactedDetails = redactSensitiveFields(details) as Record<string, any>;
       await logAdminAction(req, action, 'CATEGORY', categoryId, redactedDetails);
     } catch (error) {
       console.error('[AuditService] Failed to log category action:', error);
@@ -188,7 +188,7 @@ export const auditService = {
     details?: Record<string, any>
   ): Promise<void> {
     try {
-      const redactedDetails = redactSensitiveFields(details);
+      const redactedDetails = redactSensitiveFields(details) as Record<string, any>;
       await logAdminAction(req, action, 'COUPON', couponId, redactedDetails);
     } catch (error) {
       console.error('[AuditService] Failed to log coupon action:', error);
@@ -207,7 +207,7 @@ export const auditService = {
     details?: Record<string, any>
   ): Promise<void> {
     try {
-      const redactedDetails = redactSensitiveFields(details);
+      const redactedDetails = redactSensitiveFields(details) as Record<string, any>;
       await logAdminAction(req, action, entityType, entityId, redactedDetails);
     } catch (error) {
       console.error('[AuditService] Failed to log generic action:', error);
