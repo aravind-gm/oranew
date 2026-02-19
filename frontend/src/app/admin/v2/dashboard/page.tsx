@@ -345,7 +345,7 @@ export default function AnalyticsDashboardPage() {
                       <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={shortDate} />
                       <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => formatINR(v)} />
                       <Tooltip
-                        formatter={(value: number) => [formatINRFull(value), 'Revenue']}
+                        formatter={(value: number | undefined) => [formatINRFull(value ?? 0), 'Revenue']}
                         labelFormatter={(label: string) => shortDate(label)}
                         contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb' }}
                       />
@@ -371,7 +371,7 @@ export default function AnalyticsDashboardPage() {
                       <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={shortDate} />
                       <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                       <Tooltip
-                        formatter={(value: number) => [value, 'Orders']}
+                        formatter={(value: number | undefined) => [value ?? 0, 'Orders']}
                         labelFormatter={(label: string) => shortDate(label)}
                         contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb' }}
                       />
@@ -409,7 +409,7 @@ export default function AnalyticsDashboardPage() {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value: number) => formatINRFull(value)}
+                      formatter={(value: number | undefined) => formatINRFull(value ?? 0)}
                       contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb' }}
                     />
                   </PieChart>
