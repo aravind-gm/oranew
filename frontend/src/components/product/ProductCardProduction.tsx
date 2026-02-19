@@ -333,7 +333,7 @@ function ProductCard({
                   Only {product.stockQuantity} left
                 </motion.span>
               )}
-
+            </div>
           )}
 
           {/* WISHLIST BUTTON (top-right, floating) - Larger touch target on mobile */}
