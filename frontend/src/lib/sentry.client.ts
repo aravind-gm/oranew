@@ -16,6 +16,7 @@
  */
 
 import * as Sentry from '@sentry/nextjs';
+import { Replay } from '@sentry/nextjs';
 
 /**
  * Initialize Sentry for Next.js (should be called in layout.tsx or _app.tsx)
@@ -43,7 +44,7 @@ export function initFrontendSentry(): void {
 
     // Capture all unhandled exceptions
     integrations: [
-      new Sentry.Replay({
+      new Replay({
         maskAllText: true,
         blockAllMedia: true,
       }),
