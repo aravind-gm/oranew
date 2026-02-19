@@ -42,6 +42,12 @@ import {
     getBOGOStats,
 } from '../controllers/bogo.controller';
 import {
+    analyticsOverview,
+    analyticsProducts,
+    analyticsPayments,
+    analyticsCarts,
+} from '../controllers/analytics.controller';
+import {
     createProduct,
     deleteProduct,
     getProductById,
@@ -49,6 +55,7 @@ import {
     updateProduct,
 } from '../controllers/product.controller';
 import { authorize, protect } from '../middleware/auth';
+import { analyticsLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
@@ -146,5 +153,13 @@ router.delete('/settings/taxes/:id', deleteTaxConfig);
 // AUDIT LOG
 // ============================================
 router.get('/audit-log', getAuditLogs);
+
+// ============================================
+// ANALYTICS (Phase 3) — rate limited
+// ============================================
+router.get('/analytics/overview', analyticsLimiter, analyticsOverview);
+router.get('/analytics/products', analyticsLimiter, analyticsProducts);
+router.get('/analytics/payments', analyticsLimiter, analyticsPayments);
+router.get('/analytics/carts', analyticsLimiter, analyticsCarts);
 
 export default router;

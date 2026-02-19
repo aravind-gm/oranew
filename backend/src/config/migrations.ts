@@ -205,6 +205,39 @@ async function applyPhase2RevenueMigration(): Promise<void> {
   }
 }
 
+// ============================================================
+// PHASE 3: ANALYTICS INDEXES
+// Composite indexes for fast aggregation queries
+// ============================================================
+async function applyPhase3AnalyticsIndexes(): Promise<void> {
+  const indexes: Array<[string, string]> = [
+    // Orders — analytics queries filter by paymentStatus + createdAt heavily
+    ['idx_orders_payment_status_created', 'CREATE INDEX IF NOT EXISTS idx_orders_payment_status_created ON orders (payment_status, created_at DESC)'],
+    ['idx_orders_user_status',            'CREATE INDEX IF NOT EXISTS idx_orders_user_status ON orders (user_id, payment_status)'],
+    // Payments — success/failure rate queries
+    ['idx_payments_status_created',       'CREATE INDEX IF NOT EXISTS idx_payments_status_created ON payments (status, created_at DESC)'],
+    // Order items — product revenue aggregation
+    ['idx_order_items_product_id',        'CREATE INDEX IF NOT EXISTS idx_order_items_product_id ON order_items (product_id)'],
+    // Coupons — usage tracking
+    ['idx_coupon_usage_coupon_id',        'CREATE INDEX IF NOT EXISTS idx_coupon_usage_coupon_id ON coupon_usages (coupon_id)'],
+    // Cart items — abandoned cart queries
+    ['idx_cart_items_user_added',         'CREATE INDEX IF NOT EXISTS idx_cart_items_user_added ON cart_items (user_id, added_at DESC)'],
+  ];
+
+  try {
+    for (const [, sql] of indexes) {
+      try {
+        await prisma.$executeRawUnsafe(sql);
+      } catch {
+        // Non-fatal — index may already exist
+      }
+    }
+    console.log('[Migration:Phase3] ✅ Analytics indexes: OK');
+  } catch (err: any) {
+    console.error('[Migration:Phase3] ⚠️  Phase 3 indexes partial failure:', err.message?.split('\n')[0]);
+  }
+}
+
 /**
  * Fallback: Apply critical migrations manually if prisma migrate fails
  */
@@ -222,6 +255,10 @@ export async function runPendingMigrations(): Promise<boolean> {
     // Phase 2 revenue engines — always runs (idempotent)
     console.log('[Migration] ⏳ Applying Phase 2 revenue engines...');
     await applyPhase2RevenueMigration();
+
+    // Phase 3 analytics indexes — always runs (idempotent)
+    console.log('[Migration] ⏳ Applying Phase 3 analytics indexes...');
+    await applyPhase3AnalyticsIndexes();
 
     if (manualSuccess) {
       return true;

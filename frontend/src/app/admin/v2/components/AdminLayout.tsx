@@ -162,6 +162,7 @@ const navigationItems: NavItem[] = [
     icon: BarChart3,
     children: [
       { id: 'overview', label: 'Overview', href: '/admin/v2/analytics' },
+      { id: 'insights-dashboard', label: '📊 Insights Dashboard', href: '/admin/v2/dashboard' },
       { id: 'sales-reports', label: 'Sales Reports', href: '/admin/v2/analytics/sales' },
       { id: 'product-reports', label: 'Product Reports', href: '/admin/v2/analytics/products' },
       { id: 'customer-reports', label: 'Customer Reports', href: '/admin/v2/analytics/customers' },

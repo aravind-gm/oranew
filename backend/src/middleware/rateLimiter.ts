@@ -61,3 +61,15 @@ export const couponLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+// Analytics dashboard rate limiter (prevents excessive DB load)
+export const analyticsLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 30, // 30 requests per minute (dashboard refreshes)
+  message: {
+    success: false,
+    error: 'Too many analytics requests. Please wait before refreshing.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
