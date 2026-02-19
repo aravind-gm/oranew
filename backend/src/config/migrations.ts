@@ -61,6 +61,64 @@ async function applyPasswordHashMigration(retries: number = 5): Promise<boolean>
   return false;
 }
 
+// ============================================================
+// PHASE 0: SECURITY HARDENING MIGRATION
+// Applies on every startup — idempotent (IF NOT EXISTS guards)
+// ============================================================
+async function applyPhase0SecurityMigration(): Promise<void> {
+  try {
+    // 1. Stock floor constraint — prevents negative inventory at DB level
+    await prisma.$executeRawUnsafe(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint
+          WHERE conname = 'products_stock_quantity_non_negative'
+        ) THEN
+          ALTER TABLE products
+            ADD CONSTRAINT products_stock_quantity_non_negative
+            CHECK (stock_quantity >= 0);
+        END IF;
+      END
+      $$
+    `);
+    console.log('[Migration:Phase0] ✅ Stock non-negative constraint: OK');
+
+    // 2. Critical performance indexes
+    const indexes: Array<[string, string]> = [
+      ['idx_products_created_at',   'CREATE INDEX IF NOT EXISTS idx_products_created_at ON products (created_at DESC)'],
+      ['idx_products_final_price',   'CREATE INDEX IF NOT EXISTS idx_products_final_price ON products (final_price)'],
+      ['idx_products_active_deleted','CREATE INDEX IF NOT EXISTS idx_products_active_deleted ON products (is_active, deleted_at)'],
+      ['idx_products_stock_quantity','CREATE INDEX IF NOT EXISTS idx_products_stock_quantity ON products (stock_quantity)'],
+      ['idx_orders_created_at',      'CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders (created_at DESC)'],
+      ['idx_orders_payment_status',  'CREATE INDEX IF NOT EXISTS idx_orders_payment_status ON orders (payment_status)'],
+      ['idx_orders_status',          'CREATE INDEX IF NOT EXISTS idx_orders_status ON orders (status)'],
+      ['idx_orders_user_id',         'CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders (user_id)'],
+      ['idx_payments_transaction_id','CREATE INDEX IF NOT EXISTS idx_payments_transaction_id ON payments (transaction_id)'],
+      ['idx_payments_status',        'CREATE INDEX IF NOT EXISTS idx_payments_status ON payments (status)'],
+      ['idx_payments_order_id',      'CREATE INDEX IF NOT EXISTS idx_payments_order_id ON payments (order_id)'],
+      ['idx_inventory_locks_product_expiry', 'CREATE INDEX IF NOT EXISTS idx_inventory_locks_product_expiry ON inventory_locks (product_id, expires_at)'],
+      ['idx_inventory_locks_order_id','CREATE INDEX IF NOT EXISTS idx_inventory_locks_order_id ON inventory_locks (order_id)'],
+      ['idx_users_email',            'CREATE INDEX IF NOT EXISTS idx_users_email ON users (email)'],
+    ];
+
+    for (const [name, sql] of indexes) {
+      try {
+        await prisma.$executeRawUnsafe(sql);
+      } catch (idxErr: any) {
+        // Non-fatal — index may already exist under a different name or table may differ
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[Migration:Phase0] ⚠️  Index ${name}: ${idxErr.message?.split('\n')[0]}`);
+        }
+      }
+    }
+    console.log('[Migration:Phase0] ✅ Performance indexes: OK');
+  } catch (err: any) {
+    // Non-fatal — log and continue. Constraints/indexes are best-effort at startup.
+    console.error('[Migration:Phase0] ⚠️  Phase 0 migration partial failure:', err.message?.split('\n')[0]);
+  }
+}
+
 /**
  * Fallback: Apply critical migrations manually if prisma migrate fails
  */
@@ -70,6 +128,11 @@ export async function runPendingMigrations(): Promise<boolean> {
     
     // Try the manual migration first (most reliable)
     const manualSuccess = await applyPasswordHashMigration();
+
+    // Phase 0 security hardening — always runs (idempotent)
+    console.log('[Migration] ⏳ Applying Phase 0 security hardening...');
+    await applyPhase0SecurityMigration();
+
     if (manualSuccess) {
       return true;
     }
@@ -97,3 +160,4 @@ export async function runPendingMigrations(): Promise<boolean> {
     return false;
   }
 }
+

@@ -527,16 +527,18 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user } = useAuthStore();
+  const { user, loading } = useAuthStore();
   const router = useRouter();
 
-  // Auth check
+  // Auth check — MUST wait for loading=false before deciding.
+  // On a fresh page load, user=null and loading=true while fetchUser()
+  // is in-flight. Redirecting during that window is a false negative.
   useEffect(() => {
-    
+    if (loading) return; // auth state not resolved yet — hold off
     if (user?.role !== 'ADMIN') {
-      router.push('/admin/login');
+      router.push('/auth/login?from=/admin/v2');
     }
-  }, [user, router]);
+  }, [user, loading, router]);
 
   const toggleSidebar = () => setSidebarCollapsed(!sidebarCollapsed);
 
@@ -547,8 +549,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     setSidebarOpen,
   };
 
-  // Don't render until auth is verified
-  if (user?.role !== 'ADMIN') {
+  // Show spinner while auth is still resolving OR user is not yet confirmed admin.
+  // Do NOT redirect here — that's the useEffect's job after loading finishes.
+  if (loading || user?.role !== 'ADMIN') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f6f7f9]">
         <div className="flex flex-col items-center gap-4">

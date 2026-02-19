@@ -24,53 +24,29 @@ export const protect = async (
 ) => {
   try {
     let token: string | undefined;
-    let tokenSource: 'cookie' | 'header' | 'none' = 'none';
+    const tokenSource: 'cookie' | 'header' | 'none' = 'none';
 
-    // 🧪 DEBUG: Log all cookies received
-    console.log('[Auth Middleware] 🍪 All cookies received:', req.cookies);
-    console.log('[Auth Middleware] 🔍 access_token cookie:', req.cookies?.access_token);
+    // SECURITY: NEVER log cookies, token values, or token prefixes.
+    // All debug logging is gated behind NODE_ENV === 'development'.
 
-    // 🔐 PRIORITY 1: Check HttpOnly cookie (NEW - more secure)
+    // PRIORITY 1: HttpOnly cookie (preferred — not accessible via JS)
     if (req.cookies && req.cookies.access_token) {
       token = req.cookies.access_token;
-      tokenSource = 'cookie';
-      console.log('[Auth Middleware] 🍪 Token found in HttpOnly cookie', {
-        endpoint: req.method + ' ' + req.path,
-        tokenLength: token.length,
-      });
     }
-    // 🔐 PRIORITY 2: Fallback to Authorization header (OLD - backward compatibility)
+    // PRIORITY 2: Authorization header fallback (for API clients / SSR)
     else if (
       req.headers.authorization &&
       req.headers.authorization.startsWith('Bearer')
     ) {
       token = req.headers.authorization.split(' ')[1];
-      tokenSource = 'header';
-      console.log('[Auth Middleware] 📋 Token found in Authorization header', {
-        endpoint: req.method + ' ' + req.path,
-        tokenLength: token.length,
-      });
     }
 
-    // 🚨 CRITICAL: Token validation
     if (!token) {
-      console.error('[Auth Middleware] ❌ NO TOKEN PROVIDED', {
-        endpoint: req.method + ' ' + req.path,
-        authHeader: req.headers.authorization ? 'Present' : 'MISSING',
-        cookiePresent: !!req.cookies?.access_token,
-        allCookies: Object.keys(req.cookies || {}),
-        timestamp: new Date().toISOString(),
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Auth] No token — endpoint:', req.method, req.path);
+      }
       throw new AppError('Not authorized, no token provided', 401);
     }
-
-    console.log('[Auth Middleware] 🔐 Token validation starting...', {
-      endpoint: req.method + ' ' + req.path,
-      tokenSource: tokenSource,
-      tokenLength: token.length,
-      tokenPrefix: token.substring(0, 30) + '...',
-      timestamp: new Date().toISOString(),
-    });
 
     // Verify token signature and expiry
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
@@ -79,14 +55,10 @@ export const protect = async (
       role: UserRole;
     };
 
-    console.log('[Auth Middleware] ✅ Token verified successfully', {
-      endpoint: req.method + ' ' + req.path,
-      tokenSource: tokenSource,
-      userId: decoded.id,
-      userEmail: decoded.email,
-      userRole: decoded.role,
-      timestamp: new Date().toISOString(),
-    });
+    // Only log user identity (not token bytes) and only in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Auth] Token valid — userId:', decoded.id, 'role:', decoded.role);
+    }
 
     // Attach user to request
     req.user = decoded;

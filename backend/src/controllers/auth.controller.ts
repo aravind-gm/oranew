@@ -14,15 +14,23 @@ import { sanitizeText, sanitizeEmail, sanitizePhone } from '../utils/sanitize';
 // ============================================
 // CUSTOM 8-DIGIT OTP AUTHENTICATION SYSTEM
 // ============================================
-// Generate and verify 8-digit OTP codes
-// Store OTP temporarily in Prisma with expiration
+// OTPs are generated with crypto.randomInt (CSPRNG), hashed with bcrypt
+// before storage, and verified with bcrypt.compare (constant-time).
 
-// Store OTPs in memory (for production, use Redis)
-const otpStore = new Map<string, { otp: string; expiresAt: Date }>();
+interface OtpEntry {
+  hash: string;          // bcrypt hash of the OTP — never stored plaintext
+  expiresAt: Date;
+  attempts: number;      // brute-force guard: max 5 attempts
+}
 
-// Generate 8-digit OTP
+// NOTE: In-memory store works for single-instance.
+// For multi-instance or restarts: migrate to Redis.
+const otpStore = new Map<string, OtpEntry>();
+
+// SECURITY: crypto.randomInt is CSPRNG-backed, unlike Math.random()
 function generate8DigitOTP(): string {
-  return Math.floor(10000000 + Math.random() * 90000000).toString();
+  // Generates a cryptographically secure random 8-digit number: 10000000–99999999
+  return crypto.randomInt(10_000_000, 100_000_000).toString();
 }
 
 // @desc    Send 8-digit OTP to email
@@ -47,8 +55,12 @@ export const otpLogin = async (
     const otp = generate8DigitOTP();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
-    // Store OTP with email as key
-    otpStore.set(email.toLowerCase(), { otp, expiresAt });
+    // SECURITY: Hash the OTP before storing — never keep plaintext in memory
+    const BCRYPT_ROUNDS = 10;
+    const otpHash = await bcrypt.hash(otp, BCRYPT_ROUNDS);
+
+    // Store HASH only, not the plaintext OTP
+    otpStore.set(email.toLowerCase(), { hash: otpHash, expiresAt, attempts: 0 });
 
     // Send OTP via email
     const emailSent = await sendEmail({
@@ -96,15 +108,11 @@ export const otpLogin = async (
       `,
     });
 
-    // For development/testing: Always log OTP to console
-    console.log('\n' + '='.repeat(60));
-    console.log('🔐 OTP LOGIN REQUEST');
-    console.log('='.repeat(60));
-    console.log(`📧 Email: ${email}`);
-    console.log(`🔢 OTP Code: ${otp}`);
-    console.log(`⏰ Expires: ${expiresAt.toLocaleString()}`);
-    console.log(`📬 Email Status: ${emailSent ? '✅ Sent' : '⚠️  Failed (check SMTP config)'}`);
-    console.log('='.repeat(60) + '\n');
+    // Gate all auth debug logging behind development mode
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Auth.otpLogin] OTP sent to:', email, '| expires:', expiresAt.toISOString());
+      // NEVER log the actual OTP value, even in development
+    }
 
     // Allow login even if email fails (for testing)
     return res.status(200).json({
@@ -158,15 +166,28 @@ export const verifyOtp = async (
       });
     }
 
-    // Verify OTP
-    if (storedOtpData.otp !== otp) {
+    // SECURITY: Brute-force guard — max 5 wrong attempts per OTP
+    if (storedOtpData.attempts >= 5) {
+      otpStore.delete(emailLower);
+      return res.status(429).json({
+        success: false,
+        error: 'Too many incorrect attempts. Please request a new OTP.',
+      });
+    }
+
+    // SECURITY: bcrypt.compare is constant-time — prevents timing-based enumeration
+    const otpValid = await bcrypt.compare(otp, storedOtpData.hash);
+
+    if (!otpValid) {
+      // Increment attempt counter without exposing which field failed
+      storedOtpData.attempts += 1;
       return res.status(400).json({
         success: false,
         error: 'Invalid OTP. Please try again.',
       });
     }
 
-    // OTP is valid - delete it
+    // OTP is valid - delete it immediately (one-time use)
     otpStore.delete(emailLower);
 
     // Get or create user in Prisma

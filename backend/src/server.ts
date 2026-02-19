@@ -33,6 +33,7 @@ import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
 import { warmupDatabase } from './config/database';
 import { startScheduler } from './utils/scheduler';
+import { apiLimiter } from './middleware/rateLimiter';
 
 const app: Application = express();
 const PORT = process.env.PORT || 8000;
@@ -166,6 +167,20 @@ app.use('/api/r2', r2UploadRoutes);
 // COOKIE PARSER - For HttpOnly Cookie Authentication
 // ============================================
 app.use(cookieParser());
+
+// ============================================
+// GLOBAL RATE LIMITER (100 req / 15 min per IP)
+// ============================================
+// Applied after cookieParser but before all route handlers.
+// The Razorpay webhook endpoint is explicitly excluded: Razorpay's
+// delivery retry logic can burst above the limit and must never be
+// blocked — signature verification is the security gate for webhooks.
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.path === '/api/payments/webhook' || req.originalUrl === '/api/payments/webhook') {
+    return next();
+  }
+  return apiLimiter(req, res, next);
+});
 
 // ============================================
 // BODY PARSER - SKIP WEBHOOK ROUTE

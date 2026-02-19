@@ -148,7 +148,7 @@ function FailedContent() {
             {/* Action Buttons */}
             <div className="space-y-3">
               <Link
-                href="/cart"
+                href={orderId ? `/checkout/payment?orderId=${orderId}` : '/cart'}
                 className="btn-primary block w-full py-4 text-center"
               >
                 Retry Payment

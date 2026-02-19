@@ -4,7 +4,7 @@ import api from '@/lib/api';
 import { loadRazorpayScript } from '@/lib/razorpay';
 import { useAuthStore } from '@/store/authStore';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
 interface RazorpayResponse {
   razorpay_payment_id: string;
@@ -18,7 +18,10 @@ interface OrderData {
   items?: Array<{ product?: { name: string }; quantity: number; unitPrice: number }>;
 }
 
-export default function CheckoutPaymentPage() {
+// ─────────────────────────────────────────────────────────────
+// PaymentContent — uses useSearchParams, must live inside Suspense
+// ─────────────────────────────────────────────────────────────
+function PaymentContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const orderId = searchParams.get('orderId');
@@ -27,6 +30,12 @@ export default function CheckoutPaymentPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [orderData, setOrderData] = useState<OrderData | null>(null);
+
+  // SECURITY: Ref-based guard prevents double invocation even if React
+  // re-renders before the async handlePayment resolves. Unlike a state
+  // flag, a ref update is synchronous and does NOT cause a re-render,
+  // so the second click is blocked before the state settles.
+  const isProcessingRef = useRef(false);
 
   const fetchOrderData = useCallback(async (): Promise<void> => {
     try {
@@ -48,54 +57,51 @@ export default function CheckoutPaymentPage() {
   // Load order data once auth is confirmed
   useEffect(() => {
     if (authLoading) return;
-    if (!user) return; // auth redirect handled by effect above
+    if (!user) return;
 
     if (!orderId) {
       router.push('/checkout');
       return;
     }
 
-    // Fetch order data
     void fetchOrderData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, orderId]);
 
   const handlePayment = async (): Promise<void> => {
+    // DOUBLE-CLICK GUARD: reject if a payment attempt is already in flight
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+
     setLoading(true);
     setError('');
 
     try {
       if (!orderId) throw new Error('Order ID not found');
 
-      // Ensure Razorpay script is loaded before calling the API
       const scriptLoaded = await loadRazorpayScript();
       if (!scriptLoaded) {
         throw new Error('Failed to load payment gateway. Please check your connection and try again.');
       }
 
-      // console.log('[Payment] Starting payment with orderId:', orderId);
-
       // Step 1: Create Razorpay order on backend
-      // Cookies are sent automatically via withCredentials: true
       const paymentResponse = await api.post('/payments/create', { orderId });
 
       if (!paymentResponse.data.success) {
         throw new Error(paymentResponse.data.error?.message || 'Failed to create payment');
       }
 
-      // Backend returns: razorpayOrderId, razorpayKeyId, amount (paise), currency
       const { razorpayOrderId, razorpayKeyId, amount, currency } = paymentResponse.data;
 
-      // Step 2: Resolve key — backend is authoritative, env var is fallback
       const keyId = razorpayKeyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
       if (!keyId) {
         throw new Error('Razorpay key not configured. Set NEXT_PUBLIC_RAZORPAY_KEY_ID.');
       }
 
-      // Step 3: Open Razorpay modal
+      // Step 2: Open Razorpay modal
       const options = {
         key: keyId,
-        amount,           // Already in paise — backend uses razorpayOrder.amount
+        amount,
         currency: currency || 'INR',
         order_id: razorpayOrderId,
         name: 'ORA Jewellery',
@@ -105,6 +111,8 @@ export default function CheckoutPaymentPage() {
         },
         modal: {
           ondismiss: () => {
+            // Reset guard only on modal dismiss so user can retry
+            isProcessingRef.current = false;
             setLoading(false);
             setError('Payment cancelled. Please try again.');
           },
@@ -118,21 +126,21 @@ export default function CheckoutPaymentPage() {
         throw new Error('Razorpay not loaded');
       }
 
-      // console.log('[Payment] Opening Razorpay modal');
       const razorpay = new window.Razorpay(options);
       razorpay.open();
-      setLoading(false);
+      // Keep loading=true and isProcessingRef=true until modal resolves
     } catch (err: unknown) {
       console.error('[Payment Error]', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to initialize payment';
       setError(errorMessage);
+      // Reset guard on error so user can retry
+      isProcessingRef.current = false;
       setLoading(false);
     }
   };
 
   const handlePaymentSuccess = async (response: RazorpayResponse): Promise<void> => {
     try {
-      // CRITICAL: Verify payment signature with backend
       const verifyResponse = await api.post('/payments/verify', {
         orderId,
         razorpay_payment_id: response.razorpay_payment_id,
@@ -144,12 +152,16 @@ export default function CheckoutPaymentPage() {
         throw new Error('Payment verification failed');
       }
 
-      // CRITICAL: Do NOT assume payment is complete yet
-      // Redirect to success page which will poll for webhook confirmation
+      // Redirect to success page — do NOT reset isProcessingRef here.
+      // We're navigating away; keeping it true prevents any accidental
+      // second attempt if navigation is slow.
       router.push(`/checkout/success?orderId=${orderId}`);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Payment verification failed. Please contact support.';
       setError(errorMessage);
+      // Reset guard on failure so user can retry
+      isProcessingRef.current = false;
+      setLoading(false);
       console.error('Verification error:', err);
     }
   };
@@ -289,5 +301,30 @@ export default function CheckoutPaymentPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Default export — wraps PaymentContent in Suspense so that
+// useSearchParams() inside the child doesn't break server render.
+// The fallback spinner prevents layout shift while params resolve.
+// ─────────────────────────────────────────────────────────────
+export default function CheckoutPaymentPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="text-center">
+            <svg className="w-12 h-12 animate-spin mx-auto mb-4 text-accent" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            <p className="text-text-muted">Loading payment...</p>
+          </div>
+        </div>
+      }
+    >
+      <PaymentContent />
+    </Suspense>
   );
 }

@@ -278,12 +278,19 @@ export const verifyPayment = asyncHandler(async (req: any, res: Response) => {
   });
 
   // ────────────────────────────────────────────
-  // FIND PAYMENT RECORD
+  // FIND PAYMENT RECORD — filter by razorpay_order_id, NOT [0]
+  // Using [0] is wrong when the user retried after a failure:
+  // the first payment is FAILED, the second is the real one.
   // ────────────────────────────────────────────
-  const payment = (order as any).payments?.[0];
+  const payment = (order as any).payments?.find(
+    (p: any) => p.transactionId === razorpay_order_id
+  );
 
   if (!payment) {
-    throw new AppError('Payment record not found', 404);
+    throw new AppError(
+      'Payment record not found for this Razorpay order. Possible tampered order ID.',
+      404
+    );
   }
 
   console.log('[Payment.verify] ✓ Payment found:', {
@@ -310,15 +317,31 @@ export const verifyPayment = asyncHandler(async (req: any, res: Response) => {
   console.log('[Payment.verify] Verifying signature...');
 
   const signatureBody = `${razorpay_order_id}|${razorpay_payment_id}`;
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+  if (!keySecret) {
+    throw new AppError('Payment configuration error', 500);
+  }
   const expectedSignature = crypto
-    .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '')
+    .createHmac('sha256', keySecret)
     .update(signatureBody)
-    .digest('hex');
+    .digest();
 
-  if (expectedSignature !== razorpay_signature) {
-    console.error('[Payment.verify] ❌ Signature verification FAILED');
-    console.error('[Payment.verify] Expected:', expectedSignature.substring(0, 20) + '...');
-    console.error('[Payment.verify] Received:', razorpay_signature.substring(0, 20) + '...');
+  // SECURITY: Use timingSafeEqual to prevent timing-based signature forgery.
+  // String comparison (===) leaks timing info character by character.
+  // Buffer comparison is constant-time regardless of content.
+  let signatureValid = false;
+  try {
+    signatureValid = crypto.timingSafeEqual(
+      expectedSignature,
+      Buffer.from(razorpay_signature, 'hex')
+    );
+  } catch {
+    // timingSafeEqual throws if buffers have different lengths
+    signatureValid = false;
+  }
+
+  if (!signatureValid) {
+    console.error('[Payment.verify] Signature verification FAILED - possible tampering');
     throw new AppError('Invalid payment signature - verification failed', 400);
   }
 
@@ -456,18 +479,29 @@ export const webhook = async (req: Request, res: Response) => {
     return res.status(500).json({ success: false, reason: 'Webhook secret not configured' });
   }
   
-  const expectedSignature = crypto
+  const expectedWebhookSig = crypto
     .createHmac('sha256', webhookSecret)
     .update(rawBody)
-    .digest('hex');
-    
-  if (expectedSignature !== signature) {
-    console.log('[Webhook] ❌ Signature verification FAILED');
-    console.log('[Webhook] Expected:', expectedSignature.substring(0, 20) + '...');
-    console.log('[Webhook] Received:', signature.substring(0, 20) + '...');
+    .digest();
+
+  // SECURITY: Constant-time comparison to prevent timing attacks on webhook HMAC
+  let webhookSigValid = false;
+  try {
+    webhookSigValid = crypto.timingSafeEqual(
+      expectedWebhookSig,
+      Buffer.from(signature, 'hex')
+    );
+  } catch {
+    webhookSigValid = false;
+  }
+
+  if (!webhookSigValid) {
+    console.error('[Webhook] Signature verification FAILED - possible replay/forgery');
     return res.status(400).json({ success: false, reason: 'Invalid signature' });
   }
-  console.log('[Webhook] ✓ Signature verification: OK');
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[Webhook] Signature verification: OK');
+  }
 
   // ────────────────────────────────────────────
   // STEP 4: Parse event JSON
@@ -1001,18 +1035,41 @@ export const initiateRefund = asyncHandler(async (req: any, res: Response) => {
   }
 
   const order = returnRequest.order;
-  const payment = order.payments?.[0];
+  // SECURITY: Find the CONFIRMED payment — the one that was actually captured
+  const payment = order.payments?.find((p: any) => p.status === 'CONFIRMED');
 
   if (!payment) {
-    throw new AppError('No payment found for this order', 400);
+    throw new AppError('No confirmed payment found for this order. Only captured payments can be refunded.', 400);
+  }
+
+  // SECURITY: Extract the Razorpay Payment ID (pay_xxx) from the gateway response.
+  // transactionId stores razorpayOrder.id (order_xxx) — NEVER use it for refunds.
+  // The webhook handler saves the real payment ID under gatewayResponse.razorpayPaymentId.
+  const gatewayResponse = payment.gatewayResponse as Record<string, any> | null;
+  const razorpayPaymentId: string | undefined = gatewayResponse?.razorpayPaymentId;
+
+  if (!razorpayPaymentId || !razorpayPaymentId.startsWith('pay_')) {
+    throw new AppError(
+      'Razorpay Payment ID (pay_xxx) not found in payment record. Cannot process refund — contact engineering.',
+      500
+    );
+  }
+
+  // IDEMPOTENCY: Prevent double-refund
+  if (payment.status === 'REFUNDED') {
+    throw new AppError('This payment has already been refunded.', 409);
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[Payment.refund] Using razorpayPaymentId:', razorpayPaymentId);
   }
 
   try {
-    // Call Razorpay refund API
+    // Call Razorpay refund API with the PAYMENT ID (pay_xxx), not the order ID
     let refundResult;
     try {
       const razorpay = getRazorpay();
-      refundResult = await razorpay.payments.refund(payment.transactionId, {
+      refundResult = await razorpay.payments.refund(razorpayPaymentId, {
         amount: Math.round(Number(refundAmount) * 100), // Convert to paise
         notes: {
           returnId: returnId,
@@ -1020,9 +1077,11 @@ export const initiateRefund = asyncHandler(async (req: any, res: Response) => {
           reason: returnRequest.reason,
         },
       });
-      console.log('[Payment.refund] Razorpay refund successful:', refundResult);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Payment.refund] Razorpay refund successful:', refundResult?.id);
+      }
     } catch (razorpayError: any) {
-      console.error('[Payment.refund] Razorpay error:', razorpayError);
+      console.error('[Payment.refund] Razorpay error:', razorpayError?.message);
       throw new AppError(
         `Razorpay refund failed: ${razorpayError.message}`,
         400

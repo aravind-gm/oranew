@@ -360,9 +360,16 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
 
   // ====== TRANSACTIONAL ORDER + INVENTORY LOCK CREATION (CRITICAL) ======
   // ALL stock checks, order creation, inventory locks, and coupon updates
-  // happen in a SINGLE atomic transaction to prevent race conditions
+  // happen in a SINGLE atomic Serializable transaction.
+  //
+  // WHY Serializable?
+  //   ReadCommitted (Postgres default) allows two concurrent checkouts for
+  //   the last item to both read stockQuantity=1, both pass the check, and
+  //   both succeed — resulting in stock going to -1 (overselling).
+  //   Serializable forces transactions to execute as if sequential, so the
+  //   second checkout will see the stock already reserved and fail cleanly.
   const order = await prisma.$transaction(async (tx) => {
-    // 1️⃣ FINAL stock check inside transaction (prevents race conditions)
+    //    This is the definitive guard — the check above is a fast pre-check.
     for (const item of cartItems) {
       const freshProduct = await tx.product.findUnique({
         where: { id: item.productId },
@@ -373,9 +380,18 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
         throw new AppError(`Product ${item.productId} not found`, 400);
       }
 
-      if (freshProduct.stockQuantity < item.quantity) {
+      // CRITICAL: Check available stock (total minus active locks) inside
+      // the Serializable transaction to prevent TOCTOU race conditions.
+      const lockedQty = await tx.inventoryLock.aggregate({
+        where: { productId: item.productId, expiresAt: { gt: new Date() } },
+        _sum: { quantity: true },
+      });
+      const locked = lockedQty._sum.quantity ?? 0;
+      const available = freshProduct.stockQuantity - locked;
+
+      if (available < item.quantity) {
         throw new AppError(
-          `Insufficient stock for "${freshProduct.name}". Available: ${freshProduct.stockQuantity}, Requested: ${item.quantity}`,
+          `Insufficient stock for "${freshProduct.name}". Available: ${available}, Requested: ${item.quantity}`,
           409 // 409 Conflict for inventory issues
         );
       }
@@ -467,6 +483,13 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
     }
 
     return newOrder;
+  }, {
+    // SECURITY: Serializable isolation prevents the "last item" race condition.
+    // Two concurrent checkouts for qty=1 stock will no longer both succeed.
+    // The second transaction will receive a serialization failure and Prisma
+    // will surface it as a PrismaClientKnownRequestError (P2034) which we
+    // catch in the global error handler and return as a 409 Conflict.
+    isolationLevel: 'Serializable',
   });
 
   // Send order placed email (fire and forget - don't block response)
