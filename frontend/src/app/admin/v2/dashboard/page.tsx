@@ -346,7 +346,7 @@ export default function AnalyticsDashboardPage() {
                       <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => formatINR(v)} />
                       <Tooltip
                         formatter={(value: number | undefined) => [formatINRFull(value ?? 0), 'Revenue']}
-                        labelFormatter={(label: string) => shortDate(label)}
+                        labelFormatter={(label) => shortDate(String(label))}
                         contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb' }}
                       />
                       <Area
@@ -372,7 +372,7 @@ export default function AnalyticsDashboardPage() {
                       <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                       <Tooltip
                         formatter={(value: number | undefined) => [value ?? 0, 'Orders']}
-                        labelFormatter={(label: string) => shortDate(label)}
+                        labelFormatter={(label) => shortDate(String(label))}
                         contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb' }}
                       />
                       <Bar dataKey="orders" fill={GOLD} radius={[4, 4, 0, 0]} />
