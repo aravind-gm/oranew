@@ -16,7 +16,6 @@
  */
 
 import * as Sentry from '@sentry/nextjs';
-import { Replay } from '@sentry/nextjs';
 
 /**
  * Initialize Sentry for Next.js (should be called in layout.tsx or _app.tsx)
@@ -43,16 +42,7 @@ export function initFrontendSentry(): void {
     tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
 
     // Capture all unhandled exceptions
-    integrations: [
-      new Replay({
-        maskAllText: true,
-        blockAllMedia: true,
-      }),
-    ],
-
-    // Replay 10% of all sessions + 100% of sessions with errors
-    replaysSessionSampleRate: 0.1,
-    replaysOnErrorSampleRate: 1.0,
+    integrations: [],
 
     beforeSend(event) {
       // SECURITY: strip all sensitive data
