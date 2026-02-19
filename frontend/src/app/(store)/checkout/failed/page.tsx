@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import api from '@/lib/api';
+import type { RazorpayResponse } from '@/lib/razorpay';
 
 interface OrderDetails {
   orderId: string;
@@ -113,7 +114,7 @@ function FailedContent() {
         description: `Order #${orderNumber}`,
         prefill: { email: userEmail, name: userName },
         theme: { color: '#E75480' },
-        handler: async (response: Record<string, string>) => {
+        handler: async (response: RazorpayResponse) => {
           try {
             await api.post('/payments/verify', {
               razorpay_order_id: response.razorpay_order_id,
