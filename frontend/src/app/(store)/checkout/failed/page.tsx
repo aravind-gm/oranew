@@ -12,13 +12,6 @@ interface OrderDetails {
   errorMessage?: string;
 }
 
-// Extend window for Razorpay
-declare global {
-  interface Window {
-    Razorpay: new (options: Record<string, unknown>) => { open: () => void };
-  }
-}
-
 function FailedContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -109,7 +102,7 @@ function FailedContent() {
 
       // Step 3: Load Razorpay and open modal
       const loaded = await loadRazorpayScript();
-      if (!loaded) throw new Error('Failed to load payment gateway. Please try again.');
+      if (!loaded || !window.Razorpay) throw new Error('Failed to load payment gateway. Please try again.');
 
       const rzp = new window.Razorpay({
         key,
