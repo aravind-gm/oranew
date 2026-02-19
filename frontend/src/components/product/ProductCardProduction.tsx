@@ -67,6 +67,8 @@ interface Product {
   isBestseller?: boolean;
   material?: string;
   images: ProductImage[];
+  stockQuantity?: number;
+  lowStockThreshold?: number;
 }
 
 /**
@@ -318,7 +320,20 @@ function ProductCard({
 
               {/* Bestseller Badge */}
 
-            </div>
+              {/* Low-Stock Scarcity Badge */}
+              {product.stockQuantity !== undefined &&
+                product.stockQuantity > 0 &&
+                product.stockQuantity <= (product.lowStockThreshold ?? 5) && (
+                <motion.span
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2, duration: 0.3 }}
+                  className="px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] tracking-[0.1em] uppercase font-medium bg-amber-50 text-amber-700 rounded-full shadow-sm border border-amber-200"
+                >
+                  Only {product.stockQuantity} left
+                </motion.span>
+              )}
+
           )}
 
           {/* WISHLIST BUTTON (top-right, floating) - Larger touch target on mobile */}

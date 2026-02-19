@@ -52,6 +52,7 @@ model User {
   adminAuditLogs   AdminAuditLog[]
   couponUsages     CouponUsage[] // Track per-user coupon usage
   refreshTokens    RefreshToken[] // Track refresh tokens for session management
+  abandonedCartLog AbandonedCartLog? // One log per user for email dedup
 
   @@map("users")
 }
@@ -148,6 +149,9 @@ model Product {
 
   // Soft delete
   deletedAt         DateTime?       @map("deleted_at")
+
+  // Low-stock alert tracking (prevents duplicate Slack spam)
+  lowStockAlertSentAt DateTime?     @map("low_stock_alert_sent_at")
 
   createdAt         DateTime        @default(now()) @map("created_at")
   updatedAt         DateTime        @updatedAt @map("updated_at")
@@ -372,6 +376,7 @@ model Order {
   user              User            @relation(fields: [userId], references: [id])
   payments          Payment[]
   returns           Return[]
+  retryTokens       PaymentRetryToken[]
 
   @@index([userId])
   @@index([orderNumber])
@@ -646,6 +651,41 @@ model AdminAuditLog {
   @@index([entityType])
   @@index([createdAt])
   @@map("admin_audit_logs")
+}
+
+// ============================================
+// ABANDONED CART LOG (DB-persistent email dedup)
+// ============================================
+model AbandonedCartLog {
+  id          String   @id @default(uuid())
+  userId      String   @unique @map("user_id")
+  emailSentAt DateTime @map("email_sent_at")
+  cartTotal   Float    @map("cart_total")
+  itemCount   Int      @map("item_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([emailSentAt])
+  @@map("abandoned_cart_logs")
+}
+
+// ============================================
+// PAYMENT RETRY TOKENS
+// ============================================
+model PaymentRetryToken {
+  id        String   @id @default(uuid())
+  orderId   String   @map("order_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([orderId])
+  @@index([expiresAt])
+  @@map("payment_retry_tokens")
 }
 
 enum BOGODiscountType {

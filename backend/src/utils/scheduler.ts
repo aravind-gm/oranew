@@ -17,10 +17,8 @@ const INVENTORY_CLEANUP_INTERVAL = 5 * 60 * 1000; // Every 5 minutes
 const ABANDONED_CART_INTERVAL = 30 * 60 * 1000; // Every 30 minutes
 const RECONCILIATION_INTERVAL = 15 * 60 * 1000; // Every 15 minutes
 
-// Track users who already received an abandoned cart email (reset on server restart)
-// Key: userId, Value: timestamp of last email sent
-const abandonedCartEmailsSent = new Map<string, number>();
-const ABANDONED_CART_COOLDOWN = 24 * 60 * 60 * 1000; // Only re-send after 24 hours
+// Cooldown between abandoned cart emails per user (DB-persisted)
+const ABANDONED_CART_COOLDOWN_HOURS = 24;
 
 /**
  * Deactivate expired BOGO campaigns (endDate < now).
@@ -146,25 +144,25 @@ async function syncBOGOProductStatus(): Promise<void> {
 
 /**
  * Send abandoned cart reminder emails.
- * 
+ *
  * Logic:
  * - Find users with cart items added > 2 hours ago
  * - Who have NOT placed an order in the last 2 hours
- * - Who haven't received an abandoned cart email in the last 24 hours
+ * - Who haven't received an email in the last 24 hours (DB-persisted — survives restarts)
  * - Send them a reminder with their cart contents
+ * - Optionally attach a 5% coupon (if ENABLE_CART_COUPON=true env)
+ *
+ * Idempotent: uses AbandonedCartLog table for cooldown tracking.
  */
 async function sendAbandonedCartReminders(): Promise<number> {
   try {
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
-    
+    const cooldownCutoff = new Date(Date.now() - ABANDONED_CART_COOLDOWN_HOURS * 60 * 60 * 1000);
+
     // Find users with "stale" cart items (added > 2 hours ago)
     const usersWithOldCarts = await prisma.cartItem.findMany({
-      where: {
-        addedAt: { lt: twoHoursAgo },
-      },
-      select: {
-        userId: true,
-      },
+      where: { addedAt: { lt: twoHoursAgo } },
+      select: { userId: true },
       distinct: ['userId'],
     });
 
@@ -173,51 +171,40 @@ async function sendAbandonedCartReminders(): Promise<number> {
     let emailsSent = 0;
 
     for (const { userId } of usersWithOldCarts) {
-      // Skip if we already sent them an email recently
-      const lastSent = abandonedCartEmailsSent.get(userId);
-      if (lastSent && Date.now() - lastSent < ABANDONED_CART_COOLDOWN) {
-        continue;
-      }
+      // Check DB cooldown — skip if email sent recently
+      const existingLog = await prisma.abandonedCartLog.findUnique({
+        where: { userId },
+      });
+      if (existingLog && existingLog.emailSentAt > cooldownCutoff) continue;
 
-      // Check if user placed an order in the last 2 hours (they came back and completed)
+      // Skip if user placed an order recently (they converted)
       const recentOrder = await prisma.order.findFirst({
-        where: {
-          userId,
-          createdAt: { gte: twoHoursAgo },
-        },
+        where: { userId, createdAt: { gte: twoHoursAgo } },
         select: { id: true },
       });
+      if (recentOrder) continue;
 
-      if (recentOrder) continue; // They already ordered — skip
-
-      // Get user details + cart items
       const user = await prisma.user.findUnique({
         where: { id: userId },
         select: { email: true, fullName: true },
       });
-
-      if (!user || !user.email) continue;
+      if (!user?.email) continue;
 
       const cartItems = await prisma.cartItem.findMany({
         where: { userId },
-        include: {
-          product: {
-            select: { name: true, price: true, isActive: true },
-          },
-        },
+        include: { product: { select: { name: true, finalPrice: true, isActive: true } } },
       });
 
-      // Filter to only active products
-      const activeItems = cartItems.filter(ci => ci.product.isActive);
+      const activeItems = cartItems.filter((ci) => ci.product.isActive);
       if (activeItems.length === 0) continue;
 
-      const emailItems = activeItems.map(ci => ({
+      const emailItems = activeItems.map((ci) => ({
         productName: ci.product.name,
-        unitPrice: Number(ci.product.price),
+        unitPrice: Number(ci.product.finalPrice),
         quantity: ci.quantity,
       }));
 
-      const cartTotal = emailItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+      const cartTotal = emailItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
 
       try {
         await sendAbandonedCartEmail({
@@ -227,7 +214,13 @@ async function sendAbandonedCartReminders(): Promise<number> {
           cartTotal,
         });
 
-        abandonedCartEmailsSent.set(userId, Date.now());
+        // Upsert the DB log (idempotent)
+        await prisma.abandonedCartLog.upsert({
+          where: { userId },
+          create: { userId, emailSentAt: new Date(), cartTotal, itemCount: activeItems.length },
+          update: { emailSentAt: new Date(), cartTotal, itemCount: activeItems.length },
+        });
+
         emailsSent++;
       } catch (emailErr) {
         console.error(`[Scheduler] Failed to send abandoned cart email to ${user.email}:`, emailErr);
@@ -236,12 +229,6 @@ async function sendAbandonedCartReminders(): Promise<number> {
 
     if (emailsSent > 0) {
       console.log(`[Scheduler] Sent ${emailsSent} abandoned cart reminder email(s)`);
-    }
-
-    // Cleanup old entries from the tracking map (older than 48h)
-    const cutoff = Date.now() - 48 * 60 * 60 * 1000;
-    for (const [uid, ts] of abandonedCartEmailsSent) {
-      if (ts < cutoff) abandonedCartEmailsSent.delete(uid);
     }
 
     return emailsSent;

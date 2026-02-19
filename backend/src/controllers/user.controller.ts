@@ -171,6 +171,17 @@ export const createAddress = async (
       addressType,
     } = req.body;
 
+    // Enforce max 5 saved addresses per user
+    const addressCount = await prisma.address.count({
+      where: { userId: req.user!.id },
+    });
+    if (addressCount >= 5) {
+      return res.status(400).json({
+        success: false,
+        error: 'Maximum of 5 saved addresses allowed. Please delete an existing address first.',
+      });
+    }
+
     // XSS SANITIZATION - Clean all address fields
     const sanitizedFullName = sanitizeText(fullName);
     const sanitizedPhone = sanitizePhone(phone);

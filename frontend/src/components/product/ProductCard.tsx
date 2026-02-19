@@ -27,6 +27,8 @@ interface Product {
   reviewCount?: number;
   isNew?: boolean;
   images: ProductImage[];
+  stockQuantity?: number;
+  lowStockThreshold?: number;
 }
 
 interface ProductCardProps {
@@ -148,6 +150,13 @@ export default function ProductCard({ product, showQuickAdd = true }: ProductCar
             {hasDiscount && (
               <span className="px-3 py-1 text-[10px] tracking-[0.1em] uppercase font-medium bg-accent/90 backdrop-blur-sm text-text-primary rounded-full">
                 {Math.round(product.discountPercent)}% Off
+              </span>
+            )}
+            {product.stockQuantity !== undefined &&
+              product.stockQuantity > 0 &&
+              product.stockQuantity <= (product.lowStockThreshold ?? 5) && (
+              <span className="px-3 py-1 text-[10px] tracking-[0.1em] uppercase font-medium bg-amber-500/90 backdrop-blur-sm text-white rounded-full">
+                Only {product.stockQuantity} left
               </span>
             )}
           </div>

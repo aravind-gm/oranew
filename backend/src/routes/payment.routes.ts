@@ -6,6 +6,7 @@ import {
     verifyPayment,
     webhook,
 } from '../controllers/payment.controller';
+import { generateRetryToken, executeRetryPayment } from '../controllers/retryPayment.controller';
 import { authorize, protect } from '../middleware/auth';
 import { paymentLimiter } from '../middleware/rateLimiter';
 
@@ -68,5 +69,19 @@ router.post('/webhook', webhook);
  * Called by admin after approving a return request
  */
 router.post('/refund', protect, authorize('ADMIN'), initiateRefund);
+
+/**
+ * POST /api/payments/retry/token
+ * Generate a 15-minute retry token for a FAILED order
+ * Validates order ownership + confirms order hasn't been paid already
+ */
+router.post('/retry/token', protect, paymentLimiter, generateRetryToken);
+
+/**
+ * POST /api/payments/retry/execute
+ * Use a retry token to reinitialize Razorpay on the SAME order
+ * No new order is created — preserves stock reservation
+ */
+router.post('/retry/execute', protect, paymentLimiter, executeRetryPayment);
 
 export default router;

@@ -24,7 +24,7 @@ import { trackBeginCheckout, trackAddPaymentInfo, setEnhancedConversions } from 
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, ChevronDown, ChevronUp, Lock, Shield, Truck, CreditCard, AlertCircle, Package } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Lock, Shield, Truck, CreditCard, AlertCircle, Package, BookmarkCheck } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -48,6 +48,20 @@ interface ShippingAddress {
 }
 
 type CheckoutStep = 'address' | 'review' | 'payment';
+
+interface SavedAddress {
+  id: string;
+  fullName: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2?: string | null;
+  city: string;
+  state: string;
+  pincode: string;
+  country: string;
+  isDefault: boolean;
+  addressType?: string | null;
+}
 
 // ============================================================================
 // STEP INDICATOR COMPONENT
@@ -312,6 +326,8 @@ export default function CheckoutPage() {
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('address');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [showSavedAddresses, setShowSavedAddresses] = useState(false);
   
   const [address, setAddress] = useState<ShippingAddress>({
     fullName: '',
@@ -333,6 +349,18 @@ export default function CheckoutPage() {
     }
   }, [authLoading, user, router]);
 
+  // Fetch saved addresses for logged-in users
+  useEffect(() => {
+    if (!user) return;
+    api.get('/users/addresses')
+      .then(res => {
+        const addrs: SavedAddress[] = res.data?.data || [];
+        setSavedAddresses(addrs);
+        if (addrs.length > 0) setShowSavedAddresses(true);
+      })
+      .catch(() => { /* silent — saved addresses are optional */ });
+  }, [user]);
+
   // Empty cart redirect
   useEffect(() => {
     if (items.length === 0) {
@@ -340,7 +368,23 @@ export default function CheckoutPage() {
     }
   }, [items.length, router]);
 
-  // Handlers
+  const handleUseSavedAddress = (saved: SavedAddress) => {
+    setAddress(prev => ({
+      ...prev,
+      fullName: saved.fullName,
+      phone: saved.phone,
+      street: saved.addressLine1,
+      street2: saved.addressLine2 || '',
+      city: saved.city,
+      state: saved.state,
+      district: '',
+      zipCode: saved.pincode,
+      country: saved.country || 'India',
+    }));
+    setShowSavedAddresses(false);
+    setErrors({});
+  };
+
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setAddress(prev => {
@@ -559,6 +603,64 @@ export default function CheckoutPage() {
                 <h2 className="text-xl font-semibold text-gray-900 mb-6">Contact & Delivery Address</h2>
 
                 <div className="space-y-6">
+                  {/* Saved Addresses Picker */}
+                  {savedAddresses.length > 0 && (
+                    <div className="border border-pink-100 rounded-xl overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setShowSavedAddresses(v => !v)}
+                        className="w-full flex items-center justify-between px-4 py-3 bg-pink-50 hover:bg-pink-100 transition-colors text-sm font-medium text-pink-700"
+                      >
+                        <span className="flex items-center gap-2">
+                          <BookmarkCheck className="w-4 h-4" />
+                          Use a saved address ({savedAddresses.length})
+                        </span>
+                        {showSavedAddresses ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </button>
+                      <AnimatePresence>
+                        {showSavedAddresses && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="divide-y divide-gray-100">
+                              {savedAddresses.map(saved => (
+                                <button
+                                  key={saved.id}
+                                  type="button"
+                                  onClick={() => handleUseSavedAddress(saved)}
+                                  className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors group"
+                                >
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-semibold text-gray-900 group-hover:text-pink-700 transition-colors">
+                                        {saved.fullName}
+                                        {saved.isDefault && (
+                                          <span className="ml-2 text-[10px] bg-pink-100 text-pink-600 px-1.5 py-0.5 rounded-full font-medium">Default</span>
+                                        )}
+                                        {saved.addressType && (
+                                          <span className="ml-1 text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">{saved.addressType}</span>
+                                        )}
+                                      </p>
+                                      <p className="text-xs text-gray-500 mt-0.5 truncate">
+                                        {saved.addressLine1}{saved.addressLine2 ? `, ${saved.addressLine2}` : ''}, {saved.city}, {saved.state} – {saved.pincode}
+                                      </p>
+                                      <p className="text-xs text-gray-400 mt-0.5">{saved.phone}</p>
+                                    </div>
+                                    <span className="flex-shrink-0 text-xs text-pink-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">Use →</span>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  )}
+
                   {/* Contact Section */}
                   <div className="space-y-4">
                     <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Contact Information</h3>

@@ -32,6 +32,7 @@ interface ProductData {
   discountPercent: number;
   finalPrice: number;
   stockQuantity: number;
+  lowStockThreshold: number;
   material: string;
   weight: string;
   dimensions: string;
@@ -127,7 +128,8 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
   const isInWishlist = wishlistItems.some((item) => item.productId === product.id);
   const isOutOfStock = product.stockQuantity === 0;
-  const isLowStock = product.stockQuantity > 0 && product.stockQuantity < 5;
+  const threshold = product.lowStockThreshold ?? 5;
+  const isLowStock = product.stockQuantity > 0 && product.stockQuantity <= threshold;
   const maxQuantity = Math.min(product.stockQuantity, 10);
 
   const handleAddToCart = async () => {
@@ -260,6 +262,11 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                 <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-neutral-100 text-neutral-600 rounded-lg font-medium text-sm">
                   <span className="w-2 h-2 bg-neutral-400 rounded-full" />
                   Currently Unavailable
+                </div>
+              ) : isLowStock ? (
+                <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg font-medium text-sm animate-pulse">
+                  <span className="w-2 h-2 bg-amber-500 rounded-full flex-shrink-0" />
+                  Only {product.stockQuantity} left in stock — order soon!
                 </div>
               ) : (
                 <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg font-medium text-sm">
@@ -473,6 +480,13 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
       {/* Mobile Sticky CTA Bar */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-50 safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
+        {/* Low-stock nudge above the sticky bar */}
+        {isLowStock && (
+          <div className="flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 rounded-md px-3 py-1.5 mb-2 border border-amber-200">
+            <span className="w-1.5 h-1.5 bg-amber-500 rounded-full flex-shrink-0" />
+            Only {product.stockQuantity} left — order soon!
+          </div>
+        )}
         <div className="flex items-center gap-3">
           <div className="flex-1 min-w-0">
               <p className="text-lg font-serif font-medium text-[#1A1A1A] truncate">
