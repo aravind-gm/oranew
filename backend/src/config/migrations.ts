@@ -119,6 +119,92 @@ async function applyPhase0SecurityMigration(): Promise<void> {
   }
 }
 
+// ============================================================
+// PHASE 2: REVENUE ENGINES MIGRATION
+// Applies on every startup — idempotent (IF NOT EXISTS guards)
+// ============================================================
+async function applyPhase2RevenueMigration(): Promise<void> {
+  try {
+    // 1. Add low_stock_alert_sent_at column to products
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "low_stock_alert_sent_at" TIMESTAMP(3)
+    `);
+
+    // 2. Create abandoned_cart_logs table
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "abandoned_cart_logs" (
+        "id"            TEXT NOT NULL,
+        "user_id"       TEXT NOT NULL,
+        "email_sent_at" TIMESTAMP(3) NOT NULL,
+        "cart_total"    DOUBLE PRECISION NOT NULL,
+        "item_count"    INTEGER NOT NULL,
+        "created_at"    TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at"    TIMESTAMP(3) NOT NULL,
+        CONSTRAINT "abandoned_cart_logs_pkey" PRIMARY KEY ("id")
+      )
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "abandoned_cart_logs_user_id_key"
+        ON "abandoned_cart_logs"("user_id")
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "abandoned_cart_logs_email_sent_at_idx"
+        ON "abandoned_cart_logs"("email_sent_at")
+    `);
+    await prisma.$executeRawUnsafe(`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.table_constraints
+          WHERE constraint_name = 'abandoned_cart_logs_user_id_fkey'
+        ) THEN
+          ALTER TABLE "abandoned_cart_logs"
+            ADD CONSTRAINT "abandoned_cart_logs_user_id_fkey"
+            FOREIGN KEY ("user_id") REFERENCES "users"("id")
+            ON DELETE CASCADE ON UPDATE CASCADE;
+        END IF;
+      END $$
+    `);
+
+    // 3. Create payment_retry_tokens table
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "payment_retry_tokens" (
+        "id"         TEXT NOT NULL,
+        "order_id"   TEXT NOT NULL,
+        "token"      TEXT NOT NULL,
+        "expires_at" TIMESTAMP(3) NOT NULL,
+        "used"       BOOLEAN NOT NULL DEFAULT false,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "payment_retry_tokens_pkey" PRIMARY KEY ("id")
+      )
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "payment_retry_tokens_token_key"
+        ON "payment_retry_tokens"("token")
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "payment_retry_tokens_token_idx"
+        ON "payment_retry_tokens"("token")
+    `);
+    await prisma.$executeRawUnsafe(`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.table_constraints
+          WHERE constraint_name = 'payment_retry_tokens_order_id_fkey'
+        ) THEN
+          ALTER TABLE "payment_retry_tokens"
+            ADD CONSTRAINT "payment_retry_tokens_order_id_fkey"
+            FOREIGN KEY ("order_id") REFERENCES "orders"("id")
+            ON DELETE CASCADE ON UPDATE CASCADE;
+        END IF;
+      END $$
+    `);
+
+    console.log('[Migration:Phase2] ✅ Revenue engines schema: OK');
+  } catch (err: any) {
+    console.error('[Migration:Phase2] ⚠️  Phase 2 migration partial failure:', err.message?.split('\n')[0]);
+  }
+}
+
 /**
  * Fallback: Apply critical migrations manually if prisma migrate fails
  */
@@ -132,6 +218,10 @@ export async function runPendingMigrations(): Promise<boolean> {
     // Phase 0 security hardening — always runs (idempotent)
     console.log('[Migration] ⏳ Applying Phase 0 security hardening...');
     await applyPhase0SecurityMigration();
+
+    // Phase 2 revenue engines — always runs (idempotent)
+    console.log('[Migration] ⏳ Applying Phase 2 revenue engines...');
+    await applyPhase2RevenueMigration();
 
     if (manualSuccess) {
       return true;
