@@ -508,6 +508,10 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
     // will surface it as a PrismaClientKnownRequestError (P2034) which we
     // catch in the global error handler and return as a 409 Conflict.
     isolationLevel: 'Serializable',
+    // Generous timeouts for Render free-tier (slow cold DB connections)
+    // Default is 5s which is too short when stock checks + order create + locks run sequentially
+    timeout: 30000,   // 30s max for the transaction body
+    maxWait: 10000,   // 10s max to acquire a connection from the pool
   });
 
   // Send order placed email (fire and forget - don't block response)
