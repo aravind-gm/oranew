@@ -30,31 +30,16 @@ const api = axios.create({
   withCredentials: true, // Enable cookies for all requests
 });
 
-// Setup custom interceptors for 503 retry and auth
+// Setup custom interceptors: 503 cold-start retry + 401 silent token refresh
 setupRequestInterceptor(api);
 setupErrorInterceptor(api);
 
-// Fix Content-Type for JSON requests (multipart requests will set their own)
+// Fix Content-Type for JSON requests (multipart requests set their own)
 api.interceptors.request.use((config) => {
   if (!(config.data instanceof FormData)) {
     config.headers['Content-Type'] = 'application/json';
   }
   return config;
 });
-
-// 401 handler - just propagate the error.
-// Individual pages and the middleware handle unauthenticated state.
-// DO NOT use window.location here — it causes a full page reload on every
-// unauthenticated /auth/me check, which is the source of the auto-refresh loop.
-api.interceptors.response.use(
-  (response) => response,
-  (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      // Let the calling code handle 401 — no global redirect
-      return Promise.reject(error);
-    }
-    return Promise.reject(error);
-  }
-);
 
 export default api;

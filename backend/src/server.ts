@@ -34,6 +34,14 @@ import { notFound } from './middleware/notFound';
 import { warmupDatabase } from './config/database';
 import { startScheduler } from './utils/scheduler';
 import { apiLimiter } from './middleware/rateLimiter';
+import { initSentry, Sentry } from './config/sentry';
+import { duplicateOrderGuard } from './middleware/duplicateOrderGuard';
+
+// ============================================
+// SENTRY — must be initialized before anything else
+// that might throw or import third-party code
+// ============================================
+initSentry();
 
 const app: Application = express();
 const PORT = process.env.PORT || 8000;
@@ -196,6 +204,12 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   express.json()(req, res, next);
 });
 app.use(express.urlencoded({ extended: true }));
+
+// ============================================
+// DUPLICATE ORDER GUARD - PREVENT DOUBLE CHECKOUT
+// ============================================
+// Applied AFTER auth middleware so we can check req.user
+app.use(duplicateOrderGuard);
 
 // Static files (uploads)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
@@ -370,6 +384,9 @@ app.use('/api/shipping', shippingRoutes);
 // ERROR HANDLING
 // ============================================
 
+// Sentry error handler must come AFTER all routes and BEFORE the custom
+// errorHandler so that Sentry captures the error with full request context.
+app.use(Sentry.expressErrorHandler());
 app.use(notFound);
 app.use(errorHandler);
 

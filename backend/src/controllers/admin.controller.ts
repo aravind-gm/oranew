@@ -11,6 +11,7 @@ import {
 } from '../services/email.service';
 import { cleanupExpiredLocks, restoreInventory } from '../utils/inventory';
 import { normalizeSupabaseUrl } from '../utils/supabaseUrlHelper';
+import { logAdminAction } from '../utils/auditLog';
 
 // Helper function to transform image URL to CDN URL
 // Handles both Supabase legacy URLs and R2/CDN URLs
@@ -399,6 +400,14 @@ export const updateOrderStatus = async (
     }
 
     console.log('[Admin] Order status updated successfully:', { orderId: id, newStatus: status });
+
+    // Audit log — non-blocking
+    logAdminAction(req, 'UPDATE', 'ORDER', id, {
+      previousStatus: existingOrder.status,
+      newStatus: status,
+      trackingNumber,
+      courierName,
+    });
 
     res.json({ success: true, data: order });
   } catch (error) {
@@ -995,6 +1004,7 @@ export const createCategory = async (
       },
     });
 
+    logAdminAction(req, 'CREATE', 'CATEGORY', category.id, { name });
     res.status(201).json({ success: true, data: category });
   } catch (error) {
     next(error);
@@ -1023,6 +1033,7 @@ export const updateCategory = async (
       data: updateData,
     });
 
+    logAdminAction(req, 'UPDATE', 'CATEGORY', id, { fields: Object.keys(updateData) });
     res.json({ success: true, data: category });
   } catch (error) {
     next(error);
@@ -1051,6 +1062,7 @@ export const deleteCategory = async (
 
     await prisma.category.delete({ where: { id } });
 
+    logAdminAction(req, 'DELETE', 'CATEGORY', id, {});
     res.json({ success: true, message: 'Category deleted successfully' });
   } catch (error) {
     next(error);

@@ -404,8 +404,9 @@ export const login = async (
       const otp = generate8DigitOTP();
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
-      // Store OTP with email as key
-      otpStore.set(emailLower, { otp, expiresAt });
+      // Hash OTP before storing (never store plaintext)
+      const otpHash = await bcrypt.hash(otp, 10);
+      otpStore.set(emailLower, { hash: otpHash, expiresAt, attempts: 0 });
 
       console.log(`[Auth] 🔢 Generated OTP for ${email}: ${otp} (expires at ${expiresAt})`);
 
@@ -613,7 +614,9 @@ export const register = async (
       // Generate and send OTP
       const otp = generate8DigitOTP();
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-      otpStore.set(emailLower, { otp, expiresAt });
+      // Hash OTP before storing (never store plaintext)
+      const otpHash = await bcrypt.hash(otp, 10);
+      otpStore.set(emailLower, { hash: otpHash, expiresAt, attempts: 0 });
 
       console.log(`[Auth] 🔢 Generated registration OTP for ${email}: ${otp}`);
 

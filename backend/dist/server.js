@@ -68,6 +68,7 @@ const errorHandler_1 = require("./middleware/errorHandler");
 const notFound_1 = require("./middleware/notFound");
 const database_1 = require("./config/database");
 const scheduler_1 = require("./utils/scheduler");
+const rateLimiter_1 = require("./middleware/rateLimiter");
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 8000;
 // ============================================
@@ -125,41 +126,25 @@ app.use((0, helmet_1.default)({
     hidePoweredBy: true,
 }));
 // CORS - MUST be after helmet
+// Static origin whitelist — no callback, eliminates inconsistencies
 const allowedOrigins = [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:3001',
-    'https://oranew.vercel.app',
-    'https://orashop.vercel.app',
-    'https://oranew-staging.vercel.app',
     'https://orashop.in',
-    'https://www.orashop.in', // Include www subdomain
+    'https://www.orashop.in',
 ];
-// Add FRONTEND_URL if set in env (only in development)
-if (process.env.NODE_ENV !== 'production' && process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL)) {
-    allowedOrigins.push(process.env.FRONTEND_URL);
+// Dev origins (only in non-production)
+if (process.env.NODE_ENV !== 'production') {
+    allowedOrigins.push('http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000', 'http://127.0.0.1:3001', 'https://oranew.vercel.app', 'https://orashop.vercel.app', 'https://oranew-staging.vercel.app');
+    if (process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL)) {
+        allowedOrigins.push(process.env.FRONTEND_URL);
+    }
 }
 console.log('[CORS] 🔐 Allowed Origins:', allowedOrigins);
 app.use((0, cors_1.default)({
-    origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps, curl, Postman)
-        if (!origin)
-            return callback(null, true);
-        if (allowedOrigins.includes(origin)) {
-            callback(null, true);
-        }
-        else {
-            console.warn('[CORS] ⚠️  Blocked origin:', origin);
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
+    origin: allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-// Handle preflight requests
-app.options('*', (0, cors_1.default)());
 // ============================================
 // PATH NORMALIZATION (fix double slashes from ngrok/Razorpay)
 // ============================================
@@ -188,6 +173,19 @@ app.use('/api/r2', r2_upload_routes_1.default);
 // COOKIE PARSER - For HttpOnly Cookie Authentication
 // ============================================
 app.use((0, cookie_parser_1.default)());
+// ============================================
+// GLOBAL RATE LIMITER (100 req / 15 min per IP)
+// ============================================
+// Applied after cookieParser but before all route handlers.
+// The Razorpay webhook endpoint is explicitly excluded: Razorpay's
+// delivery retry logic can burst above the limit and must never be
+// blocked — signature verification is the security gate for webhooks.
+app.use((req, res, next) => {
+    if (req.path === '/api/payments/webhook' || req.originalUrl === '/api/payments/webhook') {
+        return next();
+    }
+    return (0, rateLimiter_1.apiLimiter)(req, res, next);
+});
 // ============================================
 // BODY PARSER - SKIP WEBHOOK ROUTE
 // ============================================

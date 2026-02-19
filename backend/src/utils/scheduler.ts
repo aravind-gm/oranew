@@ -1,6 +1,7 @@
 /**
  * Scheduled Jobs — Campaign auto-expiry + inventory lock cleanup + abandoned cart emails
- * 
+ *                  + payment reconciliation
+ *
  * Runs on a simple setInterval basis (no external cron dependency).
  * Safe for single-instance deployments (Render free tier).
  */
@@ -8,10 +9,13 @@
 import { prisma } from '../config/database';
 import { cleanupExpiredLocks } from './inventory';
 import { sendAbandonedCartEmail } from '../services/email.service';
+import { sendPaymentAlert } from './alerts';
+import { captureException } from '../config/sentry';
 
 const CAMPAIGN_CHECK_INTERVAL = 60 * 1000; // Every 1 minute
 const INVENTORY_CLEANUP_INTERVAL = 5 * 60 * 1000; // Every 5 minutes
 const ABANDONED_CART_INTERVAL = 30 * 60 * 1000; // Every 30 minutes
+const RECONCILIATION_INTERVAL = 15 * 60 * 1000; // Every 15 minutes
 
 // Track users who already received an abandoned cart email (reset on server restart)
 // Key: userId, Value: timestamp of last email sent
@@ -248,6 +252,142 @@ async function sendAbandonedCartReminders(): Promise<number> {
 }
 
 /**
+ * Payment Reconciliation
+ *
+ * Every 15 minutes: find orders where the payment is PENDING or VERIFIED
+ * and was created more than 10 minutes ago (enough time for webhooks to fire),
+ * then query Razorpay to get ground truth.
+ *
+ * Safety guarantees:
+ *  - Uses Razorpay order API (not payment API) to avoid guessing IDs
+ *  - Each order is processed independently — one failure doesn't stop others
+ *  - Idempotent: already-CONFIRMED orders are skipped
+ *  - Stock is only decremented once (verifyPayment already does it)
+ */
+async function reconcilePayments(): Promise<void> {
+  // Lazy import Razorpay to avoid circular deps at module load
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let Razorpay: new (opts: { key_id: string; key_secret: string }) => any;
+  try {
+    Razorpay = (await import('razorpay')).default;
+  } catch {
+    console.warn('[Reconcile] Razorpay not available — skipping');
+    return;
+  }
+
+  const keyId = process.env.RAZORPAY_KEY_ID;
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+  if (!keyId || !keySecret) {
+    console.warn('[Reconcile] Razorpay credentials not set — skipping');
+    return;
+  }
+
+  const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
+  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+
+  // Find stale payments that should have been resolved by now
+  const stalePayments = await prisma.payment.findMany({
+    where: {
+      status: { in: ['PENDING', 'VERIFIED'] },
+      createdAt: { lt: tenMinutesAgo },
+    },
+    include: {
+      order: {
+        select: { id: true, orderNumber: true, userId: true, status: true },
+      },
+    },
+    take: 50, // Process at most 50 per run to avoid overwhelming Razorpay API
+  });
+
+  if (stalePayments.length === 0) return;
+
+  console.log(`[Reconcile] Checking ${stalePayments.length} stale payment(s)...`);
+  let confirmed = 0, failed = 0, skipped = 0;
+
+  for (const payment of stalePayments) {
+    try {
+      // transactionId = razorpay order_id (order_xxx)
+      const rzpOrder = await razorpay.orders.fetchPayments(payment.transactionId) as any;
+      const payments: any[] = rzpOrder.items ?? [];
+
+      const captured = payments.find(
+        (p: any) => p.status === 'captured' || p.captured === true
+      );
+      const failed_p = payments.find((p: any) => p.status === 'failed');
+
+      if (captured && payment.status !== 'CONFIRMED') {
+        // Mark as CONFIRMED
+        await prisma.$transaction([
+          prisma.payment.update({
+            where: { id: payment.id },
+            data: {
+              status: 'CONFIRMED',
+              gatewayResponse: {
+                ...(typeof payment.gatewayResponse === 'object' && payment.gatewayResponse ? payment.gatewayResponse : {}),
+                razorpayPaymentId: captured.id,
+                reconciledAt: new Date().toISOString(),
+                reconciledBy: 'scheduler',
+              },
+            },
+          }),
+          prisma.order.update({
+            where: { id: payment.orderId },
+            data: { paymentStatus: 'CONFIRMED', status: 'CONFIRMED' },
+          }),
+        ]);
+
+        sendPaymentAlert({
+          level: 'info',
+          event: 'Payment auto-reconciled to CONFIRMED',
+          orderId: payment.order?.orderNumber ?? payment.orderId,
+          userId: payment.order?.userId,
+          reason: 'Webhook not received — reconciled via Razorpay API',
+        });
+        confirmed++;
+      } else if (failed_p && payment.status === 'PENDING') {
+        // Mark as FAILED
+        await prisma.$transaction([
+          prisma.payment.update({
+            where: { id: payment.id },
+            data: {
+              status: 'FAILED',
+              gatewayResponse: {
+                ...(typeof payment.gatewayResponse === 'object' && payment.gatewayResponse ? payment.gatewayResponse : {}),
+                reconciledAt: new Date().toISOString(),
+                reconciledBy: 'scheduler',
+                error_description: failed_p.error_description,
+              },
+            },
+          }),
+          prisma.order.update({
+            where: { id: payment.orderId },
+            data: { paymentStatus: 'FAILED', status: 'CANCELLED', cancelledAt: new Date() },
+          }),
+        ]);
+
+        sendPaymentAlert({
+          level: 'error',
+          event: 'Payment auto-reconciled to FAILED',
+          orderId: payment.order?.orderNumber ?? payment.orderId,
+          userId: payment.order?.userId,
+          reason: failed_p.error_description ?? 'Payment failed at gateway',
+        });
+        failed++;
+      } else {
+        skipped++;
+      }
+    } catch (err) {
+      console.error(`[Reconcile] Error processing payment ${payment.id}:`, err);
+      captureException(err, { paymentId: payment.id, orderId: payment.orderId });
+    }
+  }
+
+  if (confirmed > 0 || failed > 0) {
+    console.log(`[Reconcile] Done — confirmed: ${confirmed}, failed: ${failed}, skipped: ${skipped}`);
+  }
+}
+
+/**
  * Start all scheduled jobs. Call once at server boot.
  */
 export function startScheduler(): void {
@@ -278,6 +418,16 @@ export function startScheduler(): void {
       console.error('[Scheduler] Abandoned cart reminder error:', error);
     }
   }, ABANDONED_CART_INTERVAL);
+
+  // Payment reconciliation — every 15 minutes
+  setInterval(async () => {
+    try {
+      await reconcilePayments();
+    } catch (error) {
+      console.error('[Scheduler] Reconciliation error:', error);
+      captureException(error, { job: 'payment-reconciliation' });
+    }
+  }, RECONCILIATION_INTERVAL);
 
   // Run once immediately on boot
   setTimeout(async () => {

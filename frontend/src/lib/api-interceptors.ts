@@ -1,83 +1,138 @@
 /**
  * Axios Interceptors for Production-Ready Error Handling
- * Handles 503 errors gracefully without logging out users
- * Cookie-based authentication - no manual token injection needed
+ *
+ * 503 handler: retry up to 3× with 2 s delay (Render cold-start recovery)
+ * 401 handler: attempt one silent token refresh, then retry original request.
+ *              If refresh fails, redirect to login.
+ *
+ * Cookie strategy:
+ *   - withCredentials=true means cookies are sent automatically
+ *   - The refresh endpoint sets new access_token + refresh_token HttpOnly cookies
+ *   - No token is ever stored in localStorage / memory
  */
 
-import { AxiosError, AxiosInstance } from 'axios';
+import { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 
-// Track retry state per endpoint to avoid infinite loops
+// ─────────────────────────────────────────────────────────────
+// 503 retry state
+// ─────────────────────────────────────────────────────────────
 const retryMap = new Map<string, number>();
 const MAX_RETRIES = 3;
-const RETRY_DELAY = 2000; // 2 seconds
+const RETRY_DELAY = 2000;
+
+// ─────────────────────────────────────────────────────────────
+// 401 refresh state
+// ─────────────────────────────────────────────────────────────
+// Single flag prevents concurrent refresh attempts from spawning multiple
+// /auth/refresh calls. All 401s that arrive while a refresh is in-flight
+// queue behind the same promise.
+let _refreshPromise: Promise<boolean> | null = null;
+
+// Extend AxiosRequestConfig to carry a _retry flag
+interface RetryableRequestConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
+}
 
 /**
- * Setup response interceptor to handle 503 (Service Unavailable)
- * when Render backend is starting up
+ * Call POST /auth/refresh. Cookies are sent automatically.
+ * Returns true if the backend set new access + refresh cookies.
+ * Returns false if refresh token is expired / invalid.
+ */
+async function attemptTokenRefresh(api: AxiosInstance): Promise<boolean> {
+  // Coalesce concurrent refresh attempts
+  if (_refreshPromise) return _refreshPromise;
+
+  _refreshPromise = api
+    .post('/auth/refresh')
+    .then(() => true)
+    .catch(() => false)
+    .finally(() => { _refreshPromise = null; });
+
+  return _refreshPromise;
+}
+
+/**
+ * Setup 503 retry + 401 silent-refresh interceptors.
  */
 export function setupErrorInterceptor(api: AxiosInstance) {
   api.interceptors.response.use(
-    // Success response
     (response) => {
-      // Clear retry counter on success
       const key = `${response.config.method}:${response.config.url}`;
       retryMap.delete(key);
       return response;
     },
-    // Error response
     async (error: AxiosError) => {
       const { response, config } = error;
+      const reqConfig = config as RetryableRequestConfig | undefined;
 
-      // Only handle 503 Service Unavailable (backend cold start)
-      if (response?.status === 503) {
-        const endpointKey = `${config?.method}:${config?.url}`;
+      // ── 503: Render cold-start recovery ──────────────────
+      if (response?.status === 503 && reqConfig) {
+        const endpointKey = `${reqConfig.method}:${reqConfig.url}`;
         const retryCount = retryMap.get(endpointKey) || 0;
 
-        // If we haven't exceeded retry limit
         if (retryCount < MAX_RETRIES) {
           retryMap.set(endpointKey, retryCount + 1);
-
           console.warn(
-            `[API] 🟡 Service temporarily unavailable (503). Retrying ${retryCount + 1}/${MAX_RETRIES} in ${RETRY_DELAY}ms...`,
-            { endpoint: config?.url }
+            `[API] 503 — retrying ${retryCount + 1}/${MAX_RETRIES} in ${RETRY_DELAY}ms`,
+            { endpoint: reqConfig.url }
           );
-
-          // Wait before retrying
-          await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
-
-          // Retry the request
-          if (config) {
-            return api.request(config);
-          }
-        } else {
-          // Max retries exceeded
-          console.error('[API] ❌ Backend service unavailable after retries', {
-            endpoint: config?.url,
-            retries: MAX_RETRIES,
-          });
-
-          // CRITICAL: Do NOT clear auth store on 503
-          // User should remain logged in and retry manually
-          return Promise.reject(error);
+          await new Promise((r) => setTimeout(r, RETRY_DELAY));
+          return api.request(reqConfig);
         }
+
+        console.error('[API] Backend unavailable after max retries', {
+          endpoint: reqConfig.url,
+        });
+        return Promise.reject(error);
       }
 
-      // For other errors, pass through
+      // ── 401: Silent token refresh ─────────────────────────
+      // Only attempt refresh once per request (prevent infinite loop).
+      // Skip refresh for the refresh endpoint itself to avoid loops.
+      if (
+        response?.status === 401 &&
+        reqConfig &&
+        !reqConfig._retry &&
+        !reqConfig.url?.includes('/auth/refresh') &&
+        !reqConfig.url?.includes('/auth/login')
+      ) {
+        reqConfig._retry = true;
+
+        const refreshed = await attemptTokenRefresh(api);
+
+        if (refreshed) {
+          // New access_token cookie is now set by the backend.
+          // Re-issue the original request — withCredentials sends the new cookie.
+          return api.request(reqConfig);
+        }
+
+        // Refresh failed — session is fully expired.
+        // Redirect to login only in the browser.
+        if (typeof window !== 'undefined') {
+          const currentPath = window.location.pathname;
+          // Don't redirect if already on an auth page
+          if (!currentPath.startsWith('/auth/')) {
+            window.location.href = `/auth/login?from=${encodeURIComponent(currentPath)}`;
+          }
+        }
+        return Promise.reject(error);
+      }
+
       return Promise.reject(error);
     }
   );
 }
 
 /**
- * Setup request interceptor to configure credentials
+ * Setup request interceptor to ensure credentials are always sent.
  */
 export function setupRequestInterceptor(api: AxiosInstance) {
   api.interceptors.request.use(
     (config) => {
-      // Enable credentials for cookie-based authentication
       config.withCredentials = true;
       return config;
     },
     (error) => Promise.reject(error)
   );
 }
+

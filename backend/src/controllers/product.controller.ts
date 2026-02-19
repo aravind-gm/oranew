@@ -6,6 +6,7 @@ import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { calculateFinalPrice, slugify } from '../utils/helpers';
 import { normalizeSupabaseUrl } from '../utils/supabaseUrlHelper';
+import { logAdminAction } from '../utils/auditLog';
 
 // Helper function to transform image URL to CDN URL
 // Handles both Supabase legacy URLs and R2/CDN URLs
@@ -226,6 +227,13 @@ export const createProduct = async (
       productId: product!.id,
       productName: product!.name,
       imageCount: product!.images.length,
+    });
+
+    // Audit log — non-blocking
+    logAdminAction(req, 'CREATE', 'PRODUCT', product!.id, {
+      name: product!.name,
+      price: Number(product!.price),
+      categoryId: product!.categoryId,
     });
 
     res.status(201).json({
@@ -702,6 +710,11 @@ export const updateProduct = async (
       fieldsUpdated: Object.keys(updateData),
     });
 
+    // Audit log — non-blocking
+    logAdminAction(req, 'UPDATE', 'PRODUCT', id, {
+      fieldsUpdated: Object.keys(updateData),
+    });
+
     res.json({
       success: true,
       data: updated,
@@ -761,6 +774,9 @@ export const deleteProduct = async (
         bogoActive: false,
       },
     });
+
+    // Audit log — non-blocking
+    logAdminAction(req, 'DELETE', 'PRODUCT', id, { name: product.name });
 
     res.json({
       success: true,

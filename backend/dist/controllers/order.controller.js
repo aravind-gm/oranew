@@ -7,7 +7,10 @@ const retry_1 = require("../utils/retry");
 const email_service_1 = require("../services/email.service");
 const helpers_1 = require("../utils/helpers");
 const inventory_1 = require("../utils/inventory");
-const shipping_1 = require("../utils/shipping");
+// Shipping — single source of truth: always FREE
+function calculateShipping() {
+    return 0;
+}
 const tax_1 = require("../utils/tax");
 exports.checkout = (0, helpers_1.asyncHandler)(async (req, res) => {
     const { shippingAddressId, billingAddressId, shippingAddress, items, couponCode } = req.body;
@@ -237,7 +240,21 @@ exports.checkout = (0, helpers_1.asyncHandler)(async (req, res) => {
             // Continue without coupon if validation fails
         }
     }
-    // ====== GST CALCULATION (Step 5 — per-item configurable GST) ======
+    // ====== DISCOUNT STACKING PROTECTION (max 70% of subtotal) ======
+    const MAX_DISCOUNT_PERCENT = 70;
+    if (subtotal > 0) {
+        const totalDiscountPercent = (discountAmount / subtotal) * 100;
+        if (totalDiscountPercent > MAX_DISCOUNT_PERCENT) {
+            console.warn('[Checkout] ⚠️ Discount exceeds cap:', { totalDiscountPercent, discountAmount, subtotal });
+            discountAmount = Math.floor((subtotal * MAX_DISCOUNT_PERCENT) / 100);
+            console.log('[Checkout] Discount capped to:', discountAmount);
+        }
+    }
+    // Discount can never exceed subtotal
+    if (discountAmount > subtotal) {
+        discountAmount = subtotal;
+    }
+    // ====== GST CALCULATION (per-item configurable GST) ======
     let gstAmount = 0;
     const itemGstRates = [];
     for (const item of cartItems) {
@@ -252,15 +269,30 @@ exports.checkout = (0, helpers_1.asyncHandler)(async (req, res) => {
         gstAmount = gstAmount * (1 - discountRatio);
         gstAmount = Math.round(gstAmount * 100) / 100;
     }
-    // ====== SHIPPING (Step 1 — server-side source of truth) ======
-    const shippingFee = await (0, shipping_1.calculateShippingFee)(subtotal - discountAmount);
-    // ====== TOTAL WITH NEGATIVE PREVENTION (Step 4) ======
-    const totalAmount = Math.max(0, subtotal - discountAmount + gstAmount + shippingFee);
+    // ====== SHIPPING (server-side source of truth — always FREE) ======
+    const shippingFee = calculateShipping();
+    // ====== TOTAL CALCULATION WITH NEGATIVE PREVENTION ======
+    const computedTotal = subtotal - discountAmount + gstAmount + shippingFee;
+    if (computedTotal < 0) {
+        throw new helpers_1.AppError('Invalid order amount: total cannot be negative', 400);
+    }
+    const totalAmount = Math.max(0, computedTotal);
+    // Final safety: Razorpay requires amount > 0
+    if (totalAmount <= 0) {
+        throw new helpers_1.AppError('Order total must be greater than zero', 400);
+    }
     // ====== TRANSACTIONAL ORDER + INVENTORY LOCK CREATION (CRITICAL) ======
     // ALL stock checks, order creation, inventory locks, and coupon updates
-    // happen in a SINGLE atomic transaction to prevent race conditions
+    // happen in a SINGLE atomic Serializable transaction.
+    //
+    // WHY Serializable?
+    //   ReadCommitted (Postgres default) allows two concurrent checkouts for
+    //   the last item to both read stockQuantity=1, both pass the check, and
+    //   both succeed — resulting in stock going to -1 (overselling).
+    //   Serializable forces transactions to execute as if sequential, so the
+    //   second checkout will see the stock already reserved and fail cleanly.
     const order = await database_1.prisma.$transaction(async (tx) => {
-        // 1️⃣ FINAL stock check inside transaction (prevents race conditions)
+        //    This is the definitive guard — the check above is a fast pre-check.
         for (const item of cartItems) {
             const freshProduct = await tx.product.findUnique({
                 where: { id: item.productId },
@@ -269,18 +301,27 @@ exports.checkout = (0, helpers_1.asyncHandler)(async (req, res) => {
             if (!freshProduct) {
                 throw new helpers_1.AppError(`Product ${item.productId} not found`, 400);
             }
-            if (freshProduct.stockQuantity < item.quantity) {
-                throw new helpers_1.AppError(`Insufficient stock for "${freshProduct.name}". Available: ${freshProduct.stockQuantity}, Requested: ${item.quantity}`, 409 // 409 Conflict for inventory issues
+            // CRITICAL: Check available stock (total minus active locks) inside
+            // the Serializable transaction to prevent TOCTOU race conditions.
+            const lockedQty = await tx.inventoryLock.aggregate({
+                where: { productId: item.productId, expiresAt: { gt: new Date() } },
+                _sum: { quantity: true },
+            });
+            const locked = lockedQty._sum.quantity ?? 0;
+            const available = freshProduct.stockQuantity - locked;
+            if (available < item.quantity) {
+                throw new helpers_1.AppError(`Insufficient stock for "${freshProduct.name}". Available: ${available}, Requested: ${item.quantity}`, 409 // 409 Conflict for inventory issues
                 );
             }
         }
-        // 2️⃣ Create order
+        // 2️⃣ Create order (server-computed values only — never trust frontend)
         const newOrder = await tx.order.create({
             data: {
                 orderNumber: (0, helpers_1.generateOrderNumber)(),
                 userId: req.user.id,
                 subtotal: new library_1.Decimal(subtotal),
                 discountAmount: new library_1.Decimal(discountAmount),
+                couponCode: appliedCouponCode || null,
                 gstAmount: new library_1.Decimal(gstAmount),
                 shippingFee: new library_1.Decimal(shippingFee),
                 totalAmount: new library_1.Decimal(totalAmount),
@@ -352,6 +393,13 @@ exports.checkout = (0, helpers_1.asyncHandler)(async (req, res) => {
             }
         }
         return newOrder;
+    }, {
+        // SECURITY: Serializable isolation prevents the "last item" race condition.
+        // Two concurrent checkouts for qty=1 stock will no longer both succeed.
+        // The second transaction will receive a serialization failure and Prisma
+        // will surface it as a PrismaClientKnownRequestError (P2034) which we
+        // catch in the global error handler and return as a 409 Conflict.
+        isolationLevel: 'Serializable',
     });
     // Send order placed email (fire and forget - don't block response)
     try {

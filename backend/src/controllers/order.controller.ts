@@ -369,6 +369,24 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
   //   Serializable forces transactions to execute as if sequential, so the
   //   second checkout will see the stock already reserved and fail cleanly.
   const order = await prisma.$transaction(async (tx) => {
+    // DUPLICATE ORDER GUARD — prevents double-taps, network retries, and
+    // page-reload races from creating duplicate orders for the same user.
+    // A 60-second window catches all realistic retry scenarios.
+    const recentOrder = await tx.order.findFirst({
+      where: {
+        userId: req.user!.id,
+        createdAt: { gte: new Date(Date.now() - 60_000) },
+        status: { notIn: ['CANCELLED'] },
+      },
+      select: { id: true, orderNumber: true },
+    });
+    if (recentOrder) {
+      throw new AppError(
+        `Duplicate order detected (${recentOrder.orderNumber}). Please wait 60 seconds before placing another order.`,
+        409
+      );
+    }
+
     //    This is the definitive guard — the check above is a fast pre-check.
     for (const item of cartItems) {
       const freshProduct = await tx.product.findUnique({

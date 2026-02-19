@@ -6,6 +6,9 @@ import { prisma } from '../config/database';
 import { withRetry } from '../utils/retry';
 import { getOrderConfirmationTemplate, getRefundProcessedTemplate, sendEmail } from '../utils/email';
 import { AppError, asyncHandler } from '../utils/helpers';
+import { sendPaymentAlert } from '../utils/alerts';
+import { captureException } from '../config/sentry';
+import { logAdminAction } from '../utils/auditLog';
 
 // ============================================
 // RAZORPAY SINGLETON
@@ -342,6 +345,13 @@ export const verifyPayment = asyncHandler(async (req: any, res: Response) => {
 
   if (!signatureValid) {
     console.error('[Payment.verify] Signature verification FAILED - possible tampering');
+    sendPaymentAlert({
+      level: 'critical',
+      event: 'Payment verify HMAC mismatch — possible tampering',
+      orderId,
+      userId: req.user?.id,
+      reason: 'timingSafeEqual failed on verify endpoint',
+    });
     throw new AppError('Invalid payment signature - verification failed', 400);
   }
 
@@ -497,6 +507,11 @@ export const webhook = async (req: Request, res: Response) => {
 
   if (!webhookSigValid) {
     console.error('[Webhook] Signature verification FAILED - possible replay/forgery');
+    sendPaymentAlert({
+      level: 'critical',
+      event: 'Webhook HMAC mismatch — possible replay/forgery attack',
+      reason: 'Incoming webhook signature did not match expected HMAC',
+    });
     return res.status(400).json({ success: false, reason: 'Invalid signature' });
   }
   if (process.env.NODE_ENV === 'development') {
@@ -873,6 +888,15 @@ async function handlePaymentFailed(event: any, res: Response) {
     console.log('[Webhook:Failed] Reason:', error_description || error_reason);
     console.log('[Webhook:Failed] ════════════════════════════════════════');
 
+    // Fire-and-forget Slack alert
+    sendPaymentAlert({
+      level: 'error',
+      event: 'Payment failed (webhook)',
+      orderId: order.orderNumber,
+      userId: order.user?.id,
+      reason: error_description || error_reason || error_code || 'Unknown',
+    });
+
     return res.status(200).json({ success: true });
   } catch (err) {
     console.error('[Webhook:Failed] ❌ Transaction error:', err);
@@ -1153,6 +1177,25 @@ export const initiateRefund = asyncHandler(async (req: any, res: Response) => {
       // Continue - don't fail the refund if email fails
     }
 
+    // Audit log: record admin refund action
+    logAdminAction(req, 'UPDATE', 'ORDER', order.id, {
+      action: 'REFUND_PROCESSED',
+      returnId,
+      refundAmount,
+      refundId: refundResult?.id,
+      paymentId: payment.id,
+    });
+
+    // Fire-and-forget alert so team knows a refund was issued
+    sendPaymentAlert({
+      level: 'info',
+      event: 'Refund processed',
+      orderId: order.orderNumber,
+      userId: userId,
+      amount: Math.round(Number(refundAmount) * 100),
+      reason: `returnId=${returnId}`,
+    });
+
     res.json({
       success: true,
       message: 'Refund processed successfully',
@@ -1161,6 +1204,14 @@ export const initiateRefund = asyncHandler(async (req: any, res: Response) => {
       transactionId: refundResult?.id,
     });
   } catch (error) {
+    captureException(error, { context: 'initiateRefund', returnId, userId });
+    sendPaymentAlert({
+      level: 'critical',
+      event: 'Refund FAILED',
+      userId,
+      reason: error instanceof Error ? error.message : String(error),
+      extra: { returnId },
+    });
     console.error('[Payment.refund] Error:', error);
     throw error;
   }

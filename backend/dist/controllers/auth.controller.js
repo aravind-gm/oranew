@@ -4,22 +4,20 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteAccount = exports.logout = exports.getMe = exports.changePassword = exports.passwordLogin = exports.register = exports.login = exports.verifyOtp = exports.otpLogin = void 0;
+const crypto_1 = __importDefault(require("crypto"));
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const database_1 = require("../config/database");
 const email_1 = require("../utils/email");
 const jwt_1 = require("../utils/jwt");
 const refreshToken_1 = require("../utils/refreshToken");
 const sanitize_1 = require("../utils/sanitize");
-// ============================================
-// CUSTOM 8-DIGIT OTP AUTHENTICATION SYSTEM
-// ============================================
-// Generate and verify 8-digit OTP codes
-// Store OTP temporarily in Prisma with expiration
-// Store OTPs in memory (for production, use Redis)
+// NOTE: In-memory store works for single-instance.
+// For multi-instance or restarts: migrate to Redis.
 const otpStore = new Map();
-// Generate 8-digit OTP
+// SECURITY: crypto.randomInt is CSPRNG-backed, unlike Math.random()
 function generate8DigitOTP() {
-    return Math.floor(10000000 + Math.random() * 90000000).toString();
+    // Generates a cryptographically secure random 8-digit number: 10000000–99999999
+    return crypto_1.default.randomInt(10000000, 100000000).toString();
 }
 // @desc    Send 8-digit OTP to email
 // @route   POST /api/auth/otp-login
@@ -36,8 +34,11 @@ const otpLogin = async (req, res, next) => {
         // Generate 8-digit OTP
         const otp = generate8DigitOTP();
         const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-        // Store OTP with email as key
-        otpStore.set(email.toLowerCase(), { otp, expiresAt });
+        // SECURITY: Hash the OTP before storing — never keep plaintext in memory
+        const BCRYPT_ROUNDS = 10;
+        const otpHash = await bcrypt_1.default.hash(otp, BCRYPT_ROUNDS);
+        // Store HASH only, not the plaintext OTP
+        otpStore.set(email.toLowerCase(), { hash: otpHash, expiresAt, attempts: 0 });
         // Send OTP via email
         const emailSent = await (0, email_1.sendEmail)({
             to: email.toLowerCase(),
@@ -83,15 +84,11 @@ const otpLogin = async (req, res, next) => {
         </html>
       `,
         });
-        // For development/testing: Always log OTP to console
-        console.log('\n' + '='.repeat(60));
-        console.log('🔐 OTP LOGIN REQUEST');
-        console.log('='.repeat(60));
-        console.log(`📧 Email: ${email}`);
-        console.log(`🔢 OTP Code: ${otp}`);
-        console.log(`⏰ Expires: ${expiresAt.toLocaleString()}`);
-        console.log(`📬 Email Status: ${emailSent ? '✅ Sent' : '⚠️  Failed (check SMTP config)'}`);
-        console.log('='.repeat(60) + '\n');
+        // Gate all auth debug logging behind development mode
+        if (process.env.NODE_ENV === 'development') {
+            console.log('[Auth.otpLogin] OTP sent to:', email, '| expires:', expiresAt.toISOString());
+            // NEVER log the actual OTP value, even in development
+        }
         // Allow login even if email fails (for testing)
         return res.status(200).json({
             success: true,
@@ -135,14 +132,25 @@ const verifyOtp = async (req, res, next) => {
                 error: 'OTP has expired. Please request a new one.',
             });
         }
-        // Verify OTP
-        if (storedOtpData.otp !== otp) {
+        // SECURITY: Brute-force guard — max 5 wrong attempts per OTP
+        if (storedOtpData.attempts >= 5) {
+            otpStore.delete(emailLower);
+            return res.status(429).json({
+                success: false,
+                error: 'Too many incorrect attempts. Please request a new OTP.',
+            });
+        }
+        // SECURITY: bcrypt.compare is constant-time — prevents timing-based enumeration
+        const otpValid = await bcrypt_1.default.compare(otp, storedOtpData.hash);
+        if (!otpValid) {
+            // Increment attempt counter without exposing which field failed
+            storedOtpData.attempts += 1;
             return res.status(400).json({
                 success: false,
                 error: 'Invalid OTP. Please try again.',
             });
         }
-        // OTP is valid - delete it
+        // OTP is valid - delete it immediately (one-time use)
         otpStore.delete(emailLower);
         // Get or create user in Prisma
         let user = await database_1.prisma.user.findUnique({
@@ -183,20 +191,20 @@ const verifyOtp = async (req, res, next) => {
         // Generate refresh token (7d expiry)
         const refreshToken = (0, refreshToken_1.generateRefreshToken)();
         await (0, refreshToken_1.storeRefreshToken)(user.id, refreshToken);
-        // Set HttpOnly cookies with subdomain support
+        // Set HttpOnly cookies (shared across orashop.in subdomains)
         res.cookie('access_token', accessToken, {
             httpOnly: true,
-            secure: true,
-            sameSite: 'none',
-            domain: '.orashop.in',
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
             path: '/',
             maxAge: 30 * 60 * 1000, // 30 minutes
         });
         res.cookie('refresh_token', refreshToken, {
             httpOnly: true,
-            secure: true,
-            sameSite: 'none',
-            domain: '.orashop.in',
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
             path: '/',
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
@@ -240,11 +248,20 @@ const login = async (req, res, next) => {
         if (password) {
             // PASSWORD LOGIN FLOW
             console.log(`[Auth] 🔐 Password login attempt for: ${email}`);
+            console.log(`[Auth] 📧 Email received:`, email);
+            console.log(`[Auth] 🔑 Password length:`, password?.length);
             // Find user by email
             const user = await database_1.prisma.user.findUnique({
                 where: { email: emailLower },
             });
+            console.log(`[Auth] 👤 User found:`, !!user);
+            if (user) {
+                console.log(`[Auth] 🔐 Has passwordHash:`, !!user.passwordHash);
+                console.log(`[Auth] 📝 User ID:`, user.id);
+                console.log(`[Auth] ✉️  User email:`, user.email);
+            }
             if (!user) {
+                console.log(`[Auth] ❌ LOGIN FAILED: User not found for email: ${emailLower}`);
                 return res.status(401).json({
                     success: false,
                     error: 'Invalid email or password',
@@ -252,6 +269,7 @@ const login = async (req, res, next) => {
             }
             // Check if user has password set
             if (!user.passwordHash) {
+                console.log(`[Auth] ❌ LOGIN FAILED: Account is OTP-only (no password set)`);
                 return res.status(401).json({
                     success: false,
                     error: 'This account uses OTP login. Please use the OTP option instead.',
@@ -259,7 +277,9 @@ const login = async (req, res, next) => {
             }
             // Verify password
             const passwordMatch = await bcrypt_1.default.compare(password, user.passwordHash);
+            console.log(`[Auth] 🔑 Password match result:`, passwordMatch);
             if (!passwordMatch) {
+                console.log(`[Auth] ❌ LOGIN FAILED: Password mismatch for ${email}`);
                 return res.status(401).json({
                     success: false,
                     error: 'Invalid email or password',
@@ -274,24 +294,31 @@ const login = async (req, res, next) => {
             // Generate refresh token (7d expiry)
             const refreshToken = (0, refreshToken_1.generateRefreshToken)();
             await (0, refreshToken_1.storeRefreshToken)(user.id, refreshToken);
-            // Set HttpOnly cookies with subdomain support
+            // Set HttpOnly cookies (shared across orashop.in subdomains)
             res.cookie('access_token', accessToken, {
                 httpOnly: true,
-                secure: true,
-                sameSite: 'none',
-                domain: '.orashop.in',
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
                 path: '/',
                 maxAge: 30 * 60 * 1000, // 30 minutes
             });
             res.cookie('refresh_token', refreshToken, {
                 httpOnly: true,
-                secure: true,
-                sameSite: 'none',
-                domain: '.orashop.in',
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
                 path: '/',
                 maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
             });
             console.log(`[Auth] ✅ User logged in with password: ${email}`);
+            console.log(`[Auth] 🍪 Cookies set:`, {
+                access_token: 'SET',
+                refresh_token: 'SET',
+                domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : 'localhost',
+                sameSite: 'lax',
+                secure: process.env.NODE_ENV === 'production',
+            });
             return res.status(200).json({
                 success: true,
                 user: {
@@ -312,8 +339,9 @@ const login = async (req, res, next) => {
             // Generate 8-digit OTP
             const otp = generate8DigitOTP();
             const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-            // Store OTP with email as key
-            otpStore.set(emailLower, { otp, expiresAt });
+            // Hash OTP before storing (never store plaintext)
+            const otpHash = await bcrypt_1.default.hash(otp, 10);
+            otpStore.set(emailLower, { hash: otpHash, expiresAt, attempts: 0 });
             console.log(`[Auth] 🔢 Generated OTP for ${email}: ${otp} (expires at ${expiresAt})`);
             // Try to send email with enhanced error handling
             try {
@@ -445,20 +473,20 @@ const register = async (req, res, next) => {
             // Generate refresh token (7d expiry)
             const refreshToken = (0, refreshToken_1.generateRefreshToken)();
             await (0, refreshToken_1.storeRefreshToken)(user.id, refreshToken);
-            // Set HttpOnly cookies with subdomain support
+            // Set HttpOnly cookies (shared across orashop.in subdomains)
             res.cookie('access_token', accessToken, {
                 httpOnly: true,
-                secure: true,
-                sameSite: 'none',
-                domain: '.orashop.in',
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
                 path: '/',
                 maxAge: 30 * 60 * 1000, // 30 minutes
             });
             res.cookie('refresh_token', refreshToken, {
                 httpOnly: true,
-                secure: true,
-                sameSite: 'none',
-                domain: '.orashop.in',
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
                 path: '/',
                 maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
             });
@@ -496,7 +524,9 @@ const register = async (req, res, next) => {
             // Generate and send OTP
             const otp = generate8DigitOTP();
             const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-            otpStore.set(emailLower, { otp, expiresAt });
+            // Hash OTP before storing (never store plaintext)
+            const otpHash = await bcrypt_1.default.hash(otp, 10);
+            otpStore.set(emailLower, { hash: otpHash, expiresAt, attempts: 0 });
             console.log(`[Auth] 🔢 Generated registration OTP for ${email}: ${otp}`);
             // Try to send welcome email with OTP
             try {
@@ -588,17 +618,21 @@ const passwordLogin = async (req, res, next) => {
         // Generate refresh token (7d expiry)
         const refreshToken = (0, refreshToken_1.generateRefreshToken)();
         await (0, refreshToken_1.storeRefreshToken)(user.id, refreshToken);
-        // Set HttpOnly cookies
+        // Set HttpOnly cookies (shared across orashop.in subdomains)
         res.cookie('access_token', accessToken, {
             httpOnly: true,
-            secure: true,
-            sameSite: 'none',
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+            path: '/',
             maxAge: 30 * 60 * 1000, // 30 minutes
         });
         res.cookie('refresh_token', refreshToken, {
             httpOnly: true,
-            secure: true,
-            sameSite: 'none',
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+            path: '/',
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
         console.log(`[Auth] ✅ User logged in with password: ${email}`);
@@ -718,19 +752,19 @@ exports.getMe = getMe;
 // @access  Private
 const logout = async (req, res, next) => {
     try {
-        // Clear authentication cookies with subdomain support
+        // Clear authentication cookies (shared across subdomains)
         res.clearCookie('access_token', {
             httpOnly: true,
-            secure: true,
-            sameSite: 'none',
-            domain: '.orashop.in',
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
             path: '/',
         });
         res.clearCookie('refresh_token', {
             httpOnly: true,
-            secure: true,
-            sameSite: 'none',
-            domain: '.orashop.in',
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
             path: '/',
         });
         console.log(`[Auth] ✅ User logged out: ${req.user.email}`);

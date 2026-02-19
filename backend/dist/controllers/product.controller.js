@@ -468,16 +468,19 @@ exports.getProductById = getProductById;
 const updateProduct = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { name, price, discountPercent, categoryId, stockQuantity, ...otherData } = req.body;
+        // SECURITY: Explicit whitelist — NEVER spread req.body into Prisma.
+        // Spreading otherData would allow callers to inject any DB column
+        // (e.g. isDeleted, deletedAt, bogoActive, gstRate) bypassing all validation.
+        const { name, description, shortDescription, price, discountPercent, categoryId, material, careInstructions, weight, dimensions, stockQuantity, isFeatured, isActive, images, metaTitle, metaDescription, collections, occasions, isFeaturedGift, isBOGOEligible, bogoPriceTier, bogoCategory, bogoActive, isTumbler, capacity, isBestseller, isOnOffer, offerType, offerValue, offerExpiry, showCountdown, lowStockThreshold, } = req.body;
         const product = await database_1.prisma.product.findUnique({ where: { id } });
         if (!product) {
             throw new errorHandler_1.AppError('Product not found', 404);
         }
-        const updateData = { ...otherData };
-        if (name) {
-            updateData.name = name;
-            const newSlug = (0, helpers_1.slugify)(name);
-            // Ensure slug uniqueness on rename
+        // Build update payload from whitelisted fields only
+        const updateData = {};
+        if (name !== undefined) {
+            updateData.name = String(name).trim();
+            const newSlug = (0, helpers_1.slugify)(String(name));
             const existingSlug = await database_1.prisma.product.findFirst({
                 where: { slug: newSlug, id: { not: id } },
             });
@@ -489,21 +492,79 @@ const updateProduct = async (req, res, next) => {
                 updateData.slug = newSlug;
             }
         }
-        if (price) {
+        if (description !== undefined)
+            updateData.description = String(description);
+        if (shortDescription !== undefined)
+            updateData.shortDescription = String(shortDescription).slice(0, 500);
+        if (price !== undefined) {
             updateData.price = parseFloat(price);
-            if (discountPercent) {
-                updateData.discountPercent = parseFloat(discountPercent);
-                updateData.finalPrice = (0, helpers_1.calculateFinalPrice)(parseFloat(price), parseFloat(discountPercent));
-            }
-            else {
-                updateData.finalPrice = parseFloat(price);
-            }
+            const disc = discountPercent !== undefined ? parseFloat(discountPercent) : Number(product.discountPercent);
+            updateData.discountPercent = disc;
+            updateData.finalPrice = (0, helpers_1.calculateFinalPrice)(parseFloat(price), disc);
         }
-        if (categoryId) {
-            updateData.categoryId = categoryId;
+        else if (discountPercent !== undefined) {
+            updateData.discountPercent = parseFloat(discountPercent);
+            updateData.finalPrice = (0, helpers_1.calculateFinalPrice)(Number(product.price), parseFloat(discountPercent));
         }
+        if (categoryId !== undefined)
+            updateData.categoryId = String(categoryId);
+        if (material !== undefined)
+            updateData.material = String(material);
+        if (careInstructions !== undefined)
+            updateData.careInstructions = String(careInstructions);
+        if (weight !== undefined)
+            updateData.weight = String(weight);
+        if (dimensions !== undefined)
+            updateData.dimensions = String(dimensions);
         if (stockQuantity !== undefined) {
-            updateData.stockQuantity = parseInt(stockQuantity);
+            const qty = parseInt(stockQuantity, 10);
+            if (isNaN(qty) || qty < 0)
+                throw new errorHandler_1.AppError('stockQuantity must be a non-negative integer', 400);
+            updateData.stockQuantity = qty;
+        }
+        if (lowStockThreshold !== undefined)
+            updateData.lowStockThreshold = parseInt(lowStockThreshold, 10);
+        if (isFeatured !== undefined)
+            updateData.isFeatured = Boolean(isFeatured);
+        if (isActive !== undefined)
+            updateData.isActive = Boolean(isActive);
+        if (metaTitle !== undefined)
+            updateData.metaTitle = String(metaTitle);
+        if (metaDescription !== undefined)
+            updateData.metaDescription = String(metaDescription);
+        if (collections !== undefined && Array.isArray(collections))
+            updateData.collections = collections.map(String);
+        if (occasions !== undefined && Array.isArray(occasions))
+            updateData.occasions = occasions.map(String);
+        if (isFeaturedGift !== undefined)
+            updateData.isFeaturedGift = Boolean(isFeaturedGift);
+        if (isBOGOEligible !== undefined)
+            updateData.isBOGOEligible = Boolean(isBOGOEligible);
+        if (bogoPriceTier !== undefined)
+            updateData.bogoPriceTier = parseInt(bogoPriceTier, 10);
+        if (bogoCategory !== undefined)
+            updateData.bogoCategory = String(bogoCategory);
+        if (bogoActive !== undefined)
+            updateData.bogoActive = Boolean(bogoActive);
+        if (isTumbler !== undefined)
+            updateData.isTumbler = Boolean(isTumbler);
+        if (capacity !== undefined)
+            updateData.capacity = String(capacity);
+        if (isBestseller !== undefined)
+            updateData.isBestseller = Boolean(isBestseller);
+        if (isOnOffer !== undefined)
+            updateData.isOnOffer = Boolean(isOnOffer);
+        if (offerType !== undefined)
+            updateData.offerType = String(offerType);
+        if (offerValue !== undefined)
+            updateData.offerValue = parseFloat(offerValue);
+        if (offerExpiry !== undefined)
+            updateData.offerExpiry = new Date(offerExpiry);
+        if (showCountdown !== undefined)
+            updateData.showCountdown = Boolean(showCountdown);
+        if (images !== undefined) {
+            // images are handled as nested upserts — not a raw spread
+            // (handled separately by image-specific endpoints; ignore here if empty)
         }
         const updated = await database_1.prisma.product.update({
             where: { id },

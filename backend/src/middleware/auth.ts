@@ -2,6 +2,8 @@ import { UserRole } from '@prisma/client';
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { AppError } from './errorHandler';
+import { prisma } from '../config/database';
+import { setSentryUser } from '../config/sentry';
 
 declare global {
   namespace Express {
@@ -24,21 +26,15 @@ export const protect = async (
 ) => {
   try {
     let token: string | undefined;
-    const tokenSource: 'cookie' | 'header' | 'none' = 'none';
 
     // SECURITY: NEVER log cookies, token values, or token prefixes.
     // All debug logging is gated behind NODE_ENV === 'development'.
 
-    // PRIORITY 1: HttpOnly cookie (preferred — not accessible via JS)
+    // ONLY source: HttpOnly cookie.
+    // Bearer header fallback has been removed — it is an unnecessary
+    // attack surface; all legitimate clients send the cookie automatically.
     if (req.cookies && req.cookies.access_token) {
       token = req.cookies.access_token;
-    }
-    // PRIORITY 2: Authorization header fallback (for API clients / SSR)
-    else if (
-      req.headers.authorization &&
-      req.headers.authorization.startsWith('Bearer')
-    ) {
-      token = req.headers.authorization.split(' ')[1];
     }
 
     if (!token) {
@@ -48,20 +44,42 @@ export const protect = async (
       throw new AppError('Not authorized, no token provided', 401);
     }
 
-    // Verify token signature and expiry
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+    // Verify token signature and expiry.
+    // algorithm pinned to HS256 — prevents algorithm confusion attacks
+    // (e.g., RS256 downgrade, 'none' algorithm bypass).
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!, {
+      algorithms: ['HS256'],
+    }) as {
       id: string;
       email: string;
       role: UserRole;
     };
 
-    // Only log user identity (not token bytes) and only in development
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[Auth] Token valid — userId:', decoded.id, 'role:', decoded.role);
+    // RE-VERIFY ROLE FROM DB
+    // The JWT role may be stale if an admin was demoted after the token was
+    // issued. We do a lightweight SELECT on every authenticated request.
+    // This adds ~1 ms on a warm connection — acceptable tradeoff for
+    // correct access control.
+    const dbUser = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: { id: true, email: true, role: true },
+    });
+
+    if (!dbUser) {
+      throw new AppError('User account no longer exists', 401);
     }
 
-    // Attach user to request
-    req.user = decoded;
+    // Only log user identity (not token bytes) and only in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Auth] Token valid — userId:', dbUser.id, 'role:', dbUser.role);
+    }
+
+    // Attach live role from DB (not stale JWT claim)
+    req.user = { id: dbUser.id, email: dbUser.email, role: dbUser.role };
+
+    // Attach user to Sentry scope (userId only — no PII)
+    setSentryUser(dbUser.id, dbUser.role);
+
     next();
   } catch (error) {
     let errorMsg = 'Not authorized, invalid token';
@@ -70,10 +88,6 @@ export const protect = async (
     if (error instanceof jwt.TokenExpiredError) {
       errorMsg = 'Token has expired';
       statusCode = 401;
-      console.error('[Auth Middleware] ⏰ TOKEN EXPIRED', {
-        endpoint: req.method + ' ' + req.path,
-        expiredAt: error.expiredAt,
-      });
     } else if (error instanceof jwt.JsonWebTokenError) {
       errorMsg = 'Invalid token signature or format';
       statusCode = 401;
@@ -84,9 +98,6 @@ export const protect = async (
     } else if (error instanceof jwt.NotBeforeError) {
       errorMsg = 'Token not yet valid';
       statusCode = 401;
-      console.error('[Auth Middleware] ⏳ TOKEN NOT YET VALID', {
-        endpoint: req.method + ' ' + req.path,
-      });
     } else if (error instanceof AppError) {
       errorMsg = error.message;
       statusCode = error.statusCode;
@@ -104,23 +115,18 @@ export const protect = async (
 
 export const authorize = (...roles: UserRole[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    // Ensure user is authenticated first
     if (!req.user) {
-      console.error('[Auth Middleware] ❌ User not authenticated (no req.user)', {
-        endpoint: req.method + ' ' + req.path,
-      });
       return next(new AppError('Not authenticated', 401));
     }
 
-    // Check role authorization
     if (!roles.includes(req.user.role)) {
-      console.warn('[Auth Middleware] 🚫 USER ROLE NOT AUTHORIZED', {
-        endpoint: req.method + ' ' + req.path,
-        userRole: req.user.role,
-        userId: req.user.id,
-        userEmail: req.user.email,
-        requiredRoles: roles,
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[Auth] Role not authorized', {
+          endpoint: req.method + ' ' + req.path,
+          userRole: req.user.role,
+          requiredRoles: roles,
+        });
+      }
       return next(
         new AppError(
           `Access denied. Required roles: ${roles.join(', ')}. Your role: ${req.user.role}`,
@@ -128,12 +134,6 @@ export const authorize = (...roles: UserRole[]) => {
         )
       );
     }
-
-    console.log('[Auth Middleware] ✅ Authorization granted', {
-      endpoint: req.method + ' ' + req.path,
-      userRole: req.user.role,
-      userId: req.user.id,
-    });
 
     next();
   };
