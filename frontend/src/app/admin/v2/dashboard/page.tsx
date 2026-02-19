@@ -400,9 +400,10 @@ export default function AnalyticsDashboardPage() {
                       cx="50%"
                       cy="50%"
                       outerRadius={100}
-                      label={({ category, pctOfTotal }: { category: string; pctOfTotal: number }) =>
-                        `${category} (${pctOfTotal}%)`
-                      }
+                      label={(props) => {
+                        const { category, pctOfTotal } = props as unknown as { category: string; pctOfTotal: number };
+                        return `${category} (${pctOfTotal}%)`;
+                      }}
                     >
                       {products.categoryBreakdown.map((_, index) => (
                         <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
