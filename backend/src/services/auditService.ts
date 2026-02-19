@@ -12,7 +12,7 @@
  */
 
 import { AuthRequest } from '../middleware/auth';
-import { logAdminAction, AuditAction, AuditEntityType } from './auditLog';
+import { logAdminAction, AuditAction, AuditEntityType } from '../utils/auditLog';
 import { captureException } from '../config/sentry';
 
 // Sensitive field patterns that should never appear in audit logs
