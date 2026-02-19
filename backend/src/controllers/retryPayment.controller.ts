@@ -15,13 +15,27 @@
 import crypto from 'crypto';
 import { Response } from 'express';
 import Razorpay from 'razorpay';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../config/database';
-import { withRetry } from '../utils/retry';
 import { AppError, asyncHandler } from '../utils/helpers';
 import { AuthRequest } from '../middleware/auth';
 import { captureException } from '../config/sentry';
 
 const RETRY_TOKEN_TTL_MINUTES = 15;
+
+// Prisma payload types for type-safe query results
+type OrderForRetryToken = Prisma.OrderGetPayload<{
+  include: { payments: { orderBy: { createdAt: 'desc' }; take: 1 } };
+}>;
+
+type OrderForRetryExecute = Prisma.OrderGetPayload<{
+  include: {
+    items: { include: { product: true } };
+    payments: { orderBy: { createdAt: 'desc' }; take: 1 };
+  };
+}>;
+
+type PaymentRetryTokenRecord = Prisma.PaymentRetryTokenGetPayload<Record<string, never>>;
 
 const getRazorpay = (): Razorpay => {
   const keyId = process.env.RAZORPAY_KEY_ID;
@@ -43,12 +57,10 @@ export const generateRetryToken = asyncHandler(async (req: AuthRequest, res: Res
 
   if (!orderId) throw new AppError('Order ID is required', 400);
 
-  const order = await withRetry(() =>
-    prisma.order.findUnique({
-      where: { id: orderId },
-      include: { payments: { orderBy: { createdAt: 'desc' }, take: 1 } },
-    })
-  );
+  const order: OrderForRetryToken | null = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { payments: { orderBy: { createdAt: 'desc' }, take: 1 } },
+  });
 
   if (!order) throw new AppError('Order not found', 404);
   if (order.userId !== userId) throw new AppError('Access denied', 403);
@@ -101,9 +113,8 @@ export const executeRetryPayment = asyncHandler(async (req: AuthRequest, res: Re
   if (!retryToken) throw new AppError('Retry token is required', 400);
 
   // Validate token
-  const tokenRecord = await withRetry(() =>
-    prisma.paymentRetryToken.findUnique({ where: { token: retryToken } })
-  );
+  const tokenRecord: PaymentRetryTokenRecord | null =
+    await prisma.paymentRetryToken.findUnique({ where: { token: retryToken } });
 
   if (!tokenRecord) throw new AppError('Invalid retry token', 400);
   if (tokenRecord.used) throw new AppError('Retry token has already been used', 400);
@@ -112,15 +123,13 @@ export const executeRetryPayment = asyncHandler(async (req: AuthRequest, res: Re
   }
 
   // Fetch the order
-  const order = await withRetry(() =>
-    prisma.order.findUnique({
-      where: { id: tokenRecord.orderId },
-      include: {
-        items: { include: { product: true } },
-        payments: { orderBy: { createdAt: 'desc' }, take: 1 },
-      },
-    })
-  );
+  const order: OrderForRetryExecute | null = await prisma.order.findUnique({
+    where: { id: tokenRecord.orderId },
+    include: {
+      items: { include: { product: true } },
+      payments: { orderBy: { createdAt: 'desc' }, take: 1 },
+    },
+  });
 
   if (!order) throw new AppError('Order not found', 404);
   if (order.userId !== userId) throw new AppError('Access denied', 403);
@@ -135,14 +144,19 @@ export const executeRetryPayment = asyncHandler(async (req: AuthRequest, res: Re
   const razorpay = getRazorpay();
   const amountInPaise = Math.round(Number(order.totalAmount) * 100);
 
-  let razorpayOrder: { id: string; amount: number; currency: string };
+  let razorpayOrderId: string;
+  let razorpayAmount: number;
+  let razorpayCurrency: string;
   try {
-    razorpayOrder = await razorpay.orders.create({
+    const rzpOrder = await razorpay.orders.create({
       amount: amountInPaise,
       currency: 'INR',
       receipt: order.orderNumber,
       notes: { orderId: order.id, retry: 'true' },
     });
+    razorpayOrderId = rzpOrder.id;
+    razorpayAmount = Number(rzpOrder.amount);
+    razorpayCurrency = rzpOrder.currency;
   } catch (err) {
     captureException(err, { context: 'retry_razorpay_order_create', orderId: order.id });
     throw new AppError('Failed to create payment. Please try again.', 502);
@@ -153,7 +167,7 @@ export const executeRetryPayment = asyncHandler(async (req: AuthRequest, res: Re
     data: {
       orderId: order.id,
       paymentGateway: 'RAZORPAY',
-      transactionId: razorpayOrder.id,
+      transactionId: razorpayOrderId,
       amount: order.totalAmount,
       currency: 'INR',
       status: 'PENDING',
@@ -181,9 +195,9 @@ export const executeRetryPayment = asyncHandler(async (req: AuthRequest, res: Re
   res.json({
     success: true,
     data: {
-      razorpayOrderId: razorpayOrder.id,
-      amount: razorpayOrder.amount,
-      currency: razorpayOrder.currency,
+      razorpayOrderId,
+      amount: razorpayAmount,
+      currency: razorpayCurrency,
       key: keyId,
       orderId: order.id,
       orderNumber: order.orderNumber,
