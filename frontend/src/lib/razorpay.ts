@@ -38,6 +38,15 @@ interface RazorpayOptions {
   theme?: {
     color?: string;
   };
+  modal?: {
+    ondismiss?: () => void;
+    confirm_close?: boolean;
+    escape?: boolean;
+  };
+  retry?: {
+    enabled?: boolean;
+    max_count?: number;
+  };
 }
 
 export interface RazorpayResponse {
