@@ -4,6 +4,7 @@ import express, { Application, NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import path from 'path';
 import cookieParser from 'cookie-parser';
+import compression from 'compression';
 
 // Routes
 import adminRoutes from './routes/admin.routes';
@@ -36,6 +37,8 @@ import { startScheduler } from './utils/scheduler';
 import { apiLimiter } from './middleware/rateLimiter';
 import { initSentry, Sentry } from './config/sentry';
 import { duplicateOrderGuard } from './middleware/duplicateOrderGuard';
+import { initRedis } from './config/redis';
+import { initJobQueue, shutdownJobQueue } from './services/jobQueue.service';
 
 // ============================================
 // SENTRY — must be initialized before anything else
@@ -108,6 +111,22 @@ app.use(helmet({
   xssFilter: true,
   frameguard: { action: 'deny' },
   hidePoweredBy: true,
+}));
+
+// ============================================
+// COMPRESSION — Brotli/Gzip for all responses
+// ============================================
+// Reduces payload size by 60-80% (especially for JSON APIs).
+// Cloudflare will also compress at CDN level, but this covers
+// direct API calls and non-CDN paths.
+app.use(compression({
+  level: 6, // Good balance of speed vs compression ratio
+  threshold: 1024, // Only compress responses > 1KB
+  filter: (req, res) => {
+    // Don't compress webhook responses or SSE streams
+    if (req.path.includes('webhook')) return false;
+    return compression.filter(req, res);
+  },
 }));
 
 // CORS - MUST be after helmet
@@ -489,6 +508,46 @@ app.listen(PORT, async () => {
   // Start scheduled jobs (campaign expiry, inventory cleanup)
   startScheduler();
   console.log('[Startup] ✅ Scheduler: STARTED (campaign expiry + inventory cleanup)');
+
+  // ============================================
+  // REDIS + BACKGROUND JOBS (Phase 4)
+  // ============================================
+  // Safe to fail — falls back to in-memory cache + setInterval scheduler
+  console.log('\n[Startup] 🔌 Initializing Redis...');
+  const redisReady = await initRedis();
+
+  if (redisReady) {
+    console.log('[Startup] ✅ Redis: CONNECTED — caching enabled');
+
+    // Initialize BullMQ job queue (requires Redis)
+    console.log('[Startup] 🔄 Initializing BullMQ job queue...');
+    const jobQueueReady = await initJobQueue();
+
+    if (jobQueueReady) {
+      console.log('[Startup] ✅ BullMQ: ACTIVE — background jobs via Redis');
+    } else {
+      console.log('[Startup] ⚠️  BullMQ: FAILED — using scheduler fallback');
+    }
+  } else {
+    console.log('[Startup] ⚠️  Redis: NOT AVAILABLE — using in-memory cache + scheduler');
+  }
+
+  console.log('\n[Startup] 🎉 Phase 4 infrastructure ready');
+});
+
+// ============================================
+// GRACEFUL SHUTDOWN
+// ============================================
+process.on('SIGTERM', async () => {
+  console.log('[Shutdown] SIGTERM received — graceful shutdown...');
+  await shutdownJobQueue();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  console.log('[Shutdown] SIGINT received — graceful shutdown...');
+  await shutdownJobQueue();
+  process.exit(0);
 });
 
 export default app;

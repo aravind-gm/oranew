@@ -1,10 +1,10 @@
 /**
- * Analytics Service — Phase 3
- * ============================
+ * Analytics Service — Phase 3 + Phase 4 Redis
+ * =============================================
  * 
  * Server-side computation of all business metrics.
  * All queries use composite indexes for sub-100ms execution.
- * Results cached in-memory for 60 seconds.
+ * Results cached via Redis (60s TTL) with in-memory fallback.
  * 
  * Rules:
  *  - Only CONFIRMED payments count as revenue
@@ -15,31 +15,20 @@
  */
 
 import { prisma } from '../config/database';
+import { cacheGet, cacheSet } from '../config/redis';
 
 // ============================================
-// IN-MEMORY CACHE (60-second TTL)
+// REDIS-BACKED CACHE (60-second TTL, in-memory fallback)
 // ============================================
 
-interface CacheEntry<T> {
-  data: T;
-  expiresAt: number;
+const CACHE_TTL_SECONDS = 60; // 60 seconds
+
+async function getCached<T>(key: string): Promise<T | null> {
+  return cacheGet<T>(`analytics:${key}`);
 }
 
-const cache = new Map<string, CacheEntry<unknown>>();
-const CACHE_TTL_MS = 60_000; // 60 seconds
-
-function getCached<T>(key: string): T | null {
-  const entry = cache.get(key);
-  if (!entry) return null;
-  if (Date.now() > entry.expiresAt) {
-    cache.delete(key);
-    return null;
-  }
-  return entry.data as T;
-}
-
-function setCache<T>(key: string, data: T): T {
-  cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+async function setAndReturn<T>(key: string, data: T): Promise<T> {
+  await cacheSet(`analytics:${key}`, data, CACHE_TTL_SECONDS);
   return data;
 }
 
@@ -129,7 +118,7 @@ export interface OverviewAnalytics {
 }
 
 export async function getOverviewAnalytics(): Promise<OverviewAnalytics> {
-  const cached = getCached<OverviewAnalytics>('overview');
+  const cached = await getCached<OverviewAnalytics>('overview');
   if (cached) return cached;
 
   const today = startOfTodayIST();
@@ -252,7 +241,7 @@ export async function getOverviewAnalytics(): Promise<OverviewAnalytics> {
     },
   };
 
-  return setCache('overview', result);
+  return setAndReturn('overview', result);
 }
 
 // ============================================
@@ -290,7 +279,7 @@ export interface ProductAnalytics {
 }
 
 export async function getProductAnalytics(): Promise<ProductAnalytics> {
-  const cached = getCached<ProductAnalytics>('products');
+  const cached = await getCached<ProductAnalytics>('products');
   if (cached) return cached;
 
   const thirtyDaysAgo = daysAgo(30);
@@ -416,7 +405,7 @@ export async function getProductAnalytics(): Promise<ProductAnalytics> {
     lowStock,
   };
 
-  return setCache('products', result);
+  return setAndReturn('products', result);
 }
 
 // ============================================
@@ -444,7 +433,7 @@ export interface PaymentAnalytics {
 }
 
 export async function getPaymentAnalytics(): Promise<PaymentAnalytics> {
-  const cached = getCached<PaymentAnalytics>('payments');
+  const cached = await getCached<PaymentAnalytics>('payments');
   if (cached) return cached;
 
   const sevenDaysAgo = daysAgo(7);
@@ -520,7 +509,7 @@ export async function getPaymentAnalytics(): Promise<PaymentAnalytics> {
     })),
   };
 
-  return setCache('payments', result);
+  return setAndReturn('payments', result);
 }
 
 // ============================================
@@ -547,7 +536,7 @@ export interface CartAnalytics {
 }
 
 export async function getCartAnalytics(): Promise<CartAnalytics> {
-  const cached = getCached<CartAnalytics>('carts');
+  const cached = await getCached<CartAnalytics>('carts');
   if (cached) return cached;
 
   const sevenDaysAgo = daysAgo(7);
@@ -648,5 +637,5 @@ export async function getCartAnalytics(): Promise<CartAnalytics> {
     })),
   };
 
-  return setCache('carts', result);
+  return setAndReturn('carts', result);
 }

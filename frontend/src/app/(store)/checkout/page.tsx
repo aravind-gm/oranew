@@ -342,10 +342,10 @@ export default function CheckoutPage() {
     country: 'India',
   });
 
-  // Auth redirect
+  // Auth redirect — offer guest checkout option
   useEffect(() => {
     if (!authLoading && !user) {
-      router.replace('/auth/login?redirect=/checkout');
+      router.replace('/checkout/guest');
     }
   }, [authLoading, user, router]);
 

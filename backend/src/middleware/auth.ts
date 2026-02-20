@@ -138,3 +138,34 @@ export const authorize = (...roles: UserRole[]) => {
     next();
   };
 };
+
+/**
+ * Optional auth — attaches user if token exists, but does NOT block unauthenticated requests.
+ * Used for guest checkout: allows `req.user` to be undefined.
+ */
+export const optionalAuth = async (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (req.cookies?.access_token) {
+      const decoded = jwt.verify(req.cookies.access_token, process.env.JWT_SECRET!, {
+        algorithms: ['HS256'],
+      }) as { id: string; email: string; role: UserRole };
+
+      const dbUser = await prisma.user.findUnique({
+        where: { id: decoded.id },
+        select: { id: true, email: true, role: true },
+      });
+
+      if (dbUser) {
+        req.user = { id: dbUser.id, email: dbUser.email, role: dbUser.role };
+        setSentryUser(dbUser.id, dbUser.role);
+      }
+    }
+  } catch {
+    // Token invalid or expired — that's fine, continue as guest
+  }
+  next();
+};
