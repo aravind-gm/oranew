@@ -744,7 +744,7 @@ export default function LoginPage() {
           )}
 
           {/* Footer */}
-          <div className="mt-6 pt-6 border-t border-gray-200/50">
+          <div className="mt-6 pt-6 border-t border-gray-200/50 space-y-3">
             <p className="text-center text-sm text-gray-500">
               {authMode === 'login' ? (
                 <>
@@ -768,6 +768,21 @@ export default function LoginPage() {
                 </>
               )}
             </p>
+
+            {/* Guest Checkout Option */}
+            <div className="pt-2 border-t border-gray-100">
+              <p className="text-center text-xs text-gray-500 mb-2">
+                Want to checkout faster?
+              </p>
+              <Link href="/checkout/guest">
+                <button
+                  type="button"
+                  className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 rounded-xl transition-all duration-300"
+                >
+                  Continue as Guest
+                </button>
+              </Link>
+            </div>
           </div>
         </div>
 
