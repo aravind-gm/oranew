@@ -36,7 +36,7 @@ const INDIAN_STATES = [
 
 export default function GuestCheckoutPage() {
   const router = useRouter();
-  const { items, total, clearCart } = useCartStore();
+  const { items, getTotal, clearCart } = useCartStore();
   const { user, loading: authLoading } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -339,7 +339,7 @@ export default function GuestCheckoutPage() {
                 ) : (
                   <>
                     <Lock className="w-5 h-5" />
-                    Pay {formatPrice(total())}
+                    Pay {formatPrice(getTotal())}
                   </>
                 )}
               </button>
@@ -400,7 +400,7 @@ export default function GuestCheckoutPage() {
               <div className="border-t mt-4 pt-4 space-y-2">
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Subtotal ({items.length} items)</span>
-                  <span>{formatPrice(total())}</span>
+                  <span>{formatPrice(getTotal())}</span>
                 </div>
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Shipping</span>
@@ -412,7 +412,7 @@ export default function GuestCheckoutPage() {
                 </div>
                 <div className="flex justify-between text-base font-semibold text-gray-900 pt-2 border-t">
                   <span>Total</span>
-                  <span className="text-[#d4af37]">{formatPrice(total())}</span>
+                  <span className="text-[#d4af37]">{formatPrice(getTotal())}</span>
                 </div>
               </div>
             </div>
