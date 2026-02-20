@@ -87,8 +87,10 @@ export async function initJobQueue(): Promise<boolean> {
 
   try {
     // Create queue
+    // Note: `as any` is required because BullMQ bundles its own ioredis internally,
+    // causing TypeScript to see two incompatible Redis type definitions.
     backgroundQueue = new Queue('ora-background', {
-      connection: redis.duplicate(),
+      connection: redis.duplicate() as any,
       defaultJobOptions: {
         removeOnComplete: { count: 100 }, // Keep last 100 completed
         removeOnFail: { count: 50 },      // Keep last 50 failed for debugging
@@ -141,7 +143,7 @@ export async function initJobQueue(): Promise<boolean> {
         }
       },
       {
-        connection: redis.duplicate(),
+        connection: redis.duplicate() as any,
         concurrency: 3, // Process up to 3 jobs in parallel
       }
     );
@@ -424,11 +426,26 @@ async function processOrderEmail(data: OrderEmailJobData): Promise<void> {
         quantity: i.quantity,
         unitPrice: Number(i.unitPrice),
       })),
-      subtotal: Number(order.subtotal),
-      discount: Number(order.discountAmount),
-      gst: Number(order.gstAmount),
-      shipping: Number(order.shippingFee),
-      total: Number(order.totalAmount),
+      totalAmount: Number(order.totalAmount),
+      gstAmount: Number(order.gstAmount),
+      shippingCost: Number(order.shippingFee),
+      discountAmount: Number(order.discountAmount),
+      shippingAddress: order.shippingAddress
+        ? {
+            fullName: order.shippingAddress.fullName,
+            addressLine1: order.shippingAddress.addressLine1,
+            addressLine2: order.shippingAddress.addressLine2 ?? undefined,
+            city: order.shippingAddress.city,
+            state: order.shippingAddress.state,
+            pincode: order.shippingAddress.pincode,
+          }
+        : {
+            fullName: order.user.fullName || 'Customer',
+            addressLine1: 'N/A',
+            city: 'N/A',
+            state: 'N/A',
+            pincode: 'N/A',
+          },
     });
   } catch (err) {
     console.error(`[JobQueue] Order email failed for ${data.orderId}:`, err);

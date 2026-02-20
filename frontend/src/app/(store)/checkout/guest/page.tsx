@@ -34,12 +34,6 @@ const INDIAN_STATES = [
   'Lakshadweep', 'Puducherry',
 ];
 
-declare global {
-  interface Window {
-    Razorpay?: new (options: Record<string, unknown>) => { open: () => void };
-  }
-}
-
 export default function GuestCheckoutPage() {
   const router = useRouter();
   const { items, total, clearCart } = useCartStore();
@@ -175,7 +169,8 @@ export default function GuestCheckoutPage() {
         },
       };
 
-      const rzp = new window.Razorpay!(options);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rzp = new (window.Razorpay as any)(options);
       rzp.open();
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { error?: string } } };
