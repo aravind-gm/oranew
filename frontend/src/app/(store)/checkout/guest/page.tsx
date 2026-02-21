@@ -17,11 +17,14 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ShoppingBag, Lock, Truck, Shield, Package } from 'lucide-react';
+import { ArrowLeft, ShoppingBag, Lock, Truck } from 'lucide-react';
 import api from '@/lib/api';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
 import Image from 'next/image';
+import { GuestCheckoutSkeleton } from '@/components/checkout/SkeletonBlock';
+import { TrustStrip, ReturnPolicyLine } from '@/components/checkout/TrustStrip';
+import { CODBadge } from '@/components/checkout/CODBadge';
 
 const INDIAN_STATES = [
   'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
@@ -183,11 +186,7 @@ export default function GuestCheckoutPage() {
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(price);
 
   if (authLoading || user || items.length === 0) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#d4af37]" />
-      </div>
-    );
+    return <GuestCheckoutSkeleton />;
   }
 
   return (
@@ -344,18 +343,11 @@ export default function GuestCheckoutPage() {
                 )}
               </button>
 
-              {/* Trust badges */}
-              <div className="flex items-center justify-center gap-6 text-xs text-gray-500">
-                <span className="flex items-center gap-1">
-                  <Shield className="w-4 h-4" /> Secure Checkout
-                </span>
-                <span className="flex items-center gap-1">
-                  <Truck className="w-4 h-4" /> Free Shipping
-                </span>
-                <span className="flex items-center gap-1">
-                  <Package className="w-4 h-4" /> Easy Returns
-                </span>
-              </div>
+              {/* Trust Strip */}
+              <TrustStrip />
+
+              {/* Return policy reassurance */}
+              <ReturnPolicyLine />
 
               {/* Login prompt */}
               <p className="text-center text-sm text-gray-500">
@@ -414,6 +406,16 @@ export default function GuestCheckoutPage() {
                   <span>Total</span>
                   <span className="text-[#d4af37]">{formatPrice(getTotal())}</span>
                 </div>
+              </div>
+
+              {/* COD Badge */}
+              <div className="mt-3">
+                <CODBadge enabled />
+              </div>
+
+              {/* Trust Strip */}
+              <div className="mt-3">
+                <TrustStrip />
               </div>
             </div>
           </div>

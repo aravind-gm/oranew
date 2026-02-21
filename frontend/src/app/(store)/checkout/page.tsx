@@ -23,6 +23,9 @@ import { getStateNames, getDistrictsByState, validatePhoneNumber, validatePincod
 import { trackBeginCheckout, trackAddPaymentInfo, setEnhancedConversions } from '@/lib/analytics';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
+import { CheckoutSkeleton } from '@/components/checkout/SkeletonBlock';
+import { TrustStrip, ReturnPolicyLine } from '@/components/checkout/TrustStrip';
+import { CODBadge } from '@/components/checkout/CODBadge';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, ChevronDown, ChevronUp, Lock, Shield, Truck, CreditCard, AlertCircle, Package, BookmarkCheck } from 'lucide-react';
 import Image from 'next/image';
@@ -286,28 +289,14 @@ function OrderSummary({ items, totalPrice }: { items: Array<{ productId: string;
         </div>
       </div>
 
-      {/* Trust Badges */}
-      <div className="mt-6 pt-6 border-t border-gray-100">
-        <div className="flex items-center justify-center gap-6 text-center">
-          <div>
-            <div className="w-8 h-8 mx-auto mb-1 bg-emerald-50 rounded-full flex items-center justify-center">
-              <Truck className="w-4 h-4 text-emerald-600" />
-            </div>
-            <p className="text-[10px] text-gray-500">Free Shipping</p>
-          </div>
-          <div>
-            <div className="w-8 h-8 mx-auto mb-1 bg-blue-50 rounded-full flex items-center justify-center">
-              <Shield className="w-4 h-4 text-blue-600" />
-            </div>
-            <p className="text-[10px] text-gray-500">Secure</p>
-          </div>
-          <div>
-            <div className="w-8 h-8 mx-auto mb-1 bg-amber-50 rounded-full flex items-center justify-center">
-              <Package className="w-4 h-4 text-amber-600" />
-            </div>
-            <p className="text-[10px] text-gray-500">Easy Returns</p>
-          </div>
-        </div>
+      {/* COD Badge */}
+      <div className="mt-4">
+        <CODBadge enabled />
+      </div>
+
+      {/* Trust Strip */}
+      <div className="mt-4">
+        <TrustStrip />
       </div>
     </div>
   );
@@ -531,26 +520,15 @@ export default function CheckoutPage() {
     }
   };
 
-  // Loading state — only show spinner while auth is still loading
-  if (authLoading) {
+  // Loading / guard states → show skeleton instead of spinners
+  const isReady = !authLoading && !!user && items.length > 0;
+
+  if (!isReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-pink-200 border-t-pink-600 rounded-full animate-spin mx-auto" />
-          <p className="mt-4 text-gray-500">Loading checkout...</p>
-        </div>
-      </div>
+      <CheckoutSkeleton ready={false}>
+        <div />
+      </CheckoutSkeleton>
     );
-  }
-
-  // After auth resolves: if no user, useEffect above will redirect; render nothing meanwhile
-  if (!user) {
-    return null;
-  }
-
-  // Empty cart — useEffect above handles redirect, but guard render
-  if (items.length === 0) {
-    return null;
   }
 
   return (
@@ -943,6 +921,7 @@ export default function CheckoutPage() {
                     </>
                   )}
                 </motion.button>
+                <ReturnPolicyLine />
               </motion.div>
             )}
           </div>
