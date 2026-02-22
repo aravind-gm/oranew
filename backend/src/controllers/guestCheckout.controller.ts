@@ -48,7 +48,12 @@ interface GuestCheckoutBody {
     quantity: number;
   }>;
   couponCode?: string;
+  paymentMethod?: 'RAZORPAY' | 'COD';
 }
+
+// COD constants (must match order.controller.ts)
+const COD_MAX_AMOUNT = 5000;
+const COD_MAX_PER_DAY_GUEST = 1; // Stricter for guests (no account verification)
 
 // Shipping — always FREE (consistent with order.controller.ts)
 function calculateShipping(): number {
@@ -56,7 +61,9 @@ function calculateShipping(): number {
 }
 
 export const guestCheckout = asyncHandler(async (req: Request, res: Response) => {
-  const { email, fullName, phone, address, items, couponCode } = req.body as GuestCheckoutBody;
+  const { email, fullName, phone, address, items, couponCode, paymentMethod } = req.body as GuestCheckoutBody & { paymentMethod?: string };
+
+  const isCOD = paymentMethod === 'COD';
 
   // ====== VALIDATION ======
   if (!email || !email.includes('@')) {
@@ -242,6 +249,36 @@ export const guestCheckout = asyncHandler(async (req: Request, res: Response) =>
     throw new AppError('Order total must be greater than zero', 400);
   }
 
+  // ====== COD BUSINESS RULES ======
+  if (isCOD) {
+    const COD_MAX_AMOUNT = 5000;
+    if (totalAmount > COD_MAX_AMOUNT) {
+      throw new AppError(
+        `Cash on Delivery is available for orders up to ₹${COD_MAX_AMOUNT}. Your total is ₹${Math.round(totalAmount)}.`,
+        400
+      );
+    }
+
+    // For guest COD: limit by email (max 3/day)
+    const COD_DAILY_LIMIT = 3;
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const codOrdersToday = await prisma.order.count({
+      where: {
+        userId,
+        paymentMethod: 'COD',
+        createdAt: { gte: todayStart },
+        status: { notIn: ['CANCELLED'] },
+      },
+    });
+    if (codOrdersToday >= COD_DAILY_LIMIT) {
+      throw new AppError(
+        `Daily limit of ${COD_DAILY_LIMIT} Cash on Delivery orders reached. Please use online payment or try again tomorrow.`,
+        400
+      );
+    }
+  }
+
   // ====== CREATE ORDER (Serializable transaction for inventory safety) ======
   const order = await prisma.$transaction(async (tx) => {
     // Stock re-check inside transaction
@@ -265,7 +302,7 @@ export const guestCheckout = asyncHandler(async (req: Request, res: Response) =>
       data: {
         orderNumber,
         userId,
-        status: 'PENDING',
+        status: isCOD ? 'CONFIRMED' : 'PENDING',
         subtotal,
         discountAmount,
         couponCode: appliedCouponCode,
@@ -274,7 +311,7 @@ export const guestCheckout = asyncHandler(async (req: Request, res: Response) =>
         totalAmount,
         shippingAddressId: newAddress.id,
         billingAddressId: newAddress.id,
-        paymentMethod: 'RAZORPAY',
+        paymentMethod: isCOD ? 'COD' : 'RAZORPAY',
         paymentStatus: 'PENDING',
         items: {
           create: cartItems.map((item, index) => ({
@@ -312,7 +349,50 @@ export const guestCheckout = asyncHandler(async (req: Request, res: Response) =>
     return newOrder;
   }, { timeout: 30000, maxWait: 10000 });
 
-  // ====== CREATE RAZORPAY ORDER ======
+  // ====== COD: Skip Razorpay, create COD payment record ======
+  if (isCOD) {
+    await prisma.payment.create({
+      data: {
+        orderId: order.id,
+        paymentGateway: 'COD',
+        transactionId: `COD-${order.orderNumber}`,
+        amount: totalAmount,
+        currency: 'INR',
+        status: 'PENDING',
+      },
+    });
+
+    // Deduct stock immediately for COD (order is CONFIRMED)
+    for (const item of cartItems) {
+      await prisma.product.update({
+        where: { id: item.productId },
+        data: { stockQuantity: { decrement: item.quantity } },
+      });
+    }
+
+    console.log('[GuestCheckout] ✅ COD Order confirmed:', {
+      orderNumber: order.orderNumber,
+      total: totalAmount,
+      isGuest: !req.user?.id,
+    });
+
+    return res.status(201).json({
+      success: true,
+      codOrder: true,
+      order: {
+        id: order.id,
+        orderNumber: order.orderNumber,
+        subtotal,
+        discountAmount,
+        gstAmount,
+        shippingFee,
+        totalAmount,
+        items: order.items,
+      },
+    });
+  }
+
+  // ====== CREATE RAZORPAY ORDER (Online payment only) ======
   let Razorpay: any;
   try {
     Razorpay = (await import('razorpay')).default;
@@ -357,6 +437,7 @@ export const guestCheckout = asyncHandler(async (req: Request, res: Response) =>
 
   res.status(201).json({
     success: true,
+    codOrder: false,
     order: {
       id: order.id,
       orderNumber: order.orderNumber,

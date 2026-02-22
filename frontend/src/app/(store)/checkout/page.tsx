@@ -317,6 +317,7 @@ export default function CheckoutPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [showSavedAddresses, setShowSavedAddresses] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'razorpay' | 'cod'>('razorpay');
   
   const [address, setAddress] = useState<ShippingAddress>({
     fullName: '',
@@ -470,6 +471,10 @@ export default function CheckoutPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const isCODSelected = selectedPaymentMethod === 'cod';
+  const COD_MAX_AMOUNT = 5000;
+  const codEligible = totalPrice <= COD_MAX_AMOUNT;
+
   const handlePlaceOrder = async () => {
     setLoading(true);
 
@@ -483,6 +488,7 @@ export default function CheckoutPage() {
         items: orderItems,
         shippingAddress: address,
         couponCode: null,
+        paymentMethod: isCODSelected ? 'COD' : undefined,
       });
 
       if (!response.data.success) {
@@ -495,7 +501,7 @@ export default function CheckoutPage() {
       trackAddPaymentInfo({
         orderId: createdOrder.id,
         total: totalPrice,
-        paymentMethod: 'razorpay',
+        paymentMethod: isCODSelected ? 'cod' : 'razorpay',
         items: items.map((item) => ({
           id: item.productId || item.id,
           name: item.name,
@@ -504,6 +510,15 @@ export default function CheckoutPage() {
         })),
       });
 
+      // COD: order is confirmed immediately — go to success
+      if (response.data.codOrder) {
+        const { clearCart } = useCartStore.getState();
+        clearCart();
+        router.push(`/checkout/success?orderNumber=${createdOrder.orderNumber}`);
+        return;
+      }
+
+      // Online: proceed to Razorpay payment page
       router.push(`/checkout/payment?orderId=${createdOrder.id}`);
     } catch (err: unknown) {
       let errorMessage = 'Failed to create order';
@@ -853,28 +868,82 @@ export default function CheckoutPage() {
               >
                 <h2 className="text-xl font-semibold text-gray-900 mb-6">Payment Method</h2>
 
-                {/* Payment Option */}
-                <div className="space-y-4 mb-8">
-                  <label className="flex items-center gap-4 p-5 border-2 border-pink-500 bg-pink-50 rounded-xl cursor-pointer">
-                    <input type="radio" name="payment" value="razorpay" defaultChecked className="w-5 h-5 accent-pink-600" />
+                {/* Payment Options */}
+                <div className="space-y-3 mb-8">
+                  {/* Razorpay */}
+                  <label
+                    className={`flex items-center gap-4 p-5 border-2 rounded-xl cursor-pointer transition-all ${
+                      selectedPaymentMethod === 'razorpay'
+                        ? 'border-pink-500 bg-pink-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                    onClick={() => setSelectedPaymentMethod('razorpay')}
+                  >
+                    <input
+                      type="radio"
+                      name="payment"
+                      value="razorpay"
+                      checked={selectedPaymentMethod === 'razorpay'}
+                      onChange={() => setSelectedPaymentMethod('razorpay')}
+                      className="w-5 h-5 accent-pink-600"
+                    />
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <CreditCard className="w-5 h-5 text-pink-600" />
-                        <span className="font-semibold text-gray-900">Razorpay Secure Payments</span>
+                        <span className="font-semibold text-gray-900">Pay Online</span>
                       </div>
                       <p className="text-sm text-gray-600 mt-1">Credit/Debit Card • UPI • Net Banking • Wallets</p>
                     </div>
                   </label>
+
+                  {/* COD */}
+                  <label
+                    className={`flex items-center gap-4 p-5 border-2 rounded-xl transition-all ${
+                      !codEligible
+                        ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed'
+                        : selectedPaymentMethod === 'cod'
+                        ? 'border-emerald-500 bg-emerald-50 cursor-pointer'
+                        : 'border-gray-200 hover:border-gray-300 cursor-pointer'
+                    }`}
+                    onClick={() => codEligible && setSelectedPaymentMethod('cod')}
+                  >
+                    <input
+                      type="radio"
+                      name="payment"
+                      value="cod"
+                      checked={selectedPaymentMethod === 'cod'}
+                      onChange={() => codEligible && setSelectedPaymentMethod('cod')}
+                      disabled={!codEligible}
+                      className="w-5 h-5 accent-emerald-600"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <Package className="w-5 h-5 text-emerald-600" />
+                        <span className="font-semibold text-gray-900">Cash on Delivery</span>
+                      </div>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {codEligible
+                          ? 'Pay when your order is delivered'
+                          : `Available for orders up to ₹${COD_MAX_AMOUNT.toLocaleString()}`}
+                      </p>
+                    </div>
+                  </label>
                 </div>
 
-                {/* Razorpay Security Badge */}
+                {/* Security Badge */}
                 <div className="flex items-center gap-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl mb-4">
                   <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <Lock className="w-6 h-6 text-emerald-600" />
                   </div>
                   <div>
-                    <p className="font-medium text-emerald-900">Secured by Razorpay</p>
-                    <p className="text-sm text-emerald-700">256-bit SSL • PCI DSS Compliant • RBI Approved</p>
+                    <p className="font-medium text-emerald-900">
+                      {isCODSelected ? 'Cash on Delivery' : 'Secured by Razorpay'}
+                    </p>
+                    <p className="text-sm text-emerald-700">
+                      {isCODSelected
+                        ? 'Pay at your doorstep · No advance payment needed'
+                        : '256-bit SSL • PCI DSS Compliant • RBI Approved'}
+                    </p>
                   </div>
                 </div>
 
@@ -907,12 +976,21 @@ export default function CheckoutPage() {
                   whileTap={{ scale: 0.99 }}
                   onClick={handlePlaceOrder}
                   disabled={loading}
-                  className="hidden lg:flex w-full py-4 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-full font-semibold text-lg hover:from-pink-700 hover:to-rose-700 transition-all shadow-lg hover:shadow-xl items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={`hidden lg:flex w-full py-4 text-white rounded-full font-semibold text-lg transition-all shadow-lg hover:shadow-xl items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                    isCODSelected
+                      ? 'bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700'
+                      : 'bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700'
+                  }`}
                 >
                   {loading ? (
                     <>
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       Processing...
+                    </>
+                  ) : isCODSelected ? (
+                    <>
+                      <Package className="w-5 h-5" />
+                      Place COD Order · ₹{totalPrice.toLocaleString()}
                     </>
                   ) : (
                     <>
@@ -960,8 +1038,8 @@ export default function CheckoutPage() {
               </>
             ) : currentStep === 'payment' ? (
               <>
-                <Lock className="w-4 h-4" />
-                Pay Now
+                {isCODSelected ? <Package className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                {isCODSelected ? 'Place COD Order' : 'Pay Now'}
               </>
             ) : (
               'Continue'

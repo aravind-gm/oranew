@@ -62,6 +62,21 @@ export const couponLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// COD checkout rate limiter (stricter — prevents COD abuse / fraud)
+export const codLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 2, // 2 COD attempts per 10 minutes
+  message: {
+    success: false,
+    error: 'Too many Cash on Delivery attempts. Please wait before trying again.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    return (req as any).user?.id || req.ip || 'unknown';
+  },
+});
+
 // Analytics dashboard rate limiter (prevents excessive DB load)
 export const analyticsLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute

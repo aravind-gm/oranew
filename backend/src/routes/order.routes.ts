@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { cancelOrder, checkout, getOrderById, getOrders, processRefund, requestReturn } from '../controllers/order.controller';
 import { guestCheckout } from '../controllers/guestCheckout.controller';
 import { authorize, optionalAuth, protect } from '../middleware/auth';
-import { checkoutLimiter } from '../middleware/rateLimiter';
+import { checkoutLimiter, codLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 

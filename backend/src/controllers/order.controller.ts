@@ -25,8 +25,14 @@ interface CartItemInput {
   quantity: number;
 }
 
+// COD constants
+const COD_MAX_AMOUNT = 5000;         // ₹5,000 cap for COD orders
+const COD_MAX_PER_DAY = 3;           // Max 3 COD orders per user per day
+
 export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { shippingAddressId, billingAddressId, shippingAddress, items, couponCode } = req.body;
+  const { shippingAddressId, billingAddressId, shippingAddress, items, couponCode, paymentMethod } = req.body;
+
+  const isCOD = paymentMethod === 'COD';
 
   console.log('[Checkout] Request received:', {
     userId: req.user?.id,
@@ -34,6 +40,7 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
     hasShippingAddress: !!shippingAddress,
     itemsCount: items?.length || 0,
     couponCode: couponCode || 'None',
+    paymentMethod: paymentMethod || 'RAZORPAY',
   });
 
   let finalShippingAddrId = shippingAddressId;
@@ -353,9 +360,41 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
   }
   const totalAmount = Math.max(0, computedTotal);
 
-  // Final safety: Razorpay requires amount > 0
+  // Final safety: amount > 0
   if (totalAmount <= 0) {
     throw new AppError('Order total must be greater than zero', 400);
+  }
+
+  // ====== COD VALIDATION RULES ======
+  if (isCOD) {
+    // Rule 1: Cart total must be ≤ ₹5,000 for COD
+    if (totalAmount > COD_MAX_AMOUNT) {
+      throw new AppError(
+        `Cash on Delivery is available only for orders up to ₹${COD_MAX_AMOUNT.toLocaleString()}. Your total is ₹${Math.round(totalAmount).toLocaleString()}.`,
+        400
+      );
+    }
+
+    // Rule 2: Max 3 COD orders per user per day (fraud prevention)
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const codOrdersToday = await prisma.order.count({
+      where: {
+        userId: req.user!.id,
+        paymentMethod: 'COD',
+        createdAt: { gte: todayStart },
+        status: { notIn: ['CANCELLED'] },
+      },
+    });
+
+    if (codOrdersToday >= COD_MAX_PER_DAY) {
+      throw new AppError(
+        `You can place a maximum of ${COD_MAX_PER_DAY} Cash on Delivery orders per day. Please use online payment.`,
+        400
+      );
+    }
+
+    console.log('[Checkout] COD validated:', { totalAmount, codOrdersToday });
   }
 
   // ====== TRANSACTIONAL ORDER + INVENTORY LOCK CREATION (CRITICAL) ======
@@ -428,7 +467,8 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
         totalAmount: new Decimal(totalAmount),
         shippingAddressId: finalShippingAddrId,
         billingAddressId: finalBillingAddrId,
-        status: 'PENDING',
+        status: isCOD ? 'CONFIRMED' : 'PENDING',
+        paymentMethod: isCOD ? 'COD' : 'RAZORPAY',
         paymentStatus: 'PENDING',
         items: {
           create: cartItems.map((item, index) => ({
@@ -543,12 +583,48 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
     console.error('Email error (non-blocking):', emailError);
   }
 
+  // ====== COD: Create payment record & confirm immediately ======
+  if (isCOD) {
+    await prisma.payment.create({
+      data: {
+        orderId: (order as any).id,
+        paymentGateway: 'COD',
+        transactionId: `COD-${(order as any).orderNumber}`,
+        amount: totalAmount,
+        currency: 'INR',
+        status: 'PENDING',
+      },
+    });
+
+    // For COD, deduct stock immediately (like a confirmed order)
+    for (const item of cartItems) {
+      await prisma.product.update({
+        where: { id: item.productId },
+        data: { stockQuantity: { decrement: item.quantity } },
+      });
+    }
+
+    // Release inventory locks since stock is now deducted
+    await releaseInventoryLocks((order as any).id);
+
+    console.log('[Checkout] ✅ COD order confirmed:', (order as any).orderNumber);
+
+    return res.status(201).json({
+      success: true,
+      order,
+      data: order,
+      codOrder: true,
+      message: 'COD order placed successfully. Pay on delivery.',
+    });
+  }
+
   // DO NOT clear cart yet - wait for payment confirmation webhook
 
   res.status(201).json({
     success: true,
     order, // Frontend expects response.data.order
     data: order,
+    codOrder: false,
     message: 'Order created. Proceed to payment.',
   });
 });
