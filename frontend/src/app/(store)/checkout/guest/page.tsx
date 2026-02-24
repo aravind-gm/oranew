@@ -43,6 +43,12 @@ export default function GuestCheckoutPage() {
   const { user, loading: authLoading } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'razorpay' | 'cod'>('razorpay');
+
+  const COD_MAX_AMOUNT = 5000;
+  const cartTotal = getTotal();
+  const codEligible = cartTotal <= COD_MAX_AMOUNT;
+  const isCODSelected = selectedPaymentMethod === 'cod';
 
   const [form, setForm] = useState({
     email: '',
@@ -121,7 +127,15 @@ export default function GuestCheckoutPage() {
           productId: item.id,
           quantity: item.quantity,
         })),
+        paymentMethod: isCODSelected ? 'COD' : undefined,
       });
+
+      // COD: order confirmed immediately — redirect to success
+      if (data.codOrder) {
+        clearCart();
+        router.push(`/checkout/success?orderNumber=${data.order.orderNumber}`);
+        return;
+      }
 
       // Load Razorpay script if not loaded
       if (!window.Razorpay) {
@@ -317,6 +331,68 @@ export default function GuestCheckoutPage() {
                 </div>
               </div>
 
+              {/* Payment Method Selection */}
+              <div className="bg-white rounded-xl shadow-sm border p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Lock className="w-5 h-5 text-[#d4af37]" />
+                  Payment Method
+                </h2>
+                <div className="space-y-3">
+                  {/* Online Payment */}
+                  <label
+                    className={`flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                      selectedPaymentMethod === 'razorpay'
+                        ? 'border-[#d4af37] bg-amber-50/50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                    onClick={() => setSelectedPaymentMethod('razorpay')}
+                  >
+                    <input
+                      type="radio"
+                      name="guestPayment"
+                      value="razorpay"
+                      checked={selectedPaymentMethod === 'razorpay'}
+                      onChange={() => setSelectedPaymentMethod('razorpay')}
+                      className="w-4 h-4 accent-[#d4af37]"
+                    />
+                    <div className="flex-1">
+                      <span className="font-medium text-gray-900 text-sm">Pay Online</span>
+                      <p className="text-xs text-gray-500 mt-0.5">Card · UPI · Net Banking · Wallets</p>
+                    </div>
+                  </label>
+
+                  {/* COD */}
+                  <label
+                    className={`flex items-center gap-4 p-4 border-2 rounded-xl transition-all ${
+                      !codEligible
+                        ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed'
+                        : selectedPaymentMethod === 'cod'
+                        ? 'border-emerald-400 bg-emerald-50/50 cursor-pointer'
+                        : 'border-gray-200 hover:border-gray-300 cursor-pointer'
+                    }`}
+                    onClick={() => codEligible && setSelectedPaymentMethod('cod')}
+                  >
+                    <input
+                      type="radio"
+                      name="guestPayment"
+                      value="cod"
+                      checked={selectedPaymentMethod === 'cod'}
+                      onChange={() => codEligible && setSelectedPaymentMethod('cod')}
+                      disabled={!codEligible}
+                      className="w-4 h-4 accent-emerald-600"
+                    />
+                    <div className="flex-1">
+                      <span className="font-medium text-gray-900 text-sm">Cash on Delivery</span>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {codEligible
+                          ? 'Pay when your order arrives'
+                          : `Available for orders up to ₹${COD_MAX_AMOUNT.toLocaleString()}`}
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
               {/* Error Message */}
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-600">
@@ -328,17 +404,26 @@ export default function GuestCheckoutPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-4 bg-[#d4af37] hover:bg-[#c4a030] text-white font-semibold rounded-xl shadow-lg transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`w-full py-4 text-white font-semibold rounded-xl shadow-lg transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                  isCODSelected
+                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                    : 'bg-[#d4af37] hover:bg-[#c4a030]'
+                }`}
               >
                 {loading ? (
                   <>
                     <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-white" />
                     Processing...
                   </>
+                ) : isCODSelected ? (
+                  <>
+                    <ShoppingBag className="w-5 h-5" />
+                    Place COD Order {formatPrice(cartTotal)}
+                  </>
                 ) : (
                   <>
                     <Lock className="w-5 h-5" />
-                    Pay {formatPrice(getTotal())}
+                    Pay {formatPrice(cartTotal)}
                   </>
                 )}
               </button>
