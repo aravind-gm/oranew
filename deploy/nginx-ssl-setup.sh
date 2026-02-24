@@ -51,15 +51,90 @@ echo "  ORA JEWELLERY — NGINX + SSL SETUP"
 echo "============================================"
 echo ""
 
-# ── Step 1: Copy Nginx config ──
-info "Copying Nginx config for ${DOMAIN}..."
+# ── Step 1: Write HTTP-only Nginx config (Certbot will add SSL after) ──
+info "Writing HTTP-only Nginx config for ${DOMAIN}..."
 
-if [[ ! -f "${SCRIPT_DIR}/${NGINX_CONF}" ]]; then
-    fail "Nginx config not found: ${SCRIPT_DIR}/${NGINX_CONF}"
-fi
+cat > "/etc/nginx/sites-available/${DOMAIN}" << 'NGINXEOF'
+limit_req_zone $binary_remote_addr zone=api_general:10m rate=20r/s;
+limit_req_zone $binary_remote_addr zone=api_auth:10m rate=5r/s;
+limit_req_zone $binary_remote_addr zone=api_checkout:10m rate=2r/s;
 
-cp "${SCRIPT_DIR}/${NGINX_CONF}" "/etc/nginx/sites-available/${DOMAIN}"
-ok "Config copied to /etc/nginx/sites-available/${DOMAIN}"
+upstream ora_backend {
+    server 127.0.0.1:5000;
+    keepalive 32;
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name api.orashop.in;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    server_tokens off;
+    gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_min_length 256;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml image/svg+xml;
+
+    client_max_body_size 1m;
+    proxy_connect_timeout 10s;
+    proxy_send_timeout 30s;
+    proxy_read_timeout 60s;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Connection "";
+
+    location /api/payments/webhook {
+        proxy_pass http://ora_backend;
+        access_log /var/log/nginx/webhook.access.log;
+    }
+
+    location /api/auth/ {
+        limit_req zone=api_auth burst=10 nodelay;
+        limit_req_status 429;
+        proxy_pass http://ora_backend;
+    }
+
+    location /api/orders/checkout {
+        limit_req zone=api_checkout burst=3 nodelay;
+        limit_req_status 429;
+        proxy_pass http://ora_backend;
+    }
+
+    location /api/orders/guest-checkout {
+        limit_req zone=api_checkout burst=3 nodelay;
+        limit_req_status 429;
+        proxy_pass http://ora_backend;
+    }
+
+    location /api/upload { client_max_body_size 10m; proxy_pass http://ora_backend; }
+    location /api/r2 { client_max_body_size 10m; proxy_pass http://ora_backend; }
+    location /api/health { proxy_pass http://ora_backend; access_log off; }
+    location /health { proxy_pass http://ora_backend; access_log off; }
+
+    location /api/ {
+        limit_req zone=api_general burst=30 nodelay;
+        limit_req_status 429;
+        proxy_pass http://ora_backend;
+    }
+
+    location / { proxy_pass http://ora_backend; }
+    location ~ /\. { deny all; }
+
+    access_log /var/log/nginx/api.orashop.in.access.log;
+    error_log /var/log/nginx/api.orashop.in.error.log warn;
+}
+NGINXEOF
+
+ok "HTTP-only config written to /etc/nginx/sites-available/${DOMAIN}"
 
 # ── Step 2: Create symlink ──
 info "Creating symlink in sites-enabled..."
@@ -132,7 +207,7 @@ else
         echo "  sudo certbot --nginx -d ${DOMAIN}"
         echo ""
     else
-        certbot --nginx -d "${DOMAIN}" --non-interactive --agree-tos --email admin@orashop.in
+        certbot --nginx -d "${DOMAIN}" --agree-tos --email admin@orashop.in --redirect
         ok "SSL certificate obtained and Nginx config updated by Certbot"
     fi
 fi
