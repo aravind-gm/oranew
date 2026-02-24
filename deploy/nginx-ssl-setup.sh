@@ -82,19 +82,19 @@ ok "Webroot at /var/www/certbot"
 touch /var/log/nginx/webhook.access.log
 chown www-data:www-data /var/log/nginx/webhook.access.log
 
-# ── Step 5: Test Nginx config (HTTP-only first) ──
-info "Testing Nginx config (HTTP-only mode)..."
+# ── Step 5: Test Nginx config ──
+info "Testing Nginx config..."
 
-# For initial setup, SSL block is commented out. Nginx should still validate.
 if nginx -t 2>&1; then
     ok "Nginx config test passed"
 else
     fail "Nginx config test FAILED. Check syntax."
 fi
 
-# Reload Nginx (HTTP-only redirect + ACME challenge)
-systemctl reload nginx
-ok "Nginx reloaded (HTTP mode)"
+# Start/reload Nginx in HTTP mode
+systemctl enable nginx
+systemctl restart nginx
+ok "Nginx started (HTTP mode)"
 
 # ── Step 6: Install Certbot ──
 info "Installing Certbot..."
