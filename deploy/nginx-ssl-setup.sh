@@ -51,10 +51,25 @@ echo "  ORA JEWELLERY — NGINX + SSL SETUP"
 echo "============================================"
 echo ""
 
-# ── Step 1: Write HTTP-only Nginx config (Certbot will add SSL after) ──
-info "Writing HTTP-only Nginx config for ${DOMAIN}..."
+# ── Step 1: Copy Nginx config ──
+info "Copying Nginx config for ${DOMAIN}..."
 
-cat > "/etc/nginx/sites-available/${DOMAIN}" << 'NGINXEOF'
+if [[ ! -f "${SCRIPT_DIR}/${NGINX_CONF}" ]]; then
+    fail "Nginx config not found: ${SCRIPT_DIR}/${NGINX_CONF}"
+fi
+
+# ── Step 2: Create certbot webroot and logs ──
+info "Creating certbot webroot and log files..."
+mkdir -p /var/www/certbot
+touch /var/log/nginx/webhook.access.log 2>/dev/null || true
+chown www-data:adm /var/log/nginx/webhook.access.log 2>/dev/null || true
+ok "Webroot and logs ready"
+
+# ── Step 3: Deploy HTTP-only config first (cert doesn't exist yet) ──
+info "Deploying HTTP-only Nginx config (stage 1 — pre-cert)..."
+
+cat > "/etc/nginx/sites-available/${DOMAIN}" << 'HTTPCONF'
+# Rate limit zones
 limit_req_zone $binary_remote_addr zone=api_general:10m rate=20r/s;
 limit_req_zone $binary_remote_addr zone=api_auth:10m rate=5r/s;
 limit_req_zone $binary_remote_addr zone=api_checkout:10m rate=2r/s;
@@ -73,103 +88,43 @@ server {
         root /var/www/certbot;
     }
 
-    server_tokens off;
-    gzip on;
-    gzip_vary on;
-    gzip_proxied any;
-    gzip_comp_level 6;
-    gzip_min_length 256;
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml image/svg+xml;
-
-    client_max_body_size 1m;
-    proxy_connect_timeout 10s;
-    proxy_send_timeout 30s;
-    proxy_read_timeout 60s;
-    proxy_http_version 1.1;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_set_header Connection "";
-
+    # Pass all traffic to backend (HTTP mode — until cert is obtained)
     location /api/payments/webhook {
         proxy_pass http://ora_backend;
-        access_log /var/log/nginx/webhook.access.log;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Connection "";
     }
 
-    location /api/auth/ {
-        limit_req zone=api_auth burst=10 nodelay;
-        limit_req_status 429;
+    location / {
         proxy_pass http://ora_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Connection "";
     }
-
-    location /api/orders/checkout {
-        limit_req zone=api_checkout burst=3 nodelay;
-        limit_req_status 429;
-        proxy_pass http://ora_backend;
-    }
-
-    location /api/orders/guest-checkout {
-        limit_req zone=api_checkout burst=3 nodelay;
-        limit_req_status 429;
-        proxy_pass http://ora_backend;
-    }
-
-    location /api/upload { client_max_body_size 10m; proxy_pass http://ora_backend; }
-    location /api/r2 { client_max_body_size 10m; proxy_pass http://ora_backend; }
-    location /api/health { proxy_pass http://ora_backend; access_log off; }
-    location /health { proxy_pass http://ora_backend; access_log off; }
-
-    location /api/ {
-        limit_req zone=api_general burst=30 nodelay;
-        limit_req_status 429;
-        proxy_pass http://ora_backend;
-    }
-
-    location / { proxy_pass http://ora_backend; }
-    location ~ /\. { deny all; }
-
-    access_log /var/log/nginx/api.orashop.in.access.log;
-    error_log /var/log/nginx/api.orashop.in.error.log warn;
 }
-NGINXEOF
+HTTPCONF
 
-ok "HTTP-only config written to /etc/nginx/sites-available/${DOMAIN}"
-
-# ── Step 2: Create symlink ──
-info "Creating symlink in sites-enabled..."
-
-# Remove old symlink if exists
+# Remove old symlink and default site
 rm -f "/etc/nginx/sites-enabled/${DOMAIN}"
+rm -f /etc/nginx/sites-enabled/default
 ln -s "/etc/nginx/sites-available/${DOMAIN}" "/etc/nginx/sites-enabled/${DOMAIN}"
 
-# Remove default site if still present
-rm -f /etc/nginx/sites-enabled/default
-
-ok "Symlink created"
-
-# ── Step 3: Create certbot webroot ──
-info "Creating certbot webroot..."
-mkdir -p /var/www/certbot
-ok "Webroot at /var/www/certbot"
-
-# ── Step 4: Create webhook log ──
-touch /var/log/nginx/webhook.access.log
-chown www-data:www-data /var/log/nginx/webhook.access.log
-
-# ── Step 5: Test Nginx config ──
-info "Testing Nginx config..."
-
 if nginx -t 2>&1; then
-    ok "Nginx config test passed"
+    ok "HTTP-only Nginx config test passed"
 else
-    fail "Nginx config test FAILED. Check syntax."
+    fail "Nginx config test FAILED."
 fi
 
-# Start/reload Nginx in HTTP mode
 systemctl enable nginx
 systemctl restart nginx
-ok "Nginx started (HTTP mode)"
+ok "Nginx started in HTTP mode"
 
 # ── Step 6: Install Certbot ──
 info "Installing Certbot..."
@@ -185,58 +140,59 @@ fi
 # ── Step 7: Obtain SSL Certificate ──
 info "Obtaining SSL certificate for ${DOMAIN}..."
 echo ""
-warn "IMPORTANT: DNS A record for ${DOMAIN} must point to this server's IP"
+warn "IMPORTANT: DNS A record for ${DOMAIN} must point to this server's IP (76.13.247.61)"
 warn "If using Cloudflare proxy (orange cloud), PAUSE it temporarily for cert issuance"
 echo ""
 
-# Check if cert already exists
+CERT_OBTAINED=false
+
 if [[ -d "/etc/letsencrypt/live/${DOMAIN}" ]]; then
-    warn "Certificate already exists for ${DOMAIN}"
-    read -rp "Renew/replace it? (y/N): " RENEW
-    if [[ "${RENEW,,}" != "y" ]]; then
-        info "Skipping cert issuance, using existing cert"
-    else
-        certbot certonly --nginx -d "${DOMAIN}" --non-interactive --agree-tos --email admin@orashop.in --force-renewal
-        ok "Certificate renewed"
-    fi
+    warn "Certificate already exists for ${DOMAIN} — using it"
+    CERT_OBTAINED=true
 else
-    # First-time cert issuance
-    read -rp "Ready to obtain SSL cert? DNS must be pointing here. (y/N): " PROCEED
+    read -rp "Is DNS pointing to this server? Ready to get SSL cert? (y/N): " PROCEED
     if [[ "${PROCEED,,}" != "y" ]]; then
-        warn "Skipping SSL cert issuance. Run certbot manually later:"
+        warn "Skipping SSL cert for now. Run later with:"
         echo "  sudo certbot --nginx -d ${DOMAIN}"
+        echo "  sudo bash ${SCRIPT_DIR}/nginx-ssl-setup.sh  # re-run to install full HTTPS config"
         echo ""
+        warn "Backend is still running on HTTP — functional but not HTTPS yet."
+        exit 0
     else
-        certbot --nginx -d "${DOMAIN}" --agree-tos --email admin@orashop.in --redirect
-        ok "SSL certificate obtained and Nginx config updated by Certbot"
+        certbot certonly --webroot -w /var/www/certbot -d "${DOMAIN}" \
+            --non-interactive --agree-tos --email admin@orashop.in
+        ok "SSL certificate obtained"
+        CERT_OBTAINED=true
     fi
 fi
 
-# ── Step 8: Uncomment SSL lines in config ──
-# Certbot's --nginx plugin handles this automatically, but verify
-if [[ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]]; then
-    info "SSL cert found. Verifying Nginx SSL config..."
-    
-    # Certbot modifies the config directly when using --nginx plugin
-    # Verify the cert paths are in the config
-    if grep -q "ssl_certificate" "/etc/nginx/sites-available/${DOMAIN}"; then
-        ok "SSL directives present in Nginx config"
+# ── Step 8: Install full HTTPS Nginx config (now that cert exists) ──
+if [[ "$CERT_OBTAINED" == "true" ]]; then
+    info "Installing full HTTPS Nginx config (stage 2)..."
+    cp "${SCRIPT_DIR}/${NGINX_CONF}" "/etc/nginx/sites-available/${DOMAIN}"
+
+    # Certbot puts certs here — uncomment the SSL lines in the config
+    sed -i \
+        -e "s|# ssl_certificate |ssl_certificate |g" \
+        -e "s|# ssl_certificate_key |ssl_certificate_key |g" \
+        -e "s|# include /etc/letsencrypt|include /etc/letsencrypt|g" \
+        -e "s|# ssl_dhparam|ssl_dhparam|g" \
+        "/etc/nginx/sites-available/${DOMAIN}"
+
+    if nginx -t 2>&1; then
+        ok "HTTPS Nginx config test passed"
+        systemctl reload nginx
+        ok "Nginx reloaded with HTTPS"
     else
-        warn "SSL directives may need manual addition. Certbot should have added them."
+        warn "HTTPS config test failed — staying on HTTP config"
+        cp /dev/stdin "/etc/nginx/sites-available/${DOMAIN}" << 'FALLBACK'
+# Fallback: run certbot --nginx manually
+# sudo certbot --nginx -d api.orashop.in
+FALLBACK
     fi
 fi
 
-# ── Step 9: Final Nginx test and reload ──
-info "Final Nginx config test..."
-if nginx -t 2>&1; then
-    ok "Nginx config valid"
-    systemctl reload nginx
-    ok "Nginx reloaded with SSL"
-else
-    fail "Nginx config test failed after SSL setup"
-fi
-
-# ── Step 10: Verify auto-renewal ──
+# ── Step 9: Verify auto-renewal ──
 info "Verifying Certbot auto-renewal..."
 
 # Check systemd timer
