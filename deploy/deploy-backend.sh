@@ -63,9 +63,9 @@ log "✅ Repository at $(git log --oneline -1)"
 log "Installing backend dependencies..."
 cd $APP_DIR/backend
 
-# Clean install for production
+# Install dependencies (npm install handles out-of-sync lockfiles)
 rm -rf node_modules
-npm ci --production=false  # Need devDependencies for build (typescript, prisma)
+npm install  # installs all deps including devDependencies needed for build
 
 log "✅ Dependencies installed ($(ls node_modules | wc -l) packages)"
 
