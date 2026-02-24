@@ -153,13 +153,14 @@ prisma.\$queryRaw\`SELECT 1 as ok\`
 log "Testing Redis connection..."
 
 if [ -n "${REDIS_URL:-}" ]; then
-  node -e "
+  REDIS_URL="${REDIS_URL}" node -e "
 const Redis = require('ioredis');
-const redis = new Redis(process.env.REDIS_URL);
-redis.ping()
-  .then(r => { console.log('✅ Redis connection: OK (' + r + ')'); process.exit(0); })
+const redis = new Redis(process.env.REDIS_URL, { lazyConnect: true });
+redis.connect()
+  .then(() => redis.ping())
+  .then(r => { console.log('✅ Redis connection: OK (' + r + ')'); redis.disconnect(); process.exit(0); })
   .catch(e => { console.error('❌ Redis connection FAILED:', e.message); process.exit(1); });
-setTimeout(() => { console.error('❌ Redis timeout'); process.exit(1); }, 5000);
+setTimeout(() => { console.error('❌ Redis timeout'); process.exit(1); }, 8000);
 "
 else
   warn "Redis URL not set — skipping Redis test"
