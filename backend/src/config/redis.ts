@@ -46,7 +46,7 @@ export async function initRedis(): Promise<boolean> {
 
   try {
     redis = new Redis(url, {
-      maxRetriesPerRequest: 3,
+      maxRetriesPerRequest: null, // Required by BullMQ — it manages its own retries
       retryStrategy(times) {
         if (times > 5) {
           console.error('[Redis] ❌ Max retries reached — giving up');
