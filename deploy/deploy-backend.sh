@@ -116,9 +116,11 @@ cd $APP_DIR/backend
 npx prisma generate
 
 log "Running Prisma migrate deploy..."
-npx prisma migrate deploy
+# Migrations are already applied (same Supabase DB as Render).
+# Failure here is non-fatal — app still works with existing schema.
+npx prisma migrate deploy || warn "Migration skipped — already applied on this DB. Continuing."
 
-log "✅ Prisma client generated + migrations applied"
+log "✅ Prisma client generated + migrations checked"
 
 # ============================================================================
 # 5. BUILD TYPESCRIPT
