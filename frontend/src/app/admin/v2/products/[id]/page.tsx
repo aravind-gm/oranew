@@ -49,6 +49,8 @@ import {
   Check,
   Globe,
 } from 'lucide-react';
+import api from '@/lib/api';
+import { useAdminStore } from '@/store/adminStore';
 
 // ============================================
 // TYPES
@@ -347,8 +349,88 @@ export default function ProductFormPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [saveError, setSaveError] = useState('');
+  const [categories, setCategories] = useState<{ id: string; name: string; slug: string }[]>([]);
   const [slugLocked, setSlugLocked] = useState(true); // Lock slug by default when editing
+
+  // Fetch categories on mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await api.get('/categories');
+        if (res.data.success) {
+          setCategories(res.data.data || []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch categories:', err);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  // Load existing product data when editing
+  useEffect(() => {
+    if (!isEditing) return;
+    const loadProduct = async () => {
+      setLoading(true);
+      try {
+        const res = await api.get(`/admin/products/${productId}`);
+        if (res.data.success) {
+          const p = res.data.data;
+          setFormData({
+            name: p.name || '',
+            slug: p.slug || '',
+            description: p.description || '',
+            shortDescription: p.shortDescription || '',
+            price: p.price || 0,
+            discountPercent: p.discountPercent || 0,
+            finalPrice: p.finalPrice || p.price || 0,
+            sku: p.sku || '',
+            stockQuantity: p.stockQuantity ?? 0,
+            lowStockThreshold: p.lowStockThreshold ?? 5,
+            trackInventory: p.trackInventory ?? true,
+            categoryId: p.categoryId || '',
+            tags: p.tags || [],
+            material: p.material || '',
+            weight: p.weight || '',
+            dimensions: p.dimensions || '',
+            careInstructions: p.careInstructions || '',
+            isActive: p.isActive ?? false,
+            isFeatured: p.isFeatured ?? false,
+            collections: p.collections || [],
+            occasions: p.occasions || [],
+            isFeaturedGift: p.isFeaturedGift ?? false,
+            isBOGOEligible: p.isBOGOEligible ?? false,
+            bogoPriceTier: p.bogoPriceTier ?? null,
+            bogoCategory: p.bogoCategory || '',
+            isTumbler: p.isTumbler ?? false,
+            capacity: p.capacity || '',
+            isBestseller: p.isBestseller ?? false,
+            isOnOffer: p.isOnOffer ?? false,
+            offerType: p.offerType || '',
+            offerValue: p.offerValue ?? 0,
+            offerExpiry: p.offerExpiry ? new Date(p.offerExpiry).toISOString().slice(0, 16) : '',
+            showCountdown: p.showCountdown ?? false,
+            metaTitle: p.metaTitle || '',
+            metaDescription: p.metaDescription || '',
+            images: (p.images || []).map((img: { id: string; imageUrl?: string; url?: string; isPrimary?: boolean }) => ({
+              id: img.id,
+              url: img.imageUrl || img.url || '',
+              isPrimary: img.isPrimary ?? false,
+            })),
+            variants: [],
+            hasVariants: false,
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load product:', err);
+        setSaveError('Failed to load product data. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadProduct();
+  }, [isEditing, productId]);
 
   // Calculate final price when price or discount changes
   useEffect(() => {
@@ -408,24 +490,123 @@ export default function ProductFormPage() {
 
   // Handle save
   const handleSave = async (publish: boolean = false) => {
+    if (saving) return; // Prevent double-click
     if (!validateForm()) return;
 
     setSaving(true);
+    setSaveError('');
+
     try {
+      // Step 1: Upload any new images (those with a File object)
+      const newImageFiles = formData.images.filter(img => img.file);
+      let uploadedUrls: string[] = [];
+
+      if (newImageFiles.length > 0) {
+        const uploadFormData = new FormData();
+        newImageFiles.forEach(img => {
+          if (img.file) uploadFormData.append('images', img.file);
+        });
+        const uploadRes = await api.post('/upload/images', uploadFormData);
+        if (uploadRes.data.success) {
+          uploadedUrls = uploadRes.data.data.urls || [];
+        } else {
+          throw new Error('Image upload failed');
+        }
+      }
+
+      // Step 2: Build final images array with CDN URLs
+      let uploadIndex = 0;
+      const finalImages = formData.images.map(img => {
+        const url = img.file ? (uploadedUrls[uploadIndex++] || img.url) : img.url;
+        return {
+          url,
+          alt: formData.name,
+          isPrimary: img.isPrimary,
+        };
+      });
+
+      // Step 3: Build payload
       const payload = {
-        ...formData,
+        name: formData.name,
+        slug: formData.slug,
+        description: formData.description,
+        shortDescription: formData.shortDescription,
+        price: String(formData.price),
+        discountPercent: String(formData.discountPercent),
+        categoryId: formData.categoryId,
+        material: formData.material,
+        careInstructions: formData.careInstructions,
+        weight: formData.weight,
+        dimensions: formData.dimensions,
+        stockQuantity: String(formData.stockQuantity),
+        lowStockThreshold: String(formData.lowStockThreshold),
+        isFeatured: formData.isFeatured,
         isActive: publish ? true : formData.isActive,
+        metaTitle: formData.metaTitle,
+        metaDescription: formData.metaDescription,
+        collections: formData.collections,
+        occasions: formData.occasions,
+        isFeaturedGift: formData.isFeaturedGift,
+        // BOGO fields
+        isBOGOEligible: formData.isBOGOEligible,
+        bogoPriceTier: formData.bogoPriceTier != null ? String(formData.bogoPriceTier) : undefined,
+        bogoCategory: formData.bogoCategory || undefined,
+        // Tumbler fields
+        isTumbler: formData.isTumbler,
+        capacity: formData.capacity || undefined,
+        isBestseller: formData.isBestseller,
+        // Offer fields
+        isOnOffer: formData.isOnOffer,
+        offerType: formData.offerType || undefined,
+        offerValue: formData.offerValue ? String(formData.offerValue) : undefined,
+        offerExpiry: formData.offerExpiry || undefined,
+        showCountdown: formData.showCountdown,
+        images: finalImages,
       };
 
-      // TODO: API call to save product
-      // console.log('Saving product:', payload);
+      // Step 4: Create or update
+      let response;
+      if (isEditing) {
+        response = await api.put(`/admin/products/${productId}`, payload);
+      } else {
+        response = await api.post('/admin/products', payload);
+      }
 
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (response.data.success) {
+        // Invalidate product list cache
+        try { useAdminStore.getState().fetchProducts(); } catch (_) { /* best-effort */ }
+        router.push('/admin/v2/products');
+      } else {
+        throw new Error(response.data.message || 'Failed to save product');
+      }
+    } catch (err: unknown) {
+      console.error('Error saving product:', err);
+      const error = err as {
+        message?: string;
+        response?: {
+          status?: number;
+          data?: { message?: string; error?: { message?: string } };
+        };
+      };
 
-      router.push('/admin/v2/products');
-    } catch (error) {
-      console.error('Error saving product:', error);
+      let errorMsg = 'Failed to save product';
+      if (error.response?.status === 401) {
+        errorMsg = 'Unauthorized — your session may have expired. Please re-login.';
+      } else if (error.response?.status === 403) {
+        errorMsg = 'Access denied — you do not have permission to save products.';
+      } else if (error.response?.status === 400) {
+        errorMsg = error.response?.data?.error?.message || error.response?.data?.message || 'Invalid data — check your form inputs.';
+      } else if (error.response?.data?.error?.message) {
+        errorMsg = error.response.data.error.message;
+      } else if (error.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+
+      setSaveError(errorMsg);
+      // Scroll to top so the user can see the error
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setSaving(false);
     }
@@ -434,6 +615,21 @@ export default function ProductFormPage() {
   return (
     <AdminLayout>
       <div className="max-w-6xl mx-auto space-y-6">
+        {/* Error Alert */}
+        {saveError && (
+          <Alert variant="error" dismissible onDismiss={() => setSaveError('')}>
+            {saveError}
+          </Alert>
+        )}
+
+        {/* Loading State */}
+        {loading && isEditing ? (
+          <div className="flex items-center justify-center py-20">
+            <Spinner size="lg" />
+            <span className="ml-3 text-[#9ca3af]">Loading product...</span>
+          </div>
+        ) : (
+        <>
         {/* Header */}
         <PageHeader
           title={isEditing ? 'Edit Product' : 'Add Product'}
@@ -455,12 +651,14 @@ export default function ProductFormPage() {
                 variant="secondary"
                 onClick={() => handleSave(false)}
                 isLoading={saving}
+                disabled={saving}
               >
                 Save as Draft
               </Button>
               <Button
                 onClick={() => handleSave(true)}
                 isLoading={saving}
+                disabled={saving}
                 leftIcon={<Check size={18} />}
               >
                 {isEditing ? 'Update Product' : 'Publish Product'}
@@ -730,13 +928,7 @@ export default function ProductFormPage() {
                   onChange={(e) => updateField('categoryId', e.target.value)}
                   options={[
                     { value: '', label: 'Select Category' },
-                    { value: 'necklaces', label: 'Necklaces' },
-                    { value: 'earrings', label: 'Earrings' },
-                    { value: 'rings', label: 'Rings' },
-                    { value: 'bracelets', label: 'Bracelets' },
-                    { value: 'bangles', label: 'Bangles' },
-                    { value: 'tumblers', label: 'Tumblers' },
-                    { value: 'gifts', label: 'Gifts' },
+                    ...categories.map(cat => ({ value: cat.id, label: cat.name })),
                   ]}
                   error={errors.categoryId}
                 />
@@ -1102,6 +1294,8 @@ export default function ProductFormPage() {
             )}
           </div>
         </div>
+        </>
+        )}
       </div>
     </AdminLayout>
   );

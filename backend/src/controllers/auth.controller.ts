@@ -10,22 +10,64 @@ import { generateToken, verifyToken } from '../utils/jwt';
 import { getSupabaseAdmin } from '../config/supabase';
 import { generateRefreshToken, storeRefreshToken } from '../utils/refreshToken';
 import { sanitizeText, sanitizeEmail, sanitizePhone } from '../utils/sanitize';
+import { getRedis } from '../config/redis';
 
 // ============================================
 // CUSTOM 8-DIGIT OTP AUTHENTICATION SYSTEM
 // ============================================
 // OTPs are generated with crypto.randomInt (CSPRNG), hashed with bcrypt
 // before storage, and verified with bcrypt.compare (constant-time).
+// Storage: Redis with key otp:{email}, TTL 5 minutes.
 
 interface OtpEntry {
   hash: string;          // bcrypt hash of the OTP — never stored plaintext
-  expiresAt: Date;
+  expiresAt: string;     // ISO date string
   attempts: number;      // brute-force guard: max 5 attempts
 }
 
-// NOTE: In-memory store works for single-instance.
-// For multi-instance or restarts: migrate to Redis.
-const otpStore = new Map<string, OtpEntry>();
+// Redis-based OTP store helpers
+const OTP_TTL_SECONDS = 5 * 60; // 5 minutes
+const OTP_KEY_PREFIX = 'otp:';
+
+async function storeOtp(email: string, entry: OtpEntry): Promise<void> {
+  const redis = getRedis();
+  if (!redis) {
+    throw new AppError('OTP service temporarily unavailable', 503);
+  }
+  await redis.setex(
+    `${OTP_KEY_PREFIX}${email}`,
+    OTP_TTL_SECONDS,
+    JSON.stringify(entry)
+  );
+}
+
+async function getOtp(email: string): Promise<OtpEntry | null> {
+  const redis = getRedis();
+  if (!redis) {
+    throw new AppError('OTP service temporarily unavailable', 503);
+  }
+  const raw = await redis.get(`${OTP_KEY_PREFIX}${email}`);
+  if (!raw) return null;
+  return JSON.parse(raw) as OtpEntry;
+}
+
+async function deleteOtp(email: string): Promise<void> {
+  const redis = getRedis();
+  if (redis) {
+    await redis.del(`${OTP_KEY_PREFIX}${email}`);
+  }
+}
+
+async function incrementOtpAttempts(email: string, entry: OtpEntry): Promise<void> {
+  const redis = getRedis();
+  if (!redis) return;
+  entry.attempts += 1;
+  // Preserve remaining TTL
+  const ttl = await redis.ttl(`${OTP_KEY_PREFIX}${email}`);
+  if (ttl > 0) {
+    await redis.setex(`${OTP_KEY_PREFIX}${email}`, ttl, JSON.stringify(entry));
+  }
+}
 
 // SECURITY: crypto.randomInt is CSPRNG-backed, unlike Math.random()
 function generate8DigitOTP(): string {
@@ -59,8 +101,8 @@ export const otpLogin = async (
     const BCRYPT_ROUNDS = 10;
     const otpHash = await bcrypt.hash(otp, BCRYPT_ROUNDS);
 
-    // Store HASH only, not the plaintext OTP
-    otpStore.set(email.toLowerCase(), { hash: otpHash, expiresAt, attempts: 0 });
+    // Store HASH only in Redis with TTL, not the plaintext OTP
+    await storeOtp(email.toLowerCase(), { hash: otpHash, expiresAt: expiresAt.toISOString(), attempts: 0 });
 
     // Send OTP via email
     const emailSent = await sendEmail({
@@ -148,7 +190,7 @@ export const verifyOtp = async (
     const emailLower = email.toLowerCase();
 
     // Check if OTP exists for this email
-    const storedOtpData = otpStore.get(emailLower);
+    const storedOtpData = await getOtp(emailLower);
 
     if (!storedOtpData) {
       return res.status(400).json({
@@ -158,8 +200,8 @@ export const verifyOtp = async (
     }
 
     // Check if OTP is expired
-    if (new Date() > storedOtpData.expiresAt) {
-      otpStore.delete(emailLower);
+    if (new Date() > new Date(storedOtpData.expiresAt)) {
+      await deleteOtp(emailLower);
       return res.status(400).json({
         success: false,
         error: 'OTP has expired. Please request a new one.',
@@ -168,7 +210,7 @@ export const verifyOtp = async (
 
     // SECURITY: Brute-force guard — max 5 wrong attempts per OTP
     if (storedOtpData.attempts >= 5) {
-      otpStore.delete(emailLower);
+      await deleteOtp(emailLower);
       return res.status(429).json({
         success: false,
         error: 'Too many incorrect attempts. Please request a new OTP.',
@@ -180,7 +222,7 @@ export const verifyOtp = async (
 
     if (!otpValid) {
       // Increment attempt counter without exposing which field failed
-      storedOtpData.attempts += 1;
+      await incrementOtpAttempts(emailLower, storedOtpData);
       return res.status(400).json({
         success: false,
         error: 'Invalid OTP. Please try again.',
@@ -188,7 +230,7 @@ export const verifyOtp = async (
     }
 
     // OTP is valid - delete it immediately (one-time use)
-    otpStore.delete(emailLower);
+    await deleteOtp(emailLower);
 
     // Get or create user in Prisma
     let user = await prisma.user.findUnique({
@@ -238,7 +280,7 @@ export const verifyOtp = async (
     res.cookie('access_token', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'strict',
       domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
       path: '/',
       maxAge: 30 * 60 * 1000, // 30 minutes
@@ -247,7 +289,7 @@ export const verifyOtp = async (
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'strict',
       domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
       path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
@@ -359,7 +401,7 @@ export const login = async (
       res.cookie('access_token', accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
+        sameSite: 'strict',
         domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
         path: '/',
         maxAge: 30 * 60 * 1000, // 30 minutes
@@ -368,7 +410,7 @@ export const login = async (
       res.cookie('refresh_token', refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
+        sameSite: 'strict',
         domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
         path: '/',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
@@ -379,7 +421,7 @@ export const login = async (
         access_token: 'SET',
         refresh_token: 'SET',
         domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : 'localhost',
-        sameSite: 'lax',
+        sameSite: 'strict',
         secure: process.env.NODE_ENV === 'production',
       });
       
@@ -406,7 +448,7 @@ export const login = async (
 
       // Hash OTP before storing (never store plaintext)
       const otpHash = await bcrypt.hash(otp, 10);
-      otpStore.set(emailLower, { hash: otpHash, expiresAt, attempts: 0 });
+      await storeOtp(emailLower, { hash: otpHash, expiresAt: expiresAt.toISOString(), attempts: 0 });
 
       console.log(`[Auth] 🔢 Generated OTP for ${email}: ${otp} (expires at ${expiresAt})`);
 
@@ -564,7 +606,7 @@ export const register = async (
       res.cookie('access_token', accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
+        sameSite: 'strict',
         domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
         path: '/',
         maxAge: 30 * 60 * 1000, // 30 minutes
@@ -573,7 +615,7 @@ export const register = async (
       res.cookie('refresh_token', refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
+        sameSite: 'strict',
         domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
         path: '/',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
@@ -616,7 +658,7 @@ export const register = async (
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
       // Hash OTP before storing (never store plaintext)
       const otpHash = await bcrypt.hash(otp, 10);
-      otpStore.set(emailLower, { hash: otpHash, expiresAt, attempts: 0 });
+      await storeOtp(emailLower, { hash: otpHash, expiresAt: expiresAt.toISOString(), attempts: 0 });
 
       console.log(`[Auth] 🔢 Generated registration OTP for ${email}: ${otp}`);
 
@@ -728,7 +770,7 @@ export const passwordLogin = async (
     res.cookie('access_token', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'strict',
       domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
       path: '/',
       maxAge: 30 * 60 * 1000, // 30 minutes
@@ -737,7 +779,7 @@ export const passwordLogin = async (
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'strict',
       domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
       path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
@@ -884,7 +926,7 @@ export const logout = async (
     res.clearCookie('access_token', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'strict',
       domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
       path: '/',
     });
@@ -892,7 +934,7 @@ export const logout = async (
     res.clearCookie('refresh_token', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'strict',
       domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
       path: '/',
     });

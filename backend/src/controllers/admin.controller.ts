@@ -12,62 +12,7 @@ import {
 import { cleanupExpiredLocks, restoreInventory } from '../utils/inventory';
 import { normalizeSupabaseUrl } from '../utils/supabaseUrlHelper';
 import { logAdminAction } from '../utils/auditLog';
-
-// Helper function to transform image URL to CDN URL
-// Handles both Supabase legacy URLs and R2/CDN URLs
-function transformImageUrlToCDN(imageUrl: string | null | undefined): string | null {
-  if (!imageUrl) return null;
-
-  // Already a CDN URL
-  if (imageUrl.includes('cdn.orashop.in')) {
-    return imageUrl;
-  }
-
-  // Supabase URL - extract the filename and use CDN
-  if (imageUrl.includes('supabase.co')) {
-    const filenameMatch = imageUrl.match(/\/([^\/]+\.(?:jpg|jpeg|png|gif|webp))$/i);
-    if (filenameMatch) {
-      const filename = filenameMatch[1];
-      return `${process.env.R2_PUBLIC_BASE_URL || 'https://cdn.orashop.in'}/products/${filename}`;
-    }
-  }
-
-  // R2 bucket URL - transform to CDN
-  if (imageUrl.includes('.r2.dev') || imageUrl.includes('r2.dev')) {
-    const filenameMatch = imageUrl.match(/\/([^\/]+\.(?:jpg|jpeg|png|gif|webp))$/i);
-    if (filenameMatch) {
-      const filename = filenameMatch[1];
-      return `${process.env.R2_PUBLIC_BASE_URL || 'https://cdn.orashop.in'}/products/${filename}`;
-    }
-  }
-
-  // Relative path - prepend CDN URL
-  if (!imageUrl.startsWith('http')) {
-    return `${process.env.R2_PUBLIC_BASE_URL || 'https://cdn.orashop.in'}/${imageUrl}`;
-  }
-
-  // Unknown format - return as is
-  return imageUrl;
-}
-
-// Helper function to transform product images to CDN URLs
-async function transformProductImages(product: any) {
-  if (!product.images || product.images.length === 0) {
-    return product;
-  }
-
-  const transformedImages = product.images.map((img: any) => {
-    if (!img.imageUrl) {
-      return img;
-    }
-
-    // Transform to CDN URL
-    const cdnUrl = transformImageUrlToCDN(img.imageUrl);
-    return { ...img, imageUrl: cdnUrl };
-  });
-
-  return { ...product, images: transformedImages };
-}
+import { transformImageUrlToCDN, transformProductImages } from '../utils/imageUrl';
 
 // ============================================
 // DASHBOARD
@@ -221,7 +166,7 @@ export const getAllOrders = async (
         },
         orderBy: { createdAt: 'desc' },
         skip,
-        take: parseInt(limit as string),
+        take: Math.min(parseInt(limit as string) || 20, 100),
       }),
       prisma.order.count({ where }),
     ]);
@@ -453,7 +398,7 @@ export const getCustomers = async (
         },
         orderBy: { createdAt: 'desc' },
         skip,
-        take: parseInt(limit as string),
+        take: Math.min(parseInt(limit as string) || 20, 100),
       }),
       prisma.user.count({ where }),
     ]);
@@ -579,7 +524,7 @@ export const getAdminProducts = async (
           images: true,
         },
         skip,
-        take: parseInt(limit as string),
+        take: Math.min(parseInt(limit as string) || 20, 100),
         orderBy: { createdAt: 'desc' },
       }),
       prisma.product.count({ where }),
@@ -658,7 +603,7 @@ export const getInventory = async (
         },
         orderBy: { stockQuantity: 'asc' },
         skip,
-        take: parseInt(limit as string),
+        take: Math.min(parseInt(limit as string) || 20, 100),
       }),
       prisma.product.count({ where }),
     ]);
@@ -890,7 +835,7 @@ export const getPaymentsReport = async (
         },
         orderBy: { createdAt: 'desc' },
         skip,
-        take: parseInt(limit as string),
+        take: Math.min(parseInt(limit as string) || 20, 100),
       }),
       prisma.payment.count({ where }),
       prisma.payment.groupBy({
@@ -1215,7 +1160,7 @@ export const getReturns = async (
         },
         orderBy: { createdAt: 'desc' },
         skip,
-        take: parseInt(limit as string),
+        take: Math.min(parseInt(limit as string) || 20, 100),
       }),
       prisma.return.count({ where }),
     ]);
@@ -1759,7 +1704,7 @@ export const getAuditLogs = async (
         include: { user: { select: { id: true, fullName: true, email: true, role: true } } },
         orderBy: { createdAt: 'desc' },
         skip,
-        take: parseInt(limit as string),
+        take: Math.min(parseInt(limit as string) || 20, 100),
       }),
       prisma.adminAuditLog.count({ where }),
     ]);

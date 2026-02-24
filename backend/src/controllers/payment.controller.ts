@@ -314,6 +314,16 @@ export const verifyPayment = asyncHandler(async (req: any, res: Response) => {
     });
   }
 
+  // IDEMPOTENCY GUARD: If order is already beyond PENDING, don't re-verify
+  if ((order as any).status !== 'PENDING' && (order as any).status !== 'CONFIRMED') {
+    console.log('[Payment.verify] ⚠️ Order status already advanced past PENDING:', (order as any).status);
+    return res.json({
+      success: true,
+      message: `Order already in ${(order as any).status} state`,
+      orderStatus: (order as any).status,
+    });
+  }
+
   // ────────────────────────────────────────────
   // VERIFY RAZORPAY SIGNATURE
   // ────────────────────────────────────────────
@@ -450,13 +460,12 @@ export const webhook = async (req: Request, res: Response) => {
   } else if ((req as any).rawBody && Buffer.isBuffer((req as any).rawBody)) {
     rawBody = (req as any).rawBody;
     console.log('[Webhook] ✓ Using rawBody attachment');
-  } else if (typeof req.body === 'object' && req.body !== null) {
-    // Body was parsed by express.json() - this is a problem!
-    console.log('[Webhook] ⚠️ Body was parsed as JSON object - express.json() ran before webhook!');
-    rawBody = Buffer.from(JSON.stringify(req.body));
   } else {
-    rawBody = Buffer.from('');
-    console.log('[Webhook] ⚠️ No body found');
+    // HARD REJECT: If raw body is missing, signature verification is impossible.
+    // Do NOT fall back to JSON.stringify — that produces a different byte sequence
+    // than what Razorpay signed, making HMAC verification unreliable.
+    console.error('[Webhook] ❌ HARD REJECT: Raw body missing — cannot verify signature');
+    return res.status(400).json({ success: false, reason: 'Raw body missing — signature unverifiable' });
   }
   console.log('[Webhook] Raw body length:', rawBody.length);
 
@@ -527,6 +536,23 @@ export const webhook = async (req: Request, res: Response) => {
   } catch (err) {
     console.log('[Webhook] ❌ Invalid JSON:', err);
     return res.status(400).json({ success: false, reason: 'Invalid JSON' });
+  }
+
+  // ────────────────────────────────────────────
+  // STEP 4.5: Validate webhook timestamp (replay protection)
+  // ────────────────────────────────────────────
+  // Razorpay events include created_at (Unix timestamp in seconds).
+  // Reject events older than 5 minutes to prevent replay attacks.
+  if (event.created_at) {
+    const eventAgeMs = Math.abs(Date.now() - event.created_at * 1000);
+    if (eventAgeMs > 300000) { // 5 minutes
+      console.warn('[Webhook] ⚠️ REPLAY PROTECTION: Webhook event too old', {
+        eventAge: `${Math.round(eventAgeMs / 1000)}s`,
+        created_at: event.created_at,
+        now: Math.floor(Date.now() / 1000),
+      });
+      return res.status(400).json({ success: false, reason: 'Webhook expired' });
+    }
   }
 
   const eventType = event?.event;
@@ -618,11 +644,21 @@ async function handlePaymentCaptured(event: any, res: Response) {
   // Validate amount matches (HARD REJECTION)
   const expectedAmountPaise = Math.round(Number(payment.amount) * 100);
   if (webhookAmount !== expectedAmountPaise) {
-    console.warn("SECURITY ALERT: Payment amount mismatch", {
+    console.error("[Webhook:Captured] ❌ RECONCILIATION MISMATCH: Payment amount mismatch", {
       expected: expectedAmountPaise,
       received: webhookAmount,
       paymentId: payment.id,
-      timestamp: new Date().toISOString()
+      orderId: payment.order?.id,
+      orderNumber: payment.order?.orderNumber,
+      timestamp: new Date().toISOString(),
+      severity: 'CRITICAL',
+      action: 'HARD_REJECT',
+    });
+    sendPaymentAlert({
+      level: 'critical',
+      event: 'Webhook amount mismatch — reconciliation failure',
+      reason: `Expected ${expectedAmountPaise} paise, received ${webhookAmount} paise`,
+      orderId: payment.order?.id,
     });
     return res.status(400).json({ 
       success: false, 

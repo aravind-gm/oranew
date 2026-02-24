@@ -35,8 +35,15 @@ export function getRedis(): Redis | null {
 /**
  * Initialize Redis connection. Call once at server startup.
  * Safe to call even if REDIS_URL is not set — will silently skip.
+ * Singleton-safe: calling multiple times returns existing connection.
  */
 export async function initRedis(): Promise<boolean> {
+  // Singleton guard: if already connected, return immediately
+  if (redis && isRedisReady) {
+    console.log('[Redis] ✅ Already connected (singleton)');
+    return true;
+  }
+
   const url = process.env.REDIS_URL;
 
   if (!url) {

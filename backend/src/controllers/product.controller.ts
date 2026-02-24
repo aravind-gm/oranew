@@ -7,65 +7,7 @@ import { AppError } from '../middleware/errorHandler';
 import { calculateFinalPrice, slugify } from '../utils/helpers';
 import { normalizeSupabaseUrl } from '../utils/supabaseUrlHelper';
 import { logAdminAction } from '../utils/auditLog';
-
-// Helper function to transform image URL to CDN URL
-// Handles both Supabase legacy URLs and R2/CDN URLs
-function transformImageUrlToCDN(imageUrl: string | null | undefined): string | null {
-  if (!imageUrl) return null;
-
-  // Already a CDN URL
-  if (imageUrl.includes('cdn.orashop.in')) {
-    return imageUrl;
-  }
-
-  // Supabase URL - extract the filename and use CDN
-  if (imageUrl.includes('supabase.co')) {
-    const filenameMatch = imageUrl.match(/\/([^\/]+\.(?:jpg|jpeg|png|gif|webp))$/i);
-    if (filenameMatch) {
-      const filename = filenameMatch[1];
-      return `${process.env.R2_PUBLIC_BASE_URL || 'https://cdn.orashop.in'}/products/${filename}`;
-    }
-  }
-
-  // R2 bucket URL - transform to CDN
-  if (imageUrl.includes('.r2.dev') || imageUrl.includes('r2.dev')) {
-    const filenameMatch = imageUrl.match(/\/([^\/]+\.(?:jpg|jpeg|png|gif|webp))$/i);
-    if (filenameMatch) {
-      const filename = filenameMatch[1];
-      return `${process.env.R2_PUBLIC_BASE_URL || 'https://cdn.orashop.in'}/products/${filename}`;
-    }
-  }
-
-  // Relative path - prepend CDN URL
-  if (!imageUrl.startsWith('http')) {
-    return `${process.env.R2_PUBLIC_BASE_URL || 'https://cdn.orashop.in'}/${imageUrl}`;
-  }
-
-  // Unknown format - return as is
-  return imageUrl;
-}
-
-// Helper function to ensure product images have correct CDN URLs
-// Both storefront and admin now use CDN URLs for consistency
-async function transformProductImages(product: any, forPublic: boolean = true) {
-  if (!product.images || product.images.length === 0) {
-    return product;
-  }
-
-  const transformedImages = product.images.map((img: any) => {
-    if (!img.imageUrl) {
-      return img;
-    }
-
-    // Transform to CDN URL
-    const cdnUrl = transformImageUrlToCDN(img.imageUrl);
-    return { ...img, imageUrl: cdnUrl };
-  });
-
-  return { ...product, images: transformedImages };
-}
-
-// Note: Signed URLs no longer needed - using CDN public URLs instead
+import { transformImageUrlToCDN, transformProductImages } from '../utils/imageUrl';
 
 // @desc    Create product (Admin)
 // @route   POST /api/admin/products
@@ -502,8 +444,8 @@ export const getProducts = async (
       prisma.product.findMany({
         where: whereClause,
         orderBy: orderByClause,
-        skip: (Number(page) - 1) * Number(limit),
-        take: Number(limit),
+        skip: (Number(page) - 1) * Math.min(Number(limit) || 16, 100),
+        take: Math.min(Number(limit) || 16, 100),
         include: {
           category: true,
           images: true,
@@ -805,7 +747,7 @@ export const getFeaturedProducts = async (
         deletedAt: null,
       },
       include: { images: true, category: true },
-      take: parseInt(limit as string),
+      take: Math.min(parseInt(limit as string) || 8, 100),
       orderBy: { createdAt: 'desc' },
     });
 
@@ -932,7 +874,7 @@ export const getRecommendedProducts = async (
     let products = await prisma.product.findMany({
       where: whereClause,
       orderBy: [{ isFeatured: 'desc' }, { averageRating: 'desc' }],
-      take: Number(limit),
+      take: Math.min(Number(limit) || 20, 100),
       include: {
         category: true,
         images: { where: { isPrimary: true }, take: 1 },
@@ -1017,7 +959,7 @@ export const searchProducts = async (
         where,
         include: { images: true, category: true },
         skip,
-        take: parseInt(limit as string),
+        take: Math.min(parseInt(limit as string) || 20, 100),
         orderBy: { createdAt: 'desc' },
       }),
       prisma.product.count({ where }),

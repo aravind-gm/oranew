@@ -1,4 +1,22 @@
 import rateLimit from 'express-rate-limit';
+import { RedisStore } from 'rate-limit-redis';
+import { getRedis } from '../config/redis';
+
+// Build Redis store if Redis is available, otherwise undefined (falls back to MemoryStore in dev only)
+function getRedisStore() {
+  const client = getRedis();
+  if (!client) {
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('[RateLimiter] ⚠️  Redis not available — rate limiting may not work correctly in cluster mode');
+    }
+    return undefined;
+  }
+  return new RedisStore({
+    // @ts-expect-error - ioredis call method is compatible
+    sendCommand: (...args: string[]) => client.call(...args),
+    prefix: 'rl:',
+  });
+}
 
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -9,6 +27,7 @@ export const authLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  store: getRedisStore(),
 });
 
 export const apiLimiter = rateLimit({
@@ -20,6 +39,7 @@ export const apiLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  store: getRedisStore(),
 });
 
 // Checkout rate limiter (prevents spam checkout abuse)
@@ -32,6 +52,7 @@ export const checkoutLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  store: getRedisStore(),
   keyGenerator: (req) => {
     // Rate limit by user ID if authenticated, otherwise by IP
     return (req as any).user?.id || req.ip || 'unknown';
@@ -48,6 +69,7 @@ export const paymentLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  store: getRedisStore(),
 });
 
 // Coupon validation limiter (prevents brute-force coupon guessing)
@@ -60,6 +82,7 @@ export const couponLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  store: getRedisStore(),
 });
 
 // COD checkout rate limiter (stricter — prevents COD abuse / fraud)
@@ -72,6 +95,7 @@ export const codLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  store: getRedisStore(),
   keyGenerator: (req) => {
     return (req as any).user?.id || req.ip || 'unknown';
   },
@@ -87,4 +111,5 @@ export const analyticsLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  store: getRedisStore(),
 });

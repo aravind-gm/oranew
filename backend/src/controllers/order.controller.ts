@@ -174,20 +174,26 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
   }
 
   // ====== CART RE-VALIDATION (Step 6) ======
-  // Re-fetch products from DB — do NOT trust client-side prices
+  // Re-fetch ALL products in a single batch query — eliminates N+1
+  const cartProductIds = cartItems.map((item: any) => item.productId);
+  const freshProducts = await withRetry(() =>
+    prisma.product.findMany({
+      where: { id: { in: cartProductIds } },
+      select: {
+        id: true, name: true, finalPrice: true, price: true,
+        stockQuantity: true, isActive: true, deletedAt: true,
+        isBOGOEligible: true, bogoActive: true, bogoPriceTier: true,
+        gstRate: true,
+        category: { select: { slug: true } },
+      },
+    })
+  ) as any[];
+
+  // Build a lookup map for O(1) access
+  const freshProductMap = new Map(freshProducts.map((p: any) => [p.id, p]));
+
   for (const item of cartItems) {
-    const freshProduct = await withRetry(() =>
-      prisma.product.findUnique({
-        where: { id: item.productId },
-        select: {
-          id: true, name: true, finalPrice: true, price: true,
-          stockQuantity: true, isActive: true, deletedAt: true,
-          isBOGOEligible: true, bogoActive: true, bogoPriceTier: true,
-          gstRate: true,
-          category: { select: { slug: true } },
-        },
-      })
-    ) as any;
+    const freshProduct = freshProductMap.get(item.productId) as any;
 
     if (!freshProduct || freshProduct.deletedAt || !freshProduct.isActive) {
       throw new AppError(`Product "${item.product?.name || item.productId}" is no longer available`, 400);
