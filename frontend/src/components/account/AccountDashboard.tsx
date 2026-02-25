@@ -204,8 +204,8 @@ export default function AccountDashboard({ user }: AccountDashboardProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* ── Subtle top gold accent line ── */}
+    <div className="min-h-screen" style={{ background: '#FDFBF7' }}>
+      {/* ── Subtle top gold accent line ── */
       <div className="h-[2px] bg-gradient-to-r from-transparent via-gold-400 to-transparent" />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
@@ -311,11 +311,11 @@ export default function AccountDashboard({ user }: AccountDashboardProps) {
 
           {/* ── Navigation list ── */}
           <div className="lg:col-span-7">
-            <h2 className="text-[11px] uppercase tracking-[0.25em] text-neutral-400 font-medium mb-6">
+            <h2 className="text-[11px] uppercase tracking-[0.25em] text-gold-500 font-medium mb-6">
               Your Account
             </h2>
 
-            <div className="border border-neutral-100 rounded-2xl overflow-hidden divide-y divide-neutral-100">
+            <div className="border border-neutral-100 rounded-2xl overflow-hidden divide-y divide-neutral-100 bg-white">
               {navItems.map((item) => (
                 <Link
                   key={item.href}
@@ -323,8 +323,8 @@ export default function AccountDashboard({ user }: AccountDashboardProps) {
                   className="group flex items-center gap-5 px-6 py-5 hover:bg-stone-50 transition-all duration-300"
                 >
                   {/* Icon */}
-                  <span className="shrink-0 w-10 h-10 rounded-full border border-neutral-200 flex items-center justify-center
-                                   text-neutral-400 group-hover:border-gold-400 group-hover:text-gold-500 transition-all duration-300">
+                  <span className="shrink-0 w-10 h-10 rounded-full border border-primary-100 bg-primary-50 flex items-center justify-center
+                                   text-primary-400 group-hover:border-gold-400 group-hover:bg-gold-50 group-hover:text-gold-500 transition-all duration-300">
                     {item.icon}
                   </span>
 
@@ -353,7 +353,7 @@ export default function AccountDashboard({ user }: AccountDashboardProps) {
 
             {/* Quick Links */}
             <div>
-              <h3 className="text-[11px] uppercase tracking-[0.25em] text-neutral-400 font-medium mb-5">
+              <h3 className="text-[11px] uppercase tracking-[0.25em] text-primary-400 font-medium mb-5">
                 Quick Links
               </h3>
               <div className="grid grid-cols-2 gap-3">
@@ -361,13 +361,13 @@ export default function AccountDashboard({ user }: AccountDashboardProps) {
                   <Link
                     key={ql.href}
                     href={ql.href}
-                    className="group flex items-center gap-3 px-4 py-3.5 rounded-xl border border-neutral-100
-                               hover:border-gold-400/50 hover:shadow-luxury transition-all duration-300"
+                    className="group flex items-center gap-3 px-4 py-3.5 rounded-xl border border-neutral-100 bg-white
+                               hover:border-primary-200 hover:bg-primary-50 transition-all duration-300"
                   >
-                    <span className="text-neutral-400 group-hover:text-gold-500 transition-colors duration-300">
+                    <span className="text-primary-300 group-hover:text-primary-500 transition-colors duration-300">
                       {ql.icon}
                     </span>
-                    <span className="text-sm text-neutral-600 group-hover:text-neutral-800 transition-colors duration-300">
+                    <span className="text-sm text-neutral-600 group-hover:text-primary-600 transition-colors duration-300">
                       {ql.label}
                     </span>
                   </Link>
@@ -445,10 +445,10 @@ export default function AccountDashboard({ user }: AccountDashboardProps) {
             {/* ── Continue shopping CTA ── */}
             <Link
               href="/products"
-              className="group flex items-center justify-center gap-3 w-full py-4 rounded-xl border border-gold-400/40
-                         text-gold-600 hover:bg-gold-50 hover:border-gold-400 transition-all duration-300"
+              className="group flex items-center justify-center gap-3 w-full py-4 rounded-xl border border-primary-200 bg-white
+                         text-primary-500 hover:bg-primary-50 hover:border-primary-300 transition-all duration-300"
             >
-              <svg className="w-5 h-5 opacity-70 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <svg className="w-5 h-5 opacity-60 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
               </svg>
               <span className="text-sm font-medium tracking-wide">Explore New Arrivals</span>
