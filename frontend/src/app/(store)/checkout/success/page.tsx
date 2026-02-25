@@ -3,6 +3,7 @@
 import api from '@/lib/api';
 import { trackPurchase } from '@/lib/analytics';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useCartStore } from '@/store/cartStore';
@@ -265,6 +266,76 @@ function PremiumConfetti({ count = 40 }: { count?: number }) {
 }
 
 // ============================================================================
+// POST-CHECKOUT UPSELL — Complete Your Look
+// Shows max 2 related/featured products. No urgency, no timers.
+// ============================================================================
+
+interface UpsellProduct {
+  id: string;
+  name: string;
+  slug: string;
+  finalPrice: number;
+  images: Array<{ imageUrl: string; isPrimary: boolean }>;
+}
+
+function PostCheckoutUpsell({ categoryId }: { categoryId?: string }) {
+  const [products, setProducts] = useState<UpsellProduct[]>([]);
+
+  useEffect(() => {
+    const fetch = async () => {
+      try {
+        const params: Record<string, string | number> = { limit: 3 };
+        if (categoryId) params.category = categoryId;
+        const res = await api.get('/products', { params });
+        const all: UpsellProduct[] = res.data?.data?.products ?? res.data?.data ?? [];
+        setProducts(all.slice(0, 2));
+      } catch {
+        // non-fatal
+      }
+    };
+    fetch();
+  }, [categoryId]);
+
+  if (products.length === 0) return null;
+
+  return (
+    <div className="mt-10 pt-8 border-t border-gray-100 text-left">
+      <h3 className="font-serif text-xl font-light text-gray-900 mb-5 text-center">
+        Complete Your Look
+      </h3>
+      <div className="grid grid-cols-2 gap-4">
+        {products.map((p) => {
+          const img = p.images.find((i) => i.isPrimary) ?? p.images[0];
+          return (
+            <Link
+              key={p.id}
+              href={`/products/${p.slug}`}
+              className="group block rounded-xl overflow-hidden border border-gray-100 hover:shadow-md transition-shadow"
+            >
+              {img && (
+                <div className="relative aspect-square bg-neutral-50">
+                  <Image
+                    src={img.imageUrl}
+                    alt={p.name}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    sizes="(max-width: 640px) 50vw, 200px"
+                  />
+                </div>
+              )}
+              <div className="p-3">
+                <p className="text-xs font-medium text-gray-800 line-clamp-2">{p.name}</p>
+                <p className="text-xs text-gray-500 mt-0.5">₹{Number(p.finalPrice).toLocaleString()}</p>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // MAIN SUCCESS CONTENT
 // ============================================================================
 
@@ -278,6 +349,7 @@ function SuccessContent() {
   const [error, setError] = useState('');
   const [showConfetti, setShowConfetti] = useState(false);
   const [animPhase, setAnimPhase] = useState<'truck' | 'reveal'>('truck');
+  const [upsellCategoryId, setUpsellCategoryId] = useState<string | undefined>(undefined);
   const clearCart = useCartStore((state) => state.clearCart);
   const purchaseTrackedRef = useRef(false);
   const confettiKey = orderId || orderNumber || 'unknown';
@@ -292,6 +364,12 @@ function SuccessContent() {
       const orderRes = await api.get(`/orders/${status.orderId}`);
       const order: OrderDetails = orderRes.data.data || orderRes.data.order;
       if (order) {
+        // Capture first item's productId for upsell (category fetched server-side)
+        const firstItem = order.items?.[0];
+        if (firstItem?.productId && !upsellCategoryId) {
+          // Use productId to seed recommended products upsell
+          setUpsellCategoryId(firstItem.productId);
+        }
         const fired = trackPurchase({
           orderId: order.id,
           orderNumber: order.orderNumber || status.orderNumber,
@@ -567,6 +645,9 @@ function SuccessContent() {
                 Continue Shopping
               </Link>
             </div>
+
+            {/* ── Post-Checkout Upsell: Complete Your Look ── */}
+            <PostCheckoutUpsell categoryId={upsellCategoryId} />
 
             <p className="mt-8 text-sm text-gray-400">
               A confirmation email has been sent to your registered email address.

@@ -561,11 +561,13 @@ export const webhook = async (req: Request, res: Response) => {
   // ────────────────────────────────────────────
   // STEP 5: Route to appropriate handler
   // ────────────────────────────────────────────
-  // ONLY handle payment.captured and payment.failed
+  // ONLY handle payment.captured, payment.failed, and payment.refunded
   if (eventType === 'payment.captured') {
     return handlePaymentCaptured(event, res);
   } else if (eventType === 'payment.failed') {
     return handlePaymentFailed(event, res);
+  } else if (eventType === 'payment.refunded') {
+    return handlePaymentRefunded(event, res);
   } else {
     console.log('[Webhook] Ignoring event type:', eventType);
     return res.status(200).json({ success: true, reason: 'Event ignored' });
@@ -936,6 +938,110 @@ async function handlePaymentFailed(event: any, res: Response) {
     return res.status(200).json({ success: true });
   } catch (err) {
     console.error('[Webhook:Failed] ❌ Transaction error:', err);
+    return res.status(500).json({ success: false, reason: 'Transaction failed' });
+  }
+}
+
+// ============================================
+// WEBHOOK HANDLER: PAYMENT REFUNDED
+// ============================================
+async function handlePaymentRefunded(event: any, res: Response) {
+  console.log('[Webhook:Refunded] Processing payment.refunded event');
+
+  const paymentEntity = event.payload?.payment?.entity;
+  if (!paymentEntity) {
+    console.log('[Webhook:Refunded] ❌ Missing payment entity in payload');
+    return res.status(400).json({ success: false, reason: 'Missing payment entity' });
+  }
+
+  const { id: razorpayPaymentId, order_id: razorpayOrderId, notes } = paymentEntity;
+
+  console.log('[Webhook:Refunded] Refund data:', { razorpayPaymentId, razorpayOrderId });
+
+  const payment = await prisma.payment.findFirst({
+    where: { transactionId: razorpayOrderId },
+    include: {
+      order: {
+        include: { items: true, user: true },
+      },
+    },
+  });
+
+  if (!payment) {
+    console.log('[Webhook:Refunded] ❌ Payment record not found:', razorpayOrderId);
+    return res.status(200).json({ success: false, reason: 'Payment not found' });
+  }
+
+  // Idempotency: already marked refunded
+  if (payment.status === 'REFUNDED') {
+    console.log('[Webhook:Refunded] ✓ Already REFUNDED (idempotent)');
+    return res.status(200).json({ success: true, reason: 'Already refunded' });
+  }
+
+  const order = payment.order;
+  if (!order) {
+    return res.status(200).json({ success: false, reason: 'Order not found' });
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      // 1. Mark payment as REFUNDED
+      await tx.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: 'REFUNDED',
+          gatewayResponse: {
+            ...(typeof payment.gatewayResponse === 'object' && payment.gatewayResponse
+              ? (payment.gatewayResponse as object)
+              : {}),
+            razorpayPaymentId,
+            webhookEvent: 'payment.refunded',
+            refundedAt: new Date().toISOString(),
+          },
+        },
+      });
+
+      // 2. Update order status to REFUNDED if not already cancelled
+      if (order.status !== 'CANCELLED') {
+        await tx.order.update({
+          where: { id: order.id },
+          data: { status: 'CANCELLED', paymentStatus: 'REFUNDED', cancelledAt: new Date(), cancelReason: 'Refund processed via Razorpay webhook' },
+        });
+      } else {
+        // Just update payment status
+        await tx.order.update({
+          where: { id: order.id },
+          data: { paymentStatus: 'REFUNDED' },
+        });
+      }
+
+      // 3. Restore stock if not already restored (i.e. order was previously CONFIRMED)
+      if (order.status === 'CONFIRMED') {
+        for (const item of order.items) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stockQuantity: { increment: item.quantity } },
+          });
+        }
+        console.log('[Webhook:Refunded] ✓ Stock restored for', order.items.length, 'items');
+      }
+    });
+
+    console.log('[Webhook:Refunded] ════════════════════════════════════════');
+    console.log('[Webhook:Refunded] ✅ REFUND PROCESSED — Order:', order.orderNumber);
+    console.log('[Webhook:Refunded] ════════════════════════════════════════');
+
+    sendPaymentAlert({
+      level: 'warning',
+      event: 'Refund processed (webhook)',
+      orderId: order.orderNumber,
+      userId: order.user?.id,
+      reason: `payment.refunded received for ${razorpayPaymentId}`,
+    });
+
+    return res.status(200).json({ success: true });
+  } catch (err) {
+    console.error('[Webhook:Refunded] ❌ Transaction error:', err);
     return res.status(500).json({ success: false, reason: 'Transaction failed' });
   }
 }

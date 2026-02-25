@@ -17,7 +17,7 @@ import { cacheDelPattern } from '../config/redis';
 const router = Router();
 
 // Public routes — cached for CDN + browser
-router.get('/', apiCache(60), getProducts);                        // 60s cache
+router.get('/', apiCache(120), getProducts);                       // 2 min cache
 router.get('/featured', apiCache(120), getFeaturedProducts);       // 2 min cache
 router.get('/search', apiCache(30), searchProducts);               // 30s cache
 router.get('/recommended', apiCache(120), getRecommendedProducts); // 2 min cache

@@ -87,6 +87,7 @@ interface ProductData {
   careInstructions: string;
   averageRating: number;
   reviewCount: number;
+  soldThisWeek?: number;
   category: {
     id: string;
     name: string;
@@ -129,20 +130,26 @@ function StarRating({ rating, count }: { rating: number; count: number }) {
         {Array.from({ length: 5 }, (_, i) => (
           <span
             key={i}
-            className={`text-sm ${
-              i < full
-                ? 'text-amber-400'
-                : i === full && half
-                ? 'text-amber-300'
-                : 'text-neutral-200'
-            }`}
+            style={{
+              color:
+                i < full
+                  ? '#C6A85B'
+                  : i === full && half
+                  ? '#C6A85B'
+                  : '#E5E7EB',
+              opacity: i === full && half ? 0.6 : 1,
+            }}
+            className="text-sm"
           >
             ★
           </span>
         ))}
       </div>
-      <span className="text-xs text-neutral-500">
-        {rating.toFixed(1)} ({count} {count === 1 ? 'review' : 'reviews'})
+      <span className="text-xs font-semibold" style={{ color: '#1A1A1A' }}>
+        {rating.toFixed(1)}
+      </span>
+      <span className="text-xs" style={{ color: '#7A7A85' }}>
+        ({count} {count === 1 ? 'review' : 'reviews'})
       </span>
     </div>
   );
@@ -391,6 +398,13 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
             {/* Rating + Scarcity */}
             <div className="flex flex-wrap items-center gap-3">
               <StarRating rating={product.averageRating} count={product.reviewCount} />
+
+              {/* X sold this week — only shows when > 3, no urgency language */}
+              {(product.soldThisWeek ?? 0) > 3 && (
+                <span className="text-xs" style={{ color: '#7A7A85' }}>
+                  {product.soldThisWeek} sold this week
+                </span>
+              )}
 
               {isOutOfStock ? (
                 <span className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-500 bg-neutral-100 px-2.5 py-1 rounded-full">

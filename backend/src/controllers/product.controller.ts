@@ -8,6 +8,7 @@ import { calculateFinalPrice, slugify } from '../utils/helpers';
 import { normalizeSupabaseUrl } from '../utils/supabaseUrlHelper';
 import { logAdminAction } from '../utils/auditLog';
 import { transformImageUrlToCDN, transformProductImages } from '../utils/imageUrl';
+import { cacheGet, cacheSet } from '../config/redis';
 
 // @desc    Create product (Admin)
 // @route   POST /api/admin/products
@@ -789,12 +790,37 @@ export const getProductBySlug = async (
       throw new AppError('Product not found', 404);
     }
 
+    // ── soldThisWeek: Redis cache (60s) with DB fallback ──────────────────
+    let soldThisWeek = 0;
+    const soldCacheKey = `sold:week:${product.id}`;
+    try {
+      const cached = await cacheGet<number>(soldCacheKey);
+      if (cached !== null) {
+        soldThisWeek = cached;
+      } else {
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        soldThisWeek = await prisma.orderItem.count({
+          where: {
+            productId: product.id,
+            order: {
+              status: 'CONFIRMED',
+              createdAt: { gte: sevenDaysAgo },
+            },
+          },
+        });
+        await cacheSet(soldCacheKey, soldThisWeek, 60);
+      }
+    } catch {
+      // Redis down — silently fall back to 0; non-blocking
+      soldThisWeek = 0;
+    }
+
     // Transform images to PUBLIC URLs for storefront
     const productWithPublicUrls = await transformProductImages(product, true);
 
     res.json({
       success: true,
-      data: productWithPublicUrls,
+      data: { ...productWithPublicUrls, soldThisWeek },
     });
   } catch (error) {
     next(error);
