@@ -47,70 +47,121 @@ const CONFETTI_COLORS = ['#FFD6E8', '#D4AF77', '#FDFBF7', '#F8E8D0', '#E8B4CB', 
 const CONFETTI_SHAPES = ['square', 'circle', 'triangle'] as const;
 
 // ============================================================================
-// ANIMATED TRUCK SVG COMPONENT
+// DELIVERY TRUCK HERO — Drives in from left, parcel shows Order ID
 // ============================================================================
 
-function AnimatedTruck() {
+function DeliveryTruckHero({ orderDisplayId }: { orderDisplayId: string }) {
+  // Truncate order ID for parcel label (first 8 chars)
+  const parcelLabel = orderDisplayId
+    ? (orderDisplayId.length > 8 ? orderDisplayId.slice(0, 8) + '…' : orderDisplayId)
+    : 'ORA';
+
   return (
-    <div className="relative w-32 h-20 mx-auto mb-6">
-      <svg
-        viewBox="0 0 140 70"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className="w-full h-full animate-truck-bounce"
-      >
-        {/* Road line */}
-        <line x1="0" y1="60" x2="140" y2="60" stroke="#E5E7EB" strokeWidth="2" strokeDasharray="6 4" />
-        
-        {/* Truck body */}
-        <rect x="30" y="20" width="60" height="35" rx="4" fill="#EC4899" className="animate-truck-body" />
-        
-        {/* Truck cabin */}
-        <path d="M90 28 L110 28 L115 42 L90 42 Z" fill="#DB2777" rx="3" />
-        
-        {/* Window */}
-        <rect x="93" y="30" width="16" height="10" rx="2" fill="#FDF2F8" opacity="0.8" />
-        
-        {/* Package on truck */}
-        <rect x="42" y="26" width="18" height="14" rx="2" fill="#FDF2F8" />
-        <path d="M51 26 L51 40" stroke="#EC4899" strokeWidth="1" />
-        <path d="M42 33 L60 33" stroke="#EC4899" strokeWidth="1" />
-        
-        {/* ORA heart on package */}
-        <circle cx="51" cy="33" r="2.5" fill="#EC4899" />
-        
-        {/* Wheels */}
-        <circle cx="50" cy="57" r="7" fill="#374151" className="animate-wheel-spin" />
-        <circle cx="50" cy="57" r="3" fill="#9CA3AF" />
-        <circle cx="105" cy="57" r="7" fill="#374151" className="animate-wheel-spin" />
-        <circle cx="105" cy="57" r="3" fill="#9CA3AF" />
-        
-        {/* Exhaust puffs */}
-        <circle cx="25" cy="48" r="4" fill="#E5E7EB" opacity="0.6" className="animate-puff-1" />
-        <circle cx="15" cy="45" r="3" fill="#E5E7EB" opacity="0.4" className="animate-puff-2" />
-        <circle cx="8" cy="42" r="2" fill="#E5E7EB" opacity="0.2" className="animate-puff-3" />
-      </svg>
+    <div className="relative w-full max-w-md mx-auto mb-8 overflow-hidden" style={{ height: 180 }}>
+      {/* Road surface */}
+      <div className="absolute bottom-4 left-0 right-0 h-px bg-gray-200" />
+      <div className="absolute bottom-3 left-0 right-0">
+        <svg width="100%" height="4" className="text-gray-300">
+          <line x1="0" y1="2" x2="100%" y2="2" stroke="currentColor" strokeWidth="2" strokeDasharray="10 6" />
+        </svg>
+      </div>
+
+      {/* Truck container — drives in from left */}
+      <div className="animate-truck-drive-in absolute bottom-6" style={{ width: 280 }}>
+        <svg
+          viewBox="0 0 280 120"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-full h-full"
+        >
+          {/* ── Truck cargo body ── */}
+          <rect x="10" y="24" width="140" height="72" rx="6" fill="#1A1A1A" />
+          {/* Cargo body highlight */}
+          <rect x="10" y="24" width="140" height="6" rx="3" fill="#333" />
+
+          {/* ── ORA Logo on truck body ── */}
+          <text x="80" y="55" textAnchor="middle" fill="#D4AF77" fontSize="20" fontWeight="700" fontFamily="serif" letterSpacing="4">
+            ORA
+          </text>
+          <text x="80" y="70" textAnchor="middle" fill="#D4AF77" fontSize="7" fontWeight="400" fontFamily="sans-serif" letterSpacing="2" opacity="0.7">
+            JEWELLERY
+          </text>
+
+          {/* ── Parcel box on truck ── */}
+          <g className="animate-parcel-shimmer">
+            {/* Box */}
+            <rect x="38" y="4" width="52" height="20" rx="3" fill="#FDFBF7" stroke="#D4AF77" strokeWidth="1.5" />
+            {/* Ribbon cross */}
+            <line x1="64" y1="4" x2="64" y2="24" stroke="#D4AF77" strokeWidth="1" />
+            <line x1="38" y1="14" x2="90" y2="14" stroke="#D4AF77" strokeWidth="1" />
+            {/* Bow on top */}
+            <circle cx="64" cy="4" r="3" fill="#D4AF77" />
+            {/* Order ID label */}
+            <text x="64" y="11" textAnchor="middle" fill="#1A1A1A" fontSize="5" fontWeight="600" fontFamily="monospace">
+              {parcelLabel}
+            </text>
+          </g>
+
+          {/* ── Truck cabin ── */}
+          <path d="M150 40 L150 96 L210 96 L220 72 L210 40 Z" fill="#2A2A2A" />
+          {/* Windshield */}
+          <path d="M155 44 L205 44 L215 70 L155 70 Z" fill="#FDF2F8" opacity="0.5" rx="2" />
+          {/* Windshield glare */}
+          <path d="M160 48 L170 48 L168 65 L158 65 Z" fill="white" opacity="0.3" />
+          {/* Bumper */}
+          <rect x="215" y="80" width="12" height="16" rx="2" fill="#374151" />
+          {/* Headlight */}
+          <rect x="220" y="74" width="8" height="6" rx="2" fill="#FDE68A" opacity="0.9" />
+
+          {/* ── Rear wheels ── */}
+          <g className="animate-wheel-spin-drive">
+            <circle cx="50" cy="100" r="12" fill="#374151" />
+            <circle cx="50" cy="100" r="7" fill="#6B7280" />
+            <circle cx="50" cy="100" r="3" fill="#9CA3AF" />
+            {/* Spokes */}
+            <line x1="50" y1="89" x2="50" y2="111" stroke="#9CA3AF" strokeWidth="1" />
+            <line x1="39" y1="100" x2="61" y2="100" stroke="#9CA3AF" strokeWidth="1" />
+          </g>
+          <g className="animate-wheel-spin-drive">
+            <circle cx="100" cy="100" r="12" fill="#374151" />
+            <circle cx="100" cy="100" r="7" fill="#6B7280" />
+            <circle cx="100" cy="100" r="3" fill="#9CA3AF" />
+            <line x1="100" y1="89" x2="100" y2="111" stroke="#9CA3AF" strokeWidth="1" />
+            <line x1="89" y1="100" x2="111" y2="100" stroke="#9CA3AF" strokeWidth="1" />
+          </g>
+
+          {/* ── Front wheel ── */}
+          <g className="animate-wheel-spin-drive">
+            <circle cx="190" cy="100" r="12" fill="#374151" />
+            <circle cx="190" cy="100" r="7" fill="#6B7280" />
+            <circle cx="190" cy="100" r="3" fill="#9CA3AF" />
+            <line x1="190" y1="89" x2="190" y2="111" stroke="#9CA3AF" strokeWidth="1" />
+            <line x1="179" y1="100" x2="201" y2="100" stroke="#9CA3AF" strokeWidth="1" />
+          </g>
+
+          {/* ── Exhaust puffs ── */}
+          <circle cx="5" cy="88" r="5" fill="#D1D5DB" opacity="0.5" className="animate-puff-1" />
+          <circle cx="-8" cy="84" r="4" fill="#D1D5DB" opacity="0.3" className="animate-puff-2" />
+          <circle cx="-18" cy="80" r="3" fill="#D1D5DB" opacity="0.15" className="animate-puff-3" />
+        </svg>
+      </div>
     </div>
   );
 }
 
 // ============================================================================
-// ANIMATED CHECKMARK COMPONENT
+// ANIMATED CHECKMARK COMPONENT (small, inline after truck)
 // ============================================================================
 
 function AnimatedCheckmark() {
   return (
-    <div className="relative w-24 h-24 mx-auto mb-6">
+    <div className="relative w-16 h-16 mx-auto mb-4">
       {/* Outer pulse ring */}
       <div className="absolute inset-0 rounded-full bg-emerald-100 animate-ping" style={{ animationDuration: '2s' }} />
-      
-      {/* Middle ring */}
-      <div className="absolute inset-1 rounded-full bg-emerald-50" />
-      
       {/* Inner circle */}
-      <div className="absolute inset-3 rounded-full bg-emerald-500 flex items-center justify-center">
+      <div className="absolute inset-2 rounded-full bg-emerald-500 flex items-center justify-center">
         <svg
-          className="w-10 h-10 text-white"
+          className="w-8 h-8 text-white"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -218,6 +269,7 @@ function SuccessContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showConfetti, setShowConfetti] = useState(false);
+  const [animPhase, setAnimPhase] = useState<'truck' | 'reveal'>('truck');
   const clearCart = useCartStore((state) => state.clearCart);
   const purchaseTrackedRef = useRef(false);
   const confettiKey = orderId || orderNumber || 'unknown';
@@ -345,9 +397,17 @@ function SuccessContent() {
     return () => clearTimeout(timer);
   }, [showConfetti]);
 
-  // ── Determine display state ──
+  // Sequenced animation: truck drives in (2.5s) → reveal content
   const isConfirmed = isCODOrder || (paymentStatus?.isConfirmed && paymentStatus?.orderPaymentStatus === 'CONFIRMED');
   const displayOrderId = orderId || orderNumber || '';
+
+  useEffect(() => {
+    if (!isConfirmed || loading) return;
+    // Phase: truck drives in for 2.8s, then reveal content
+    setAnimPhase('truck');
+    const revealTimer = setTimeout(() => setAnimPhase('reveal'), 2800);
+    return () => clearTimeout(revealTimer);
+  }, [isConfirmed, loading]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50/30 to-white py-12 px-4">
@@ -357,10 +417,19 @@ function SuccessContent() {
 
       <div className="max-w-lg mx-auto text-center relative z-20">
         
-        {/* ── LOADING STATE ── */}
+        {/* ── LOADING STATE (simple spinner while polling) ── */}
         {loading && !isCODOrder && (
           <>
-            <AnimatedTruck />
+            <div className="mb-8">
+              <div className="w-20 h-20 mx-auto relative">
+                <div className="absolute inset-0 rounded-full border-4 border-pink-200 animate-spin" style={{ borderTopColor: '#EC4899' }} />
+                <div className="absolute inset-3 rounded-full bg-pink-50 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                </div>
+              </div>
+            </div>
             
             <h1 className="text-3xl md:text-4xl font-serif font-light text-gray-900 mb-3">
               Confirming Your Order…
@@ -369,7 +438,6 @@ function SuccessContent() {
               Your payment is being verified. This usually takes a few seconds.
             </p>
 
-            {/* Progress indicator */}
             <div className="bg-white rounded-2xl p-6 mb-8 shadow-sm border border-gray-100">
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center flex-shrink-0">
@@ -396,58 +464,63 @@ function SuccessContent() {
           </>
         )}
 
-        {/* ── CONFIRMED STATE ── */}
+        {/* ── CONFIRMED STATE — Truck hero → Content reveal ── */}
         {!loading && isConfirmed && (
           <>
-            <AnimatedCheckmark />
+            {/* PHASE 1: Delivery truck drives in with parcel */}
+            <DeliveryTruckHero orderDisplayId={displayOrderId} />
 
-            <h1 className="text-4xl md:text-5xl font-serif font-light text-gray-900 mb-2">
-              Order Confirmed! 🎉
-            </h1>
-            <p className="text-lg text-gray-500 mb-2">
-              {isCODOrder
-                ? 'Your order has been placed successfully'
-                : 'Payment verified — your order is on its way'}
-            </p>
-            <p className="text-sm text-emerald-600 font-medium mb-8 flex items-center justify-center gap-1.5">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              {isCODOrder ? 'Cash on Delivery' : 'Payment Verified'}
-            </p>
+            {/* PHASE 2: Content fades in after truck stops */}
+            <div className={animPhase === 'reveal' ? 'animate-fade-in-up' : 'opacity-0'}>
+              <AnimatedCheckmark />
 
-            {/* Order ID Card */}
-            {displayOrderId && (
-              <div className="bg-white rounded-2xl p-6 mb-6 shadow-sm border border-gray-100">
-                <p className="text-sm text-gray-500 mb-1">Order Number</p>
-                <p className="text-xl font-mono font-bold text-pink-600 break-all">{displayOrderId}</p>
-                
-                <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 gap-3">
-                  <div className="text-center">
-                    <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-1">
-                      <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
+              <h1 className="text-3xl md:text-4xl font-serif font-light text-gray-900 mb-2">
+                Order Confirmed! 🎉
+              </h1>
+              <p className="text-base text-gray-500 mb-2">
+                {isCODOrder
+                  ? 'Your order has been placed successfully'
+                  : 'Payment verified — your order is on its way'}
+              </p>
+              <p className="text-sm text-emerald-600 font-medium mb-6 flex items-center justify-center gap-1.5">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                {isCODOrder ? 'Cash on Delivery' : 'Payment Verified'}
+              </p>
+
+              {/* Order ID Card */}
+              {displayOrderId && (
+                <div className="bg-white rounded-2xl p-6 mb-6 shadow-sm border border-gray-100">
+                  <p className="text-sm text-gray-500 mb-1">Order Number</p>
+                  <p className="text-lg font-mono font-bold text-pink-600 break-all">{displayOrderId}</p>
+                  
+                  <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 gap-3">
+                    <div className="text-center">
+                      <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-1">
+                        <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <p className="text-xs text-gray-500">Payment</p>
+                      <p className="text-xs font-semibold text-emerald-600">{isCODOrder ? 'COD' : 'Verified'}</p>
                     </div>
-                    <p className="text-xs text-gray-500">Payment</p>
-                    <p className="text-xs font-semibold text-emerald-600">{isCODOrder ? 'COD' : 'Verified'}</p>
-                  </div>
-                  <div className="text-center">
-                    <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-1">
-                      <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
+                    <div className="text-center">
+                      <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-1">
+                        <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <p className="text-xs text-gray-500">Order</p>
+                      <p className="text-xs font-semibold text-emerald-600">Confirmed</p>
                     </div>
-                    <p className="text-xs text-gray-500">Order</p>
-                    <p className="text-xs font-semibold text-emerald-600">Confirmed</p>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* What Happens Next — Timeline */}
-            <div className="bg-white rounded-2xl p-6 mb-6 shadow-sm border border-gray-100 text-left">
-              <h3 className="font-serif font-semibold text-gray-900 mb-5 text-center">What happens next?</h3>
+              {/* What Happens Next — Timeline */}
+              <div className="bg-white rounded-2xl p-6 mb-6 shadow-sm border border-gray-100 text-left">
+                <h3 className="font-serif font-semibold text-gray-900 mb-5 text-center">What happens next?</h3>
               <div className="space-y-5">
                 {[
                   { done: true, label: 'Order Confirmed', sub: 'We\'ve received your order and payment' },
@@ -495,6 +568,7 @@ function SuccessContent() {
             <p className="mt-8 text-sm text-gray-400">
               A confirmation email has been sent to your registered email address.
             </p>
+            </div>
           </>
         )}
 
@@ -555,41 +629,56 @@ function SuccessContent() {
           animation: confetti-fall linear forwards;
         }
         
-        @keyframes truck-bounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-3px); }
+        @keyframes truck-drive-in {
+          0% { left: -300px; }
+          70% { left: calc(50% - 140px); }
+          85% { left: calc(50% - 130px); }
+          100% { left: calc(50% - 140px); }
         }
-        .animate-truck-bounce {
-          animation: truck-bounce 1.2s ease-in-out infinite;
-        }
-        
-        @keyframes truck-body {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.95; }
-        }
-        .animate-truck-body {
-          animation: truck-body 1.2s ease-in-out infinite;
+        .animate-truck-drive-in {
+          animation: truck-drive-in 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
         }
         
-        @keyframes wheel-spin {
-          from { transform-origin: center; }
+        @keyframes wheel-spin-drive {
+          0% { transform: rotate(0deg); }
+          70% { transform: rotate(720deg); }
+          100% { transform: rotate(720deg); }
         }
-        .animate-wheel-spin {
-          animation: wheel-spin 0.5s linear infinite;
+        .animate-wheel-spin-drive {
+          transform-origin: center;
+          animation: wheel-spin-drive 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+        
+        @keyframes parcel-shimmer {
+          0%, 70% { filter: brightness(1); }
+          80% { filter: brightness(1.3); }
+          90% { filter: brightness(1); }
+          100% { filter: brightness(1.05); }
+        }
+        .animate-parcel-shimmer {
+          animation: parcel-shimmer 2.5s ease forwards;
         }
         
         @keyframes puff {
           0% { opacity: 0.6; transform: translateX(0) scale(1); }
-          100% { opacity: 0; transform: translateX(-15px) scale(1.5); }
+          100% { opacity: 0; transform: translateX(-20px) scale(1.8); }
         }
         .animate-puff-1 {
-          animation: puff 1.5s ease-out infinite;
+          animation: puff 1.2s ease-out infinite;
         }
         .animate-puff-2 {
-          animation: puff 1.5s ease-out infinite 0.3s;
+          animation: puff 1.2s ease-out infinite 0.3s;
         }
         .animate-puff-3 {
-          animation: puff 1.5s ease-out infinite 0.6s;
+          animation: puff 1.2s ease-out infinite 0.6s;
+        }
+        
+        @keyframes fade-in-up {
+          0% { opacity: 0; transform: translateY(20px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up {
+          animation: fade-in-up 0.8s ease-out forwards;
         }
         
         @keyframes draw-check {
@@ -604,14 +693,18 @@ function SuccessContent() {
         
         @media (prefers-reduced-motion: reduce) {
           .animate-confetti-fall,
-          .animate-truck-bounce,
-          .animate-truck-body,
-          .animate-wheel-spin,
+          .animate-truck-drive-in,
+          .animate-wheel-spin-drive,
+          .animate-parcel-shimmer,
           .animate-puff-1,
           .animate-puff-2,
           .animate-puff-3,
-          .animate-draw-check {
+          .animate-draw-check,
+          .animate-fade-in-up {
             animation: none !important;
+            opacity: 1 !important;
+            transform: none !important;
+            left: calc(50% - 140px) !important;
           }
         }
       `}</style>
