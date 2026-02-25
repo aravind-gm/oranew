@@ -29,6 +29,7 @@
 import ProductGallery from '@/components/product/ProductGallery';
 import ProductSpecs from '@/components/product/ProductSpecs';
 import RecentlyViewedProducts from '@/components/product/RecentlyViewedProducts';
+import RelatedProducts from '@/components/product/RelatedProducts';
 import ReviewSection from '@/components/product/ReviewSection';
 import FrequentlyBoughtTogether from '@/components/product/FrequentlyBoughtTogether';
 import CompleteTheLook from '@/components/product/CompleteTheLook';
@@ -719,6 +720,15 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* You May Also Like */}
+        <div className="mt-12 sm:mt-16 border-t pt-8 sm:pt-12">
+          <RelatedProducts
+            categoryId={product.category.id}
+            currentProductId={product.id}
+            limit={4}
+          />
         </div>
 
         {/* Recently Viewed */}
