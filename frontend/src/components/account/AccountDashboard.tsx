@@ -4,6 +4,11 @@ import { useAuthStore } from '@/store/authStore';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
+/* ────────────────────────────────────────────
+   ORA — Luxury Account Dashboard
+   own. radiate. adorn.
+   ──────────────────────────────────────────── */
+
 interface OrderStats {
   total: number;
   pending: number;
@@ -23,6 +28,17 @@ interface AccountDashboardProps {
   };
 }
 
+/* ── Tiny decorative gold divider ── */
+const GoldDivider = () => (
+  <div className="flex items-center gap-3 my-1">
+    <span className="h-px flex-1 bg-gradient-to-r from-transparent via-gold-400/40 to-transparent" />
+    <svg width="12" height="12" viewBox="0 0 12 12" className="text-gold-400 opacity-60">
+      <path d="M6 0L7.5 4.5L12 6L7.5 7.5L6 12L4.5 7.5L0 6L4.5 4.5Z" fill="currentColor" />
+    </svg>
+    <span className="h-px flex-1 bg-gradient-to-r from-transparent via-gold-400/40 to-transparent" />
+  </div>
+);
+
 export default function AccountDashboard({ user }: AccountDashboardProps) {
   const { logout } = useAuthStore();
   const [orderStats, setOrderStats] = useState<OrderStats>({ total: 0, pending: 0, delivered: 0 });
@@ -38,6 +54,13 @@ export default function AccountDashboard({ user }: AccountDashboardProps) {
   const memberSince = user.createdAt
     ? new Date(user.createdAt).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
     : new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+
+  const initials = displayName
+    .split(' ')
+    .map((n: string) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   useEffect(() => {
     fetchOrderStats();
@@ -74,299 +97,372 @@ export default function AccountDashboard({ user }: AccountDashboardProps) {
     await logout();
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-amber-50 py-8 md:py-12">
-      <div className="container mx-auto px-4 max-w-7xl">
+  /* ── Navigation items ── */
+  const navItems = [
+    {
+      href: '/account/orders',
+      label: 'Orders',
+      sub: 'Track, return, or buy again',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+        </svg>
+      ),
+    },
+    {
+      href: '/wishlist',
+      label: 'Wishlist',
+      sub: 'Your curated collection',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+        </svg>
+      ),
+    },
+    {
+      href: '/account/addresses',
+      label: 'Addresses',
+      sub: 'Manage delivery addresses',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+        </svg>
+      ),
+    },
+    {
+      href: '/account/profile',
+      label: 'Profile',
+      sub: 'Personal details & preferences',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+        </svg>
+      ),
+    },
+    {
+      href: '/account/payments',
+      label: 'Payments',
+      sub: 'Saved cards & UPI',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+        </svg>
+      ),
+    },
+    {
+      href: '/account/coupons',
+      label: 'Coupons & Offers',
+      sub: 'Exclusive discounts for you',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
+        </svg>
+      ),
+    },
+  ];
 
-        {/* Welcome Header */}
-        <div className="backdrop-blur-xl bg-white/90 rounded-3xl shadow-2xl p-6 md:p-8 mb-6 md:mb-8 border border-rose-100">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            {/* User Info */}
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center text-white text-2xl md:text-3xl font-serif font-bold shadow-lg">
-                {(displayName[0] || 'U').toUpperCase()}
+  /* ── Quick‑link items ── */
+  const quickLinks = [
+    {
+      href: '/products',
+      label: 'Continue Shopping',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.016a3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72L4.318 3.44A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72m-13.5 8.65h3.75a.75.75 0 00.75-.75V13.5a.75.75 0 00-.75-.75H6.75a.75.75 0 00-.75.75v3.15c0 .415.336.75.75.75z" />
+        </svg>
+      ),
+    },
+    {
+      href: '/cart',
+      label: 'View Cart',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+        </svg>
+      ),
+    },
+    {
+      href: '/track-order',
+      label: 'Track Order',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+        </svg>
+      ),
+    },
+    {
+      href: '/contact',
+      label: 'Contact Concierge',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
+        </svg>
+      ),
+    },
+  ];
+
+  return (
+    <div className="min-h-screen bg-white">
+      {/* ── Subtle top gold accent line ── */}
+      <div className="h-[2px] bg-gradient-to-r from-transparent via-gold-400 to-transparent" />
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
+
+        {/* ════════════════════════════════════
+            HERO · Welcome
+            ════════════════════════════════════ */}
+        <header className="mb-12 md:mb-16">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8">
+            {/* Avatar + Greeting */}
+            <div className="flex items-center gap-5 md:gap-6">
+              {/* Monogram ring */}
+              <div className="relative shrink-0">
+                <div className="w-[72px] h-[72px] md:w-[88px] md:h-[88px] rounded-full border-[1.5px] border-gold-400/60 flex items-center justify-center bg-neutral-50">
+                  <span className="font-serif text-2xl md:text-3xl font-semibold tracking-wide text-neutral-800">
+                    {initials}
+                  </span>
+                </div>
+                {/* Gold dot indicator */}
+                <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-gold-400 ring-[2.5px] ring-white" />
               </div>
+
               <div>
-                <h1 className="font-serif text-2xl md:text-3xl lg:text-4xl font-bold text-gray-800">
-                  Hello, {displayName}! 👋
+                <p className="text-[11px] uppercase tracking-[0.25em] text-gold-400 font-medium mb-1">
+                  Welcome back
+                </p>
+                <h1 className="font-serif text-3xl md:text-4xl font-semibold text-neutral-900 leading-tight">
+                  {displayName}
                 </h1>
-                <p className="text-gray-600 text-sm md:text-base">{user.email}</p>
-                <p className="text-gray-500 text-xs mt-1">Member since {memberSince}</p>
+                <p className="text-sm text-neutral-400 mt-1">
+                  {user.email}
+                  <span className="mx-2 text-neutral-200">|</span>
+                  Member since {memberSince}
+                </p>
               </div>
             </div>
 
             {/* Actions */}
-            <div className="flex flex-wrap gap-3">
+            <div className="flex items-center gap-3">
               <Link
                 href="/account/profile"
-                className="px-4 py-2.5 rounded-xl border-2 border-rose-200 text-rose-600 font-medium 
-                           hover:bg-rose-50 hover:border-rose-300 transition-all text-sm flex items-center gap-2"
+                className="group inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-neutral-700
+                           border border-neutral-200 rounded-full hover:border-gold-400 hover:text-gold-600 transition-all duration-300"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <svg className="w-4 h-4 opacity-60 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 Settings
               </Link>
               <button
                 onClick={handleLogout}
-                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-medium 
-                           hover:from-rose-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl text-sm flex items-center gap-2"
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-neutral-500
+                           rounded-full hover:text-red-500 hover:bg-red-50 transition-all duration-300"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
                 </svg>
                 Sign Out
               </button>
             </div>
           </div>
-        </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
-          <Link href="/account/orders" className="block group">
-            <div className="backdrop-blur-xl bg-white/90 rounded-2xl shadow-lg p-5 md:p-6 border border-rose-100 hover:shadow-2xl hover:border-rose-200 transition-all group-hover:scale-[1.02] transform">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500 font-medium mb-1">Total Orders</p>
-                  <p className="text-3xl md:text-4xl font-bold text-rose-600">
-                    {loadingStats ? '...' : orderStats.total}
-                  </p>
-                </div>
-                <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-rose-400 to-pink-400 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                  <svg className="w-7 h-7 md:w-8 md:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </Link>
-
-          <Link href="/account/orders?status=pending" className="block group">
-            <div className="backdrop-blur-xl bg-white/90 rounded-2xl shadow-lg p-5 md:p-6 border border-amber-100 hover:shadow-2xl hover:border-amber-200 transition-all group-hover:scale-[1.02] transform">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500 font-medium mb-1">In Progress</p>
-                  <p className="text-3xl md:text-4xl font-bold text-amber-600">
-                    {loadingStats ? '...' : orderStats.pending}
-                  </p>
-                </div>
-                <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-amber-400 to-orange-400 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                  <svg className="w-7 h-7 md:w-8 md:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </Link>
-
-          <Link href="/account/orders?status=delivered" className="block group">
-            <div className="backdrop-blur-xl bg-white/90 rounded-2xl shadow-lg p-5 md:p-6 border border-emerald-100 hover:shadow-2xl hover:border-emerald-200 transition-all group-hover:scale-[1.02] transform">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500 font-medium mb-1">Delivered</p>
-                  <p className="text-3xl md:text-4xl font-bold text-emerald-600">
-                    {loadingStats ? '...' : orderStats.delivered}
-                  </p>
-                </div>
-                <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-emerald-400 to-teal-400 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                  <svg className="w-7 h-7 md:w-8 md:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </Link>
-        </div>
-
-        {/* Account Sections */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-
-          {/* Main Navigation */}
-          <div className="lg:col-span-2">
-            <div className="backdrop-blur-xl bg-white/90 rounded-3xl shadow-xl p-6 md:p-8 border border-rose-100">
-              <h2 className="font-serif text-xl md:text-2xl font-semibold text-gray-800 mb-6 flex items-center gap-2">
-                <span className="text-2xl">📱</span> My Account
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-                {/* Orders */}
-                <Link
-                  href="/account/orders"
-                  className="p-5 md:p-6 rounded-2xl border-2 border-rose-100 hover:border-rose-300 hover:bg-rose-50/50 transition-all group"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-rose-400 to-pink-500 rounded-xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
-                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-800">My Orders</p>
-                      <p className="text-sm text-gray-500">Track, return, or buy again</p>
-                    </div>
-                    <svg className="w-5 h-5 text-gray-400 group-hover:text-rose-500 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </Link>
-
-                {/* Wishlist */}
-                <Link
-                  href="/wishlist"
-                  className="p-5 md:p-6 rounded-2xl border-2 border-pink-100 hover:border-pink-300 hover:bg-pink-50/50 transition-all group"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-pink-400 to-rose-500 rounded-xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
-                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-800">Wishlist</p>
-                      <p className="text-sm text-gray-500">Your saved items</p>
-                    </div>
-                    <svg className="w-5 h-5 text-gray-400 group-hover:text-pink-500 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </Link>
-
-                {/* Addresses */}
-                <Link
-                  href="/account/addresses"
-                  className="p-5 md:p-6 rounded-2xl border-2 border-purple-100 hover:border-purple-300 hover:bg-purple-50/50 transition-all group"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
-                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-800">Addresses</p>
-                      <p className="text-sm text-gray-500">Manage delivery addresses</p>
-                    </div>
-                    <svg className="w-5 h-5 text-gray-400 group-hover:text-purple-500 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </Link>
-
-                {/* Profile Settings */}
-                <Link
-                  href="/account/profile"
-                  className="p-5 md:p-6 rounded-2xl border-2 border-blue-100 hover:border-blue-300 hover:bg-blue-50/50 transition-all group"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
-                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-800">Profile Settings</p>
-                      <p className="text-sm text-gray-500">Name, email, phone</p>
-                    </div>
-                    <svg className="w-5 h-5 text-gray-400 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </Link>
-
-                {/* Payment Methods */}
-                <Link
-                  href="/account/payments"
-                  className="p-5 md:p-6 rounded-2xl border-2 border-amber-100 hover:border-amber-300 hover:bg-amber-50/50 transition-all group"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
-                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-800">Payment Methods</p>
-                      <p className="text-sm text-gray-500">Saved cards & UPI</p>
-                    </div>
-                    <svg className="w-5 h-5 text-gray-400 group-hover:text-amber-500 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </Link>
-
-                {/* Coupons & Offers */}
-                <Link
-                  href="/account/coupons"
-                  className="p-5 md:p-6 rounded-2xl border-2 border-emerald-100 hover:border-emerald-300 hover:bg-emerald-50/50 transition-all group"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
-                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-800">Coupons & Offers</p>
-                      <p className="text-sm text-gray-500">Available discounts</p>
-                    </div>
-                    <svg className="w-5 h-5 text-gray-400 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </Link>
-
-              </div>
-            </div>
+          <div className="mt-8">
+            <GoldDivider />
           </div>
+        </header>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Quick Links */}
-            <div className="backdrop-blur-xl bg-white/90 rounded-3xl shadow-xl p-6 border border-rose-100">
-              <h3 className="font-serif text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                <span className="text-xl">🔗</span> Quick Links
-              </h3>
-              <div className="space-y-2">
-                <Link href="/products" className="flex items-center gap-3 p-3 rounded-xl hover:bg-rose-50 transition-colors group">
-                  <span className="text-lg">🛍️</span>
-                  <span className="text-gray-700 group-hover:text-rose-600 transition-colors">Continue Shopping</span>
-                </Link>
-                <Link href="/cart" className="flex items-center gap-3 p-3 rounded-xl hover:bg-rose-50 transition-colors group">
-                  <span className="text-lg">🛒</span>
-                  <span className="text-gray-700 group-hover:text-rose-600 transition-colors">View Cart</span>
-                </Link>
-                <Link href="/track-order" className="flex items-center gap-3 p-3 rounded-xl hover:bg-rose-50 transition-colors group">
-                  <span className="text-lg">📦</span>
-                  <span className="text-gray-700 group-hover:text-rose-600 transition-colors">Track Order</span>
-                </Link>
-                <Link href="/contact" className="flex items-center gap-3 p-3 rounded-xl hover:bg-rose-50 transition-colors group">
-                  <span className="text-lg">💬</span>
-                  <span className="text-gray-700 group-hover:text-rose-600 transition-colors">Contact Support</span>
-                </Link>
-              </div>
-            </div>
-
-            {/* Help Center */}
-            <div className="backdrop-blur-xl bg-gradient-to-br from-rose-500 to-pink-600 rounded-3xl shadow-xl p-6 text-white">
-              <h3 className="font-serif text-lg font-semibold mb-2">Need Help?</h3>
-              <p className="text-rose-100 text-sm mb-4">Our support team is available 24/7 to assist you.</p>
+        {/* ════════════════════════════════════
+            STATS · Order summary ribbon
+            ════════════════════════════════════ */}
+        <section className="mb-12 md:mb-16">
+          <div className="grid grid-cols-3 divide-x divide-neutral-100">
+            {[
+              { label: 'Total Orders', value: orderStats.total, href: '/account/orders' },
+              { label: 'In Progress', value: orderStats.pending, href: '/account/orders?status=pending' },
+              { label: 'Delivered', value: orderStats.delivered, href: '/account/orders?status=delivered' },
+            ].map((stat) => (
               <Link
-                href="/help"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors text-sm font-medium backdrop-blur-sm"
+                key={stat.label}
+                href={stat.href}
+                className="group text-center py-6 md:py-8 first:pl-0 last:pr-0 hover:bg-neutral-50/60 transition-colors duration-300 rounded-lg"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Visit Help Center
+                <p className="text-[11px] uppercase tracking-[0.2em] text-neutral-400 font-medium mb-2">
+                  {stat.label}
+                </p>
+                <p className="font-serif text-4xl md:text-5xl font-semibold text-neutral-900 group-hover:text-gold-500 transition-colors duration-300">
+                  {loadingStats ? (
+                    <span className="inline-block w-8 h-8 rounded bg-neutral-100 animate-pulse" />
+                  ) : (
+                    String(stat.value).padStart(2, '0')
+                  )}
+                </p>
               </Link>
-              <div className="mt-4 pt-4 border-t border-white/20">
-                <p className="text-rose-100 text-xs">📞 Call: 9842253984, 9095007887, 9342865987</p>
-                <p className="text-rose-100 text-xs">✉️ Email: admin@orashop.in</p>
-              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ════════════════════════════════════
+            MAIN GRID · Navigation + Sidebar
+            ════════════════════════════════════ */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14">
+
+          {/* ── Navigation list ── */}
+          <div className="lg:col-span-7">
+            <h2 className="text-[11px] uppercase tracking-[0.25em] text-neutral-400 font-medium mb-6">
+              Your Account
+            </h2>
+
+            <div className="border border-neutral-100 rounded-2xl overflow-hidden divide-y divide-neutral-100">
+              {navItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="group flex items-center gap-5 px-6 py-5 hover:bg-stone-50 transition-all duration-300"
+                >
+                  {/* Icon */}
+                  <span className="shrink-0 w-10 h-10 rounded-full border border-neutral-200 flex items-center justify-center
+                                   text-neutral-400 group-hover:border-gold-400 group-hover:text-gold-500 transition-all duration-300">
+                    {item.icon}
+                  </span>
+
+                  {/* Label */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[15px] font-medium text-neutral-800 group-hover:text-neutral-900 transition-colors">
+                      {item.label}
+                    </p>
+                    <p className="text-xs text-neutral-400 mt-0.5 truncate">{item.sub}</p>
+                  </div>
+
+                  {/* Arrow */}
+                  <svg
+                    className="w-4 h-4 text-neutral-300 group-hover:text-gold-400 group-hover:translate-x-1 transition-all duration-300"
+                    fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                  </svg>
+                </Link>
+              ))}
             </div>
           </div>
+
+          {/* ── Sidebar ── */}
+          <aside className="lg:col-span-5 space-y-8">
+
+            {/* Quick Links */}
+            <div>
+              <h3 className="text-[11px] uppercase tracking-[0.25em] text-neutral-400 font-medium mb-5">
+                Quick Links
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                {quickLinks.map((ql) => (
+                  <Link
+                    key={ql.href}
+                    href={ql.href}
+                    className="group flex items-center gap-3 px-4 py-3.5 rounded-xl border border-neutral-100
+                               hover:border-gold-400/50 hover:shadow-luxury transition-all duration-300"
+                  >
+                    <span className="text-neutral-400 group-hover:text-gold-500 transition-colors duration-300">
+                      {ql.icon}
+                    </span>
+                    <span className="text-sm text-neutral-600 group-hover:text-neutral-800 transition-colors duration-300">
+                      {ql.label}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Concierge card (dark luxury) ── */}
+            <div className="relative overflow-hidden rounded-2xl bg-neutral-900 p-7 md:p-8">
+              {/* Decorative corner element */}
+              <div className="absolute top-0 right-0 w-28 h-28 opacity-[0.04]">
+                <svg viewBox="0 0 100 100" fill="none" className="w-full h-full">
+                  <circle cx="80" cy="20" r="60" stroke="white" strokeWidth="0.5" />
+                  <circle cx="80" cy="20" r="40" stroke="white" strokeWidth="0.5" />
+                  <circle cx="80" cy="20" r="20" stroke="white" strokeWidth="0.5" />
+                </svg>
+              </div>
+
+              <div className="relative">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="w-1.5 h-1.5 rounded-full bg-gold-400" />
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-gold-400 font-medium">
+                    ORA Concierge
+                  </p>
+                </div>
+
+                <h3 className="font-serif text-xl md:text-2xl font-semibold text-white mb-2 leading-snug">
+                  Need Assistance?
+                </h3>
+                <p className="text-neutral-400 text-sm leading-relaxed mb-6">
+                  Our jewellery consultants are here to help you with sizing, care, or any queries.
+                </p>
+
+                <Link
+                  href="/help"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium
+                             bg-gold-400 text-neutral-900 hover:bg-gold-300 transition-colors duration-300"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+                  </svg>
+                  Visit Help Centre
+                </Link>
+
+                {/* Contact details */}
+                <div className="mt-6 pt-5 border-t border-neutral-700/60 space-y-2.5">
+                  <a href="tel:9842253984" className="flex items-center gap-2.5 text-neutral-400 hover:text-gold-400 transition-colors text-sm">
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
+                    </svg>
+                    9842253984
+                  </a>
+                  <a href="tel:9095007887" className="flex items-center gap-2.5 text-neutral-400 hover:text-gold-400 transition-colors text-sm">
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
+                    </svg>
+                    9095007887
+                  </a>
+                  <a href="tel:9342865987" className="flex items-center gap-2.5 text-neutral-400 hover:text-gold-400 transition-colors text-sm">
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
+                    </svg>
+                    9342865987
+                  </a>
+                  <a href="mailto:admin@orashop.in" className="flex items-center gap-2.5 text-neutral-400 hover:text-gold-400 transition-colors text-sm">
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                    </svg>
+                    admin@orashop.in
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Continue shopping CTA ── */}
+            <Link
+              href="/products"
+              className="group flex items-center justify-center gap-3 w-full py-4 rounded-xl border border-gold-400/40
+                         text-gold-600 hover:bg-gold-50 hover:border-gold-400 transition-all duration-300"
+            >
+              <svg className="w-5 h-5 opacity-70 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+              </svg>
+              <span className="text-sm font-medium tracking-wide">Explore New Arrivals</span>
+            </Link>
+
+          </aside>
+        </div>
+
+        {/* ── Footer divider ── */}
+        <div className="mt-16">
+          <GoldDivider />
+          <p className="text-center text-[11px] uppercase tracking-[0.3em] text-neutral-300 mt-4 font-medium">
+            own · radiate · adorn
+          </p>
         </div>
 
       </div>
