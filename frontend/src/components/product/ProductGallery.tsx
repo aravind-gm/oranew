@@ -2,7 +2,7 @@
 
 import { ChevronLeft, ChevronRight, ZoomIn } from 'lucide-react';
 import Image from 'next/image';
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { isSupabaseImage } from '@/lib/imageUrlHelper';
 
 interface ProductImage {
@@ -21,17 +21,17 @@ interface ProductGalleryProps {
 export default function ProductGallery({ images, productName }: ProductGalleryProps) {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isZoomed, setIsZoomed] = useState(false);
-  const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
+  const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
 
   const selectedImage = images[selectedImageIndex] || images[0];
 
-  const handlePrevious = () => {
+  const handlePrevious = useCallback(() => {
     setSelectedImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
-  };
+  }, [images.length]);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     setSelectedImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
-  };
+  }, [images.length]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isZoomed) return;
@@ -42,90 +42,110 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
   };
 
   return (
-    <div className="space-y-4">
-      {/* Main Image */}
-      <div
-        className="relative h-96 w-full overflow-hidden rounded-lg bg-neutral-100 group cursor-zoom-in"
-        onMouseMove={handleMouseMove}
-        onMouseEnter={() => setIsZoomed(true)}
-        onMouseLeave={() => setIsZoomed(false)}
-      >
-        {selectedImage && (
-          <>
-            <Image
-              src={selectedImage.imageUrl}
-              alt={selectedImage.altText || productName}
-              fill
-              unoptimized={isSupabaseImage(selectedImage.imageUrl)}
-              className={`object-cover transition-transform duration-300 ${
-                isZoomed ? 'scale-150' : 'scale-100'
-              }`}
-              style={
-                isZoomed
-                  ? {
-                      transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`,
-                    }
-                  : {}
-              }
-              sizes="(max-width: 768px) 100vw, 500px"
-            />
-            {/* Zoom Indicator */}
-            <div className="absolute top-3 right-3 bg-black/50 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
-              <ZoomIn size={18} />
-            </div>
-          </>
-        )}
-
-        {/* Navigation Arrows */}
-        {images.length > 1 && (
-          <>
-            <button
-              onClick={handlePrevious}
-              className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full transition-colors z-10"
-              aria-label="Previous image"
-            >
-              <ChevronLeft size={20} />
-            </button>
-            <button
-              onClick={handleNext}
-              className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full transition-colors z-10"
-              aria-label="Next image"
-            >
-              <ChevronRight size={20} />
-            </button>
-          </>
-        )}
-
-        {/* Image Counter */}
-        {images.length > 1 && (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
-            {selectedImageIndex + 1} / {images.length}
-          </div>
-        )}
-      </div>
-
-      {/* Thumbnail Navigation */}
+    <div className="flex flex-col-reverse md:flex-row gap-3 md:gap-4">
+      {/* ── Vertical Thumbnails (desktop left rail) / Horizontal (mobile bottom) ── */}
       {images.length > 1 && (
-        <div className="flex gap-3 overflow-x-auto pb-2">
+        <div className="flex md:flex-col gap-2.5 overflow-x-auto md:overflow-y-auto md:max-h-[600px] pb-1 md:pb-0 md:pr-1 scrollbar-hide">
           {images.map((image, index) => (
             <button
               key={image.id}
               onClick={() => setSelectedImageIndex(index)}
-              className={`relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all ${
-                selectedImageIndex === index ? 'border-primary-600' : 'border-neutral-200'
+              className={`relative flex-shrink-0 w-[68px] h-[68px] md:w-[72px] md:h-[72px] overflow-hidden rounded-lg border-2 transition-all duration-200 ${
+                selectedImageIndex === index
+                  ? 'border-primary-500 shadow-sm'
+                  : 'border-transparent hover:border-neutral-300'
               }`}
             >
               <Image
                 src={image.imageUrl}
                 alt={image.altText || `${productName} ${index + 1}`}
                 fill
+                unoptimized={isSupabaseImage(image.imageUrl)}
                 className="object-cover"
-                sizes="80px"
+                sizes="72px"
               />
+              {/* Video indicator for future */}
+              {image.altText?.toLowerCase().includes('video') && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                  <div className="w-6 h-6 rounded-full bg-white/90 flex items-center justify-center">
+                    <svg className="w-3 h-3 text-neutral-800 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                </div>
+              )}
             </button>
           ))}
         </div>
       )}
+
+      {/* ── Main Image ── */}
+      <div className="relative flex-1">
+        <div
+          className="relative w-full aspect-[3/4] md:aspect-[4/5] overflow-hidden rounded-xl bg-neutral-50 group cursor-zoom-in"
+          onMouseMove={handleMouseMove}
+          onMouseEnter={() => setIsZoomed(true)}
+          onMouseLeave={() => { setIsZoomed(false); setZoomPosition({ x: 50, y: 50 }); }}
+        >
+          {selectedImage && (
+            <>
+              <Image
+                src={selectedImage.imageUrl}
+                alt={selectedImage.altText || productName}
+                fill
+                priority
+                unoptimized={isSupabaseImage(selectedImage.imageUrl)}
+                className={`object-cover transition-transform duration-500 ease-out ${
+                  isZoomed ? 'scale-[2]' : 'scale-100'
+                }`}
+                style={
+                  isZoomed
+                    ? { transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%` }
+                    : {}
+                }
+                sizes="(max-width: 768px) 100vw, 50vw"
+              />
+
+              {/* Zoom hint */}
+              <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm text-neutral-500 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-sm">
+                <ZoomIn size={16} />
+              </div>
+            </>
+          )}
+
+          {/* Navigation Arrows — refined pill style */}
+          {images.length > 1 && (
+            <>
+              <button
+                onClick={handlePrevious}
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center bg-white/90 backdrop-blur-sm hover:bg-white rounded-full transition-all duration-200 z-10 shadow-sm opacity-0 group-hover:opacity-100"
+                aria-label="Previous image"
+              >
+                <ChevronLeft size={18} className="text-neutral-700" />
+              </button>
+              <button
+                onClick={handleNext}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center bg-white/90 backdrop-blur-sm hover:bg-white rounded-full transition-all duration-200 z-10 shadow-sm opacity-0 group-hover:opacity-100"
+                aria-label="Next image"
+              >
+                <ChevronRight size={18} className="text-neutral-700" />
+              </button>
+            </>
+          )}
+
+          {/* Image counter — bottom-left pill */}
+          {images.length > 1 && (
+            <div className="absolute bottom-4 left-4 flex items-center gap-1.5 bg-white/90 backdrop-blur-sm text-neutral-600 px-3 py-1.5 rounded-full text-xs font-medium shadow-sm">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
+              </svg>
+              {selectedImageIndex + 1} / {images.length}
+            </div>
+          )}
+
+          {/* Rating badge — bottom-left on mobile, bottom-right on desktop */}
+        </div>
+      </div>
     </div>
   );
 }
