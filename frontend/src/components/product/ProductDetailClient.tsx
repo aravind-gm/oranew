@@ -120,8 +120,9 @@ function getDeliveryEstimate(): { from: string; to: string } {
 /** Render ★ stars */
 function StarRating({ rating, count }: { rating: number; count: number }) {
   if (count === 0) return null;
-  const full = Math.floor(rating);
-  const half = rating - full >= 0.5;
+  const r = Number(rating) || 0;
+  const full = Math.floor(r);
+  const half = r - full >= 0.5;
   return (
     <div className="flex items-center gap-1.5">
       <div className="flex items-center gap-0.5">
@@ -144,7 +145,7 @@ function StarRating({ rating, count }: { rating: number; count: number }) {
         ))}
       </div>
       <span className="text-xs font-semibold" style={{ color: '#1A1A1A' }}>
-        {rating.toFixed(1)}
+        {r.toFixed(1)}
       </span>
       <span className="text-xs" style={{ color: '#7A7A85' }}>
         ({count} {count === 1 ? 'review' : 'reviews'})
@@ -181,7 +182,18 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
       try {
         setLoading(true);
         const response = await api.get(`/products/${slug}`);
-        const fetchedProduct = response.data.data;
+        const raw = response.data.data;
+        // Prisma serialises Decimal fields as strings — normalise to numbers
+        const fetchedProduct = raw ? {
+          ...raw,
+          price:         Number(raw.price)         || 0,
+          finalPrice:    Number(raw.finalPrice)     || 0,
+          averageRating: Number(raw.averageRating)  || 0,
+          reviewCount:   Number(raw.reviewCount)    || 0,
+          stockQuantity: Number(raw.stockQuantity)  ?? 0,
+          discountPercent: Number(raw.discountPercent) || 0,
+          soldThisWeek:  raw.soldThisWeek != null ? Number(raw.soldThisWeek) : undefined,
+        } : raw;
         setProduct(fetchedProduct);
 
         if (fetchedProduct) {
@@ -386,7 +398,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
             <div className="flex items-center gap-2 mt-4">
               <div className="flex items-center gap-1">
                 <span className="text-amber-500 text-base">★</span>
-                <span className="text-sm font-semibold text-neutral-800">{product.averageRating.toFixed(1)}</span>
+                <span className="text-sm font-semibold text-neutral-800">{Number(product.averageRating || 0).toFixed(1)}</span>
               </div>
               <span className="text-neutral-300">|</span>
               <span className="text-xs text-neutral-500">{product.reviewCount} Reviews</span>
