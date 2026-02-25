@@ -205,7 +205,7 @@ export default function AccountDashboard({ user }: AccountDashboardProps) {
 
   return (
     <div className="min-h-screen" style={{ background: '#FDFBF7' }}>
-      {/* ── Subtle top gold accent line ── */
+      {/* ── Subtle top gold accent line ── */}
       <div className="h-[2px] bg-gradient-to-r from-transparent via-gold-400 to-transparent" />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
