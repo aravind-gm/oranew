@@ -4,6 +4,8 @@ import { prisma } from '../config/database';
 import { withRetry } from '../utils/retry';
 import { AuthRequest } from '../middleware/auth';
 import { sendOrderPlacedEmail } from '../services/email.service';
+import { enqueueJob } from '../services/jobQueue.service';
+import { sendWhatsAppOrderConfirmation } from '../services/whatsapp.service';
 import { AppError, asyncHandler, generateOrderNumber } from '../utils/helpers';
 import { lockInventory, releaseInventoryLocks, restockInventory } from '../utils/inventory';
 // Shipping — single source of truth: always FREE
@@ -615,6 +617,32 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
 
     console.log('[Checkout] ✅ COD order confirmed:', (order as any).orderNumber);
 
+    // Schedule post-purchase lifecycle emails (Day 2/7/21)
+    const postPurchaseBase = {
+      orderId: (order as any).id,
+      customerEmail: (order as any).user.email,
+    };
+    try {
+      await enqueueJob('post-purchase-day2', { ...postPurchaseBase, type: 'post-purchase-day2' as const });
+      await enqueueJob('post-purchase-day7', { ...postPurchaseBase, type: 'post-purchase-day7' as const });
+      await enqueueJob('post-purchase-day21', { ...postPurchaseBase, type: 'post-purchase-day21' as const });
+    } catch (e) {
+      console.error('[Checkout] Failed to schedule post-purchase emails (non-blocking):', e);
+    }
+
+    // WhatsApp order confirmation (non-blocking)
+    try {
+      const userPhone = (shippingAddr as any)?.phone || '';
+      if (userPhone) {
+        sendWhatsAppOrderConfirmation({
+          phone: userPhone,
+          customerName: (order as any).user.fullName || 'Customer',
+          orderNumber: (order as any).orderNumber,
+          totalAmount,
+        }).catch((err) => console.error('[WhatsApp] COD confirmation failed:', err));
+      }
+    } catch { /* non-critical */ }
+
     return res.status(201).json({
       success: true,
       order,
@@ -820,4 +848,59 @@ export const processRefund = asyncHandler(async (req: any, res: Response) => {
   );
 
   res.json({ success: true, message: 'Refund processed and inventory restocked' });
+});
+
+/**
+ * PUBLIC: Track order by order number + email (no auth required)
+ * POST /api/orders/track
+ */
+export const trackOrder = asyncHandler(async (req: any, res: Response) => {
+  const { orderNumber, email } = req.body;
+
+  if (!orderNumber || !email) {
+    throw new AppError('Order number and email are required', 400);
+  }
+
+  const order = await prisma.order.findFirst({
+    where: {
+      orderNumber: orderNumber.toUpperCase(),
+      user: { email: email.toLowerCase() },
+    },
+    select: {
+      id: true,
+      orderNumber: true,
+      status: true,
+      paymentStatus: true,
+      paymentMethod: true,
+      totalAmount: true,
+      trackingNumber: true,
+      courierName: true,
+      shipmentStatus: true,
+      createdAt: true,
+      shippedAt: true,
+      deliveredAt: true,
+      cancelledAt: true,
+      items: {
+        select: {
+          productName: true,
+          quantity: true,
+          unitPrice: true,
+          totalPrice: true,
+        },
+      },
+      shippingAddress: {
+        select: {
+          city: true,
+          state: true,
+          pincode: true,
+        },
+      },
+    },
+  });
+
+  if (!order) {
+    throw new AppError('No order found with that order number and email combination', 404);
+  }
+
+  res.json({ success: true, data: order });
 });

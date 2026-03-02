@@ -11,6 +11,8 @@
 import React, { useEffect } from 'react';
 import Link from 'next/link';
 import AdminLayout from './components/AdminLayout';
+import ProfitDashboard from './components/ProfitDashboard';
+import SystemHealthPanel from './components/SystemHealthPanel';
 import { Card, CardHeader, CardTitle, StatCard, Badge, Button, Spinner } from './components/ui';
 import {
   ShoppingCart,
@@ -515,13 +517,27 @@ export default function DashboardPage() {
         </div>
 
         {/* Secondary Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Top Products */}
           <TopProducts products={topProductsList} loading={statsLoading} />
 
           {/* Low Stock Alert */}
           <LowStockAlert items={lowStockItems} loading={lowStockLoading} />
+
+          {/* Profit & AOV Dashboard */}
+          <ProfitDashboard
+            stats={stats ? {
+              todayRevenue: Number(stats.todayRevenue) || 0,
+              todayOrders: stats.todayOrders || 0,
+              totalRevenue: Number(stats.totalRevenue) || 0,
+              monthRevenue: Number(stats.monthRevenue) || 0,
+            } : null}
+            loading={statsLoading}
+          />
         </div>
+
+        {/* System Health */}
+        <SystemHealthPanel />
       </div>
     </AdminLayout>
   );

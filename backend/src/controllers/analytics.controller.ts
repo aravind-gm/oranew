@@ -16,6 +16,7 @@ import {
   getProductAnalytics,
   getPaymentAnalytics,
   getCartAnalytics,
+  getAOVAnalytics,
 } from '../services/analytics.service';
 
 // ──────────────────────────────────────────────────────────────
@@ -51,5 +52,14 @@ export const analyticsPayments = asyncHandler(async (_req: AuthRequest, res: Res
 // ──────────────────────────────────────────────────────────────
 export const analyticsCarts = asyncHandler(async (_req: AuthRequest, res: Response) => {
   const data = await getCartAnalytics();
+  res.json({ success: true, data });
+});
+
+// ──────────────────────────────────────────────────────────────
+// GET /api/admin/analytics/aov
+// AOV metrics: today/7d/30d, bundle rate, items/order, trend
+// ──────────────────────────────────────────────────────────────
+export const analyticsAOV = asyncHandler(async (_req: AuthRequest, res: Response) => {
+  const data = await getAOVAnalytics();
   res.json({ success: true, data });
 });

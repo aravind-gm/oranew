@@ -478,4 +478,179 @@ export default {
   sendOrderShippedEmail,
   sendOrderDeliveredEmail,
   sendAbandonedCartEmail,
+  sendShippingReassuranceEmail,
+  sendReviewRequestEmail,
+  sendReorderSuggestionEmail,
+};
+
+// ═══════════════════════════════════════════════════════════════
+// POST-PURCHASE LIFECYCLE EMAILS (Phase 9)
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Day 2 — Shipping Reassurance Email
+ * Builds trust while the order is in transit.
+ */
+export const sendShippingReassuranceEmail = async (data: {
+  customerEmail: string;
+  customerName: string;
+  orderNumber: string;
+  trackingNumber?: string;
+  courierName?: string;
+}) => {
+  const { customerEmail, customerName, orderNumber, trackingNumber, courierName } = data;
+
+  const body = `
+    <div style="text-align: center; margin-bottom: 28px;">
+      <p style="font-size: 36px; margin: 0;">📦</p>
+      <h2 style="margin: 8px 0 0 0; font-size: 22px; color: #333; font-weight: 400;">Your jewellery is on its way!</h2>
+    </div>
+
+    <p style="font-size: 15px; color: #666; line-height: 1.7; margin: 0 0 20px 0;">
+      Hi <strong>${customerName}</strong>, just a quick update — your ORA order <strong>${orderNumber}</strong> is making its way to you.
+    </p>
+
+    ${trackingNumber ? `
+    <div style="background: #faf5f4; border-radius: 10px; padding: 18px; margin-bottom: 20px; text-align: center;">
+      <p style="margin: 0 0 4px 0; font-size: 12px; color: #B76E79; text-transform: uppercase; letter-spacing: 1px;">Tracking Number</p>
+      <p style="margin: 0; font-size: 18px; font-weight: 600; color: #333; font-family: monospace; letter-spacing: 2px;">${trackingNumber}</p>
+      ${courierName ? `<p style="margin: 6px 0 0 0; font-size: 13px; color: #999;">via ${courierName}</p>` : ''}
+    </div>
+    ` : ''}
+
+    <div style="background: #fff8f0; border-left: 4px solid #B76E79; padding: 16px; border-radius: 0 10px 10px 0; margin: 20px 0;">
+      <p style="margin: 0 0 6px 0; font-size: 14px; font-weight: 600; color: #B76E79;">✨ Crafted with care</p>
+      <p style="margin: 0; font-size: 13px; color: #777; line-height: 1.6;">Every ORA piece is quality-checked and packed in our signature gift box. We can't wait for you to unbox it!</p>
+    </div>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0;">
+      <tr>
+        <td style="text-align: center; padding: 8px; font-size: 12px; color: #999;">🔒 Secure Payment</td>
+        <td style="text-align: center; padding: 8px; font-size: 12px; color: #999;">🚚 Free Delivery</td>
+        <td style="text-align: center; padding: 8px; font-size: 12px; color: #999;">🔁 5-Day Returns</td>
+      </tr>
+    </table>
+
+    <div style="text-align: center; margin: 28px 0 0 0;">
+      <a href="${FRONTEND_URL}/track-order" style="display: inline-block; background: linear-gradient(135deg, #B76E79, #C9929D); color: white; padding: 14px 36px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 14px; letter-spacing: 1px;">Track My Order</a>
+    </div>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: EMAIL_FROM,
+      to: customerEmail,
+      subject: `📦 Your ORA order is on its way — ${orderNumber}`,
+      html: emailWrapper('Shipping Update', body),
+    });
+    console.log(`✓ Shipping reassurance email sent to ${customerEmail}`);
+  } catch (error) {
+    console.error('Failed to send shipping reassurance email:', error);
+    throw error;
+  }
+};
+
+/**
+ * Day 7 — Review Request Email
+ * Asks for a review after the customer has had time to try the product.
+ */
+export const sendReviewRequestEmail = async (data: {
+  customerEmail: string;
+  customerName: string;
+  orderNumber: string;
+  items: Array<{ productName: string; productSlug?: string }>;
+}) => {
+  const { customerEmail, customerName, orderNumber, items } = data;
+
+  const productNames = items.slice(0, 3).map(i => i.productName).join(', ');
+  const firstSlug = items[0]?.productSlug || '';
+
+  const body = `
+    <div style="text-align: center; margin-bottom: 28px;">
+      <p style="font-size: 36px; margin: 0;">💝</p>
+      <h2 style="margin: 8px 0 0 0; font-size: 22px; color: #333; font-weight: 400;">How are you loving your jewellery?</h2>
+    </div>
+
+    <p style="font-size: 15px; color: #666; line-height: 1.7; margin: 0 0 20px 0;">
+      Hi <strong>${customerName}</strong>, it's been a week since your order <strong>${orderNumber}</strong> arrived. We hope you're loving your <strong>${productNames}</strong>!
+    </p>
+
+    <div style="background: linear-gradient(135deg, #fdf2f0, #fff5f3); border: 1px solid #f0e0dc; border-radius: 12px; padding: 28px; margin: 20px 0; text-align: center;">
+      <p style="margin: 0 0 8px 0; font-size: 15px; font-weight: 600; color: #B76E79;">Share your experience</p>
+      <p style="margin: 0 0 20px 0; font-size: 13px; color: #888; line-height: 1.5;">Your review helps other jewellery lovers discover ORA.<br>It only takes a minute!</p>
+
+      <!-- Star rating visual -->
+      <p style="margin: 0 0 20px 0; font-size: 28px; letter-spacing: 4px;">⭐⭐⭐⭐⭐</p>
+
+      <a href="${FRONTEND_URL}/products/${firstSlug}#reviews" style="display: inline-block; background: linear-gradient(135deg, #B76E79, #E8A0BF); color: white; padding: 14px 40px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 14px; letter-spacing: 1px;">Write a Review</a>
+    </div>
+
+    <p style="font-size: 13px; color: #aaa; text-align: center; margin-top: 20px;">
+      Not satisfied? <a href="mailto:${SUPPORT_EMAIL}" style="color: #B76E79; text-decoration: none;">Contact us</a> — we're here to help.
+    </p>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: EMAIL_FROM,
+      to: customerEmail,
+      subject: `⭐ How's your ORA jewellery? We'd love your review!`,
+      html: emailWrapper('Review Request', body),
+    });
+    console.log(`✓ Review request email sent to ${customerEmail}`);
+  } catch (error) {
+    console.error('Failed to send review request email:', error);
+    throw error;
+  }
+};
+
+/**
+ * Day 21 — Reorder / Browse Again Suggestion
+ * Gentle reminder with new arrivals or complementary pieces.
+ */
+export const sendReorderSuggestionEmail = async (data: {
+  customerEmail: string;
+  customerName: string;
+  orderNumber: string;
+}) => {
+  const { customerEmail, customerName, orderNumber } = data;
+
+  const body = `
+    <div style="text-align: center; margin-bottom: 28px;">
+      <p style="font-size: 36px; margin: 0;">✨</p>
+      <h2 style="margin: 8px 0 0 0; font-size: 22px; color: #333; font-weight: 400;">New pieces, curated for you</h2>
+    </div>
+
+    <p style="font-size: 15px; color: #666; line-height: 1.7; margin: 0 0 20px 0;">
+      Hi <strong>${customerName}</strong>, it's been a few weeks since your order <strong>${orderNumber}</strong>. We've been busy adding gorgeous new pieces to our collection!
+    </p>
+
+    <div style="background: #faf5f4; border-radius: 12px; padding: 24px; margin: 20px 0; text-align: center;">
+      <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #B76E79;">🆕 New Arrivals</p>
+      <p style="margin: 0 0 16px 0; font-size: 13px; color: #888;">Fresh designs that complement your collection perfectly.</p>
+      <a href="${FRONTEND_URL}/collections/new-arrivals" style="display: inline-block; background: linear-gradient(135deg, #B76E79, #E8A0BF); color: white; padding: 14px 36px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 14px; letter-spacing: 1px;">Explore New Arrivals</a>
+    </div>
+
+    <div style="background: #fff8f0; border-left: 4px solid #B76E79; padding: 16px; border-radius: 0 10px 10px 0; margin: 20px 0;">
+      <p style="margin: 0 0 6px 0; font-size: 14px; font-weight: 600; color: #B76E79;">💎 Complete Your Look</p>
+      <p style="margin: 0; font-size: 13px; color: #777; line-height: 1.6;">Pair your existing pieces with matching earrings, bracelets, or necklaces from our curated sets.</p>
+    </div>
+
+    <div style="text-align: center; margin: 24px 0;">
+      <a href="${FRONTEND_URL}/collections" style="display: inline-block; border: 2px solid #B76E79; color: #B76E79; padding: 12px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 13px; letter-spacing: 1px;">Browse All Collections</a>
+    </div>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: EMAIL_FROM,
+      to: customerEmail,
+      subject: `✨ New arrivals at ORA — curated just for you`,
+      html: emailWrapper('New Arrivals', body),
+    });
+    console.log(`✓ Reorder suggestion email sent to ${customerEmail}`);
+  } catch (error) {
+    console.error('Failed to send reorder suggestion email:', error);
+    throw error;
+  }
 };

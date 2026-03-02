@@ -22,6 +22,7 @@
 import { useCartStore } from '@/store/cartStore';
 import { trackViewCart } from '@/lib/analytics';
 import RelatedProductsCart from '@/components/RelatedProductsCart';
+import CartUpsell from '@/components/cart/CartUpsell';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, Minus, Plus, ShoppingBag, Trash2, Shield, Truck, Package, Heart } from 'lucide-react';
 import Image from 'next/image';
@@ -520,6 +521,9 @@ export default function CartPage() {
 
                 {/* Trust Badges */}
                 <TrustBadges />
+
+                {/* Micro-Upsell */}
+                <CartUpsell />
               </motion.div>
             </div>
           </div>

@@ -639,3 +639,125 @@ export async function getCartAnalytics(): Promise<CartAnalytics> {
 
   return setAndReturn('carts', result);
 }
+
+// ============================================
+// 5. AOV TRACKING ANALYTICS (Phase 9)
+// ============================================
+
+export interface AOVAnalytics {
+  aovToday: number;
+  aov7Days: number;
+  aov30Days: number;
+  aovTrend: number; // % change 7d vs prev 7d
+  bundleAttachmentRate: number; // % of orders with 2+ items
+  avgItemsPerOrder: number;
+  highValueOrderRate: number; // % of orders above ₹2,000
+  revenuePerCustomer: number;
+}
+
+export async function getAOVAnalytics(): Promise<AOVAnalytics> {
+  const cached = await getCached<AOVAnalytics>('aov');
+  if (cached) return cached;
+
+  const today = startOfTodayIST();
+  const sevenDaysAgo = daysAgo(7);
+  const fourteenDaysAgo = daysAgo(14);
+  const thirtyDaysAgo = daysAgo(30);
+
+  const [
+    todayOrders,
+    last7dOrders,
+    prev7dOrders,
+    last30dOrders,
+    multiItemOrders7d,
+    totalOrders7d,
+    totalItemCount7d,
+    highValueOrders7d,
+    uniqueCustomers30d,
+    revenue30d,
+  ] = await Promise.all([
+    // AOV today
+    prisma.order.aggregate({
+      where: { paymentStatus: 'CONFIRMED', createdAt: { gte: today } },
+      _avg: { totalAmount: true },
+      _count: true,
+    }),
+    // AOV last 7 days
+    prisma.order.aggregate({
+      where: { paymentStatus: 'CONFIRMED', createdAt: { gte: sevenDaysAgo } },
+      _avg: { totalAmount: true },
+      _count: true,
+      _sum: { totalAmount: true },
+    }),
+    // AOV previous 7 days (for trend)
+    prisma.order.aggregate({
+      where: {
+        paymentStatus: 'CONFIRMED',
+        createdAt: { gte: fourteenDaysAgo, lt: sevenDaysAgo },
+      },
+      _avg: { totalAmount: true },
+      _count: true,
+    }),
+    // AOV last 30 days
+    prisma.order.aggregate({
+      where: { paymentStatus: 'CONFIRMED', createdAt: { gte: thirtyDaysAgo } },
+      _avg: { totalAmount: true },
+    }),
+    // Multi-item orders (bundle proxy) in last 7 days
+    prisma.$queryRaw<[{ count: bigint }]>`
+      SELECT COUNT(*) as count FROM orders o
+      WHERE o.payment_status = 'CONFIRMED'
+        AND o.created_at >= ${sevenDaysAgo}
+        AND (SELECT COUNT(*) FROM order_items WHERE order_id = o.id) >= 2
+    `,
+    // Total confirmed orders last 7d
+    prisma.order.count({
+      where: { paymentStatus: 'CONFIRMED', createdAt: { gte: sevenDaysAgo } },
+    }),
+    // Total items sold last 7d
+    prisma.orderItem.aggregate({
+      where: {
+        order: { paymentStatus: 'CONFIRMED', createdAt: { gte: sevenDaysAgo } },
+      },
+      _sum: { quantity: true },
+    }),
+    // High value orders (>₹2000) last 7d
+    prisma.order.count({
+      where: {
+        paymentStatus: 'CONFIRMED',
+        createdAt: { gte: sevenDaysAgo },
+        totalAmount: { gte: 2000 },
+      },
+    }),
+    // Unique customers last 30d
+    prisma.$queryRaw<[{ count: bigint }]>`
+      SELECT COUNT(DISTINCT user_id) as count FROM orders
+      WHERE payment_status = 'CONFIRMED' AND created_at >= ${thirtyDaysAgo}
+    `,
+    // Revenue last 30d
+    prisma.order.aggregate({
+      where: { paymentStatus: 'CONFIRMED', createdAt: { gte: thirtyDaysAgo } },
+      _sum: { totalAmount: true },
+    }),
+  ]);
+
+  const aov7d = Number(last7dOrders._avg.totalAmount || 0);
+  const aovPrev7d = Number(prev7dOrders._avg.totalAmount || 0);
+  const uniqueCust = Number(uniqueCustomers30d[0]?.count || 0);
+  const rev30d = Number(revenue30d._sum.totalAmount || 0);
+
+  const result: AOVAnalytics = {
+    aovToday: Math.round(Number(todayOrders._avg.totalAmount || 0)),
+    aov7Days: Math.round(aov7d),
+    aov30Days: Math.round(Number(last30dOrders._avg.totalAmount || 0)),
+    aovTrend: aovPrev7d > 0 ? pct(aov7d - aovPrev7d, aovPrev7d) : 0,
+    bundleAttachmentRate: pct(Number(multiItemOrders7d[0]?.count || 0), totalOrders7d),
+    avgItemsPerOrder: totalOrders7d > 0
+      ? Math.round(((totalItemCount7d._sum.quantity || 0) / totalOrders7d) * 100) / 100
+      : 0,
+    highValueOrderRate: pct(highValueOrders7d, totalOrders7d),
+    revenuePerCustomer: uniqueCust > 0 ? Math.round(rev30d / uniqueCust) : 0,
+  };
+
+  return setAndReturn('aov', result);
+}

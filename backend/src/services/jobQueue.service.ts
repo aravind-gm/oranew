@@ -32,7 +32,11 @@ export type JobType =
   | 'payment-reconciliation'
   | 'slack-alert'
   | 'cache-invalidation'
-  | 'order-confirmation-email';
+  | 'order-confirmation-email'
+  | 'post-purchase-day2'
+  | 'post-purchase-day7'
+  | 'post-purchase-day21'
+  | 'payment-parity-check';
 
 export interface AbandonedCartJobData {
   type: 'abandoned-cart-email';
@@ -59,12 +63,24 @@ export interface OrderEmailJobData {
   customerEmail: string;
 }
 
+export interface PostPurchaseJobData {
+  type: 'post-purchase-day2' | 'post-purchase-day7' | 'post-purchase-day21';
+  orderId: string;
+  customerEmail: string;
+}
+
+export interface PaymentParityJobData {
+  type: 'payment-parity-check';
+}
+
 export type JobData =
   | AbandonedCartJobData
   | ReconciliationJobData
   | SlackAlertJobData
   | CacheInvalidationJobData
-  | OrderEmailJobData;
+  | OrderEmailJobData
+  | PostPurchaseJobData
+  | PaymentParityJobData;
 
 // ============================================
 // QUEUE SETUP
@@ -131,6 +147,16 @@ export async function initJobQueue(): Promise<boolean> {
               await processOrderEmail(job.data as OrderEmailJobData);
               break;
 
+            case 'post-purchase-day2':
+            case 'post-purchase-day7':
+            case 'post-purchase-day21':
+              await processPostPurchaseEmail(job.data as PostPurchaseJobData);
+              break;
+
+            case 'payment-parity-check':
+              await processPaymentParityCheck();
+              break;
+
             default:
               console.warn(`[JobQueue] ⚠️  Unknown job type: ${(job.data as JobData).type}`);
           }
@@ -186,6 +212,16 @@ async function scheduleRecurringJobs(): Promise<void> {
     {
       name: 'payment-reconciliation',
       data: { type: 'payment-reconciliation' } as ReconciliationJobData,
+    }
+  );
+
+  // Payment parity check — every 15 minutes
+  await backgroundQueue.upsertJobScheduler(
+    'payment-parity-check',
+    { every: 15 * 60 * 1000 },
+    {
+      name: 'payment-parity-check',
+      data: { type: 'payment-parity-check' } as PaymentParityJobData,
     }
   );
 }
@@ -450,6 +486,149 @@ async function processOrderEmail(data: OrderEmailJobData): Promise<void> {
   } catch (err) {
     console.error(`[JobQueue] Order email failed for ${data.orderId}:`, err);
     throw err; // Will be retried
+  }
+}
+
+// ============================================
+// POST-PURCHASE EMAIL PROCESSORS (Phase 9)
+// ============================================
+
+/**
+ * Process post-purchase lifecycle emails (Day 2/7/21).
+ * Scheduled when an order is CONFIRMED.
+ */
+async function processPostPurchaseEmail(data: PostPurchaseJobData): Promise<void> {
+  const { prisma } = await import('../config/database');
+
+  const order = await prisma.order.findUnique({
+    where: { id: data.orderId },
+    include: {
+      items: true,
+      user: { select: { fullName: true, email: true } },
+    },
+  });
+
+  if (!order) return;
+
+  // Don't send if order was cancelled or returned
+  if (['CANCELLED', 'RETURNED'].includes(order.status)) {
+    console.log(`[JobQueue] Skipping ${data.type} for ${data.orderId} — order is ${order.status}`);
+    return;
+  }
+
+  const customerName = order.user.fullName || 'there';
+  const customerEmail = data.customerEmail || order.user.email;
+
+  try {
+    switch (data.type) {
+      case 'post-purchase-day2': {
+        const { sendShippingReassuranceEmail } = await import('../services/email.service');
+        await sendShippingReassuranceEmail({
+          customerEmail,
+          customerName,
+          orderNumber: order.orderNumber,
+          trackingNumber: order.trackingNumber ?? undefined,
+          courierName: order.courierName ?? undefined,
+        });
+        break;
+      }
+
+      case 'post-purchase-day7': {
+        const { sendReviewRequestEmail } = await import('../services/email.service');
+        await sendReviewRequestEmail({
+          customerEmail,
+          customerName,
+          orderNumber: order.orderNumber,
+          items: order.items.map((i) => ({
+            productName: i.productName,
+          })),
+        });
+        break;
+      }
+
+      case 'post-purchase-day21': {
+        const { sendReorderSuggestionEmail } = await import('../services/email.service');
+        await sendReorderSuggestionEmail({
+          customerEmail,
+          customerName,
+          orderNumber: order.orderNumber,
+        });
+        break;
+      }
+    }
+  } catch (err) {
+    console.error(`[JobQueue] Post-purchase email (${data.type}) failed for ${data.orderId}:`, err);
+    throw err; // Will be retried
+  }
+}
+
+// ============================================
+// PAYMENT PARITY CHECK (Phase 10)
+// ============================================
+
+/**
+ * Check order/payment parity every 15 minutes.
+ * Flags CONFIRMED orders that don't have a matching CONFIRMED payment (and vice versa).
+ */
+async function processPaymentParityCheck(): Promise<void> {
+  const { prisma } = await import('../config/database');
+  const { sendPaymentAlert } = await import('../utils/alerts');
+
+  // Find orders with CONFIRMED status but no CONFIRMED payment
+  const orphanOrders = await prisma.order.findMany({
+    where: {
+      status: 'CONFIRMED',
+      paymentMethod: 'RAZORPAY',
+      paymentStatus: { not: 'CONFIRMED' },
+      createdAt: { lt: new Date(Date.now() - 30 * 60 * 1000) }, // older than 30 min
+    },
+    select: { id: true, orderNumber: true, userId: true, totalAmount: true, createdAt: true },
+    take: 50,
+  });
+
+  // Find confirmed payments whose orders are not CONFIRMED
+  const orphanPayments = await prisma.payment.findMany({
+    where: {
+      status: 'CONFIRMED',
+      order: { status: { not: 'CONFIRMED' } },
+      createdAt: { lt: new Date(Date.now() - 30 * 60 * 1000) },
+    },
+    select: {
+      id: true,
+      transactionId: true,
+      amount: true,
+      order: { select: { orderNumber: true, status: true } },
+    },
+    take: 50,
+  });
+
+  const mismatches = orphanOrders.length + orphanPayments.length;
+
+  if (mismatches > 0) {
+    console.error(`[PaymentParity] CRITICAL: ${mismatches} order/payment mismatches detected`);
+
+    // Alert for orphan orders
+    for (const order of orphanOrders) {
+      sendPaymentAlert({
+        level: 'error',
+        event: 'PARITY: Order CONFIRMED but payment not CONFIRMED',
+        orderId: order.orderNumber,
+        userId: order.userId,
+        reason: `Order total ₹${Number(order.totalAmount)} — created ${order.createdAt.toISOString()}`,
+      });
+    }
+
+    // Alert for orphan payments
+    for (const payment of orphanPayments) {
+      sendPaymentAlert({
+        level: 'error',
+        event: `PARITY: Payment CONFIRMED but order status is ${payment.order?.status}`,
+        orderId: payment.order?.orderNumber || payment.id,
+        reason: `Payment ₹${Number(payment.amount)} — txn: ${payment.transactionId}`,
+      });
+    }
+  } else {
+    console.log('[PaymentParity] ✅ All order/payment records in sync');
   }
 }
 

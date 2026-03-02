@@ -46,7 +46,9 @@ import {
     analyticsProducts,
     analyticsPayments,
     analyticsCarts,
+    analyticsAOV,
 } from '../controllers/analytics.controller';
+import { systemDiagnostics } from '../controllers/health.controller';
 import {
     createProduct,
     deleteProduct,
@@ -161,5 +163,11 @@ router.get('/analytics/overview', analyticsLimiter, analyticsOverview);
 router.get('/analytics/products', analyticsLimiter, analyticsProducts);
 router.get('/analytics/payments', analyticsLimiter, analyticsPayments);
 router.get('/analytics/carts', analyticsLimiter, analyticsCarts);
+router.get('/analytics/aov', analyticsLimiter, analyticsAOV);
+
+// ============================================
+// SYSTEM DIAGNOSTICS (Phase 10)
+// ============================================
+router.get('/system/health', systemDiagnostics);
 
 export default router;
