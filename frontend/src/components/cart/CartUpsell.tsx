@@ -68,6 +68,7 @@ export default function CartUpsell() {
 
   const handleAdd = () => {
     addItem({
+      id: `${product.id}-${Date.now()}`,
       productId: product.id,
       name: product.name,
       price: product.finalPrice,
