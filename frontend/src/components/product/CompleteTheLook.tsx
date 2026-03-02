@@ -72,6 +72,7 @@ export default function CompleteTheLook({ categoryId, currentProductId }: Comple
 
   const handleQuickAdd = (product: CTLProduct) => {
     addItem({
+      id: `${product.id}-${Date.now()}`,
       productId: product.id,
       name: product.name,
       price: product.finalPrice,
