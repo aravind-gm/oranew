@@ -10,8 +10,9 @@
  * 4. SHOP BY CATEGORY — Minimal layout (Rings, Necklaces, Earrings, Bracelets)
  * 5. NEW ARRIVALS — No hype language
  * 6. CURATED ORA DUOS — Subtle combos section (not promotional)
- * 7. TRUST STRIP — 4 minimal icons
- * 8. NEWSLETTER — Luxury tone ("Join the ORA Circle")
+ * 7. THE ORA PHILOSOPHY — Brand depth & emotional storytelling
+ * 8. TRUST STRIP — 4 minimal icons
+ * 9. NEWSLETTER — Luxury tone ("Join the ORA Circle")
  * 
  * Brand: ORA — Own. Radiate. Adorn.
  * Voice: Minimal. Honest. Premium. Contemporary.
@@ -23,6 +24,7 @@ import BrandStatement from '@/components/home/BrandStatement';
 import CuratedProducts from '@/components/home/CuratedProducts';
 import ShopByCategory from '@/components/home/ShopByCategory';
 import CuratedDuos from '@/components/home/CuratedDuos';
+import OraPhilosophy from '@/components/home/OraPhilosophy';
 import TrustStrip from '@/components/home/TrustStrip';
 import Newsletter from '@/components/home/Newsletter';
 
@@ -68,10 +70,13 @@ export default function HomePage() {
       {/* 6. CURATED ORA DUOS — Subtle, intentional combos */}
       <CuratedDuos />
 
-      {/* 7. TRUST STRIP — 4 minimal icons */}
+      {/* 7. THE ORA PHILOSOPHY — Brand depth & emotional storytelling */}
+      <OraPhilosophy />
+
+      {/* 8. TRUST STRIP — 4 minimal icons */}
       <TrustStrip />
 
-      {/* 8. NEWSLETTER — Luxury tone */}
+      {/* 9. NEWSLETTER — Luxury tone */}
       <Newsletter />
     </main>
   );

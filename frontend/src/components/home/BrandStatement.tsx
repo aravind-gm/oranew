@@ -23,6 +23,9 @@ export default function BrandStatement() {
             ORA creates contemporary fashion jewellery designed for everyday elegance. 
             Each piece is thoughtfully crafted to complement modern wardrobes and meaningful moments.
           </p>
+          <p className="mt-4 text-xs tracking-[0.2em] uppercase text-oraAccent/50 font-medium">
+            Minimal outside. Powerful inside.
+          </p>
         </motion.div>
       </div>
     </section>

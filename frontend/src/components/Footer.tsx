@@ -15,7 +15,7 @@ export default function Footer() {
             </Link>
             <p className="text-xs text-white/50 italic mb-3 sm:mb-4 tracking-wide">own. radiate. adorn.</p>
             <p className="text-xs sm:text-sm text-white/40 leading-relaxed mb-4 sm:mb-6">
-              Contemporary fashion jewellery crafted for the modern woman.
+              Designed to move with you. Everyday confidence, elevated.
             </p>
             {/* Social Links */}
             <div className="flex gap-2 sm:gap-3">
@@ -48,6 +48,7 @@ export default function Footer() {
           <div>
             <h4 className="font-serif text-sm sm:text-base mb-4 sm:mb-6 text-white">Help</h4>
             <ul className="space-y-2 sm:space-y-3">
+              <li><Link href="/about-ora" className="text-sm text-white/50 hover:text-white transition-colors inline-block py-1">About ORA</Link></li>
               <li><Link href="/contact" className="text-sm text-white/50 hover:text-white transition-colors inline-block py-1">Contact Us</Link></li>
               <li><Link href="/faq" className="text-sm text-white/50 hover:text-white transition-colors inline-block py-1">FAQs</Link></li>
               <li><Link href="/shipping" className="text-sm text-white/50 hover:text-white transition-colors inline-block py-1">Shipping & Delivery</Link></li>
