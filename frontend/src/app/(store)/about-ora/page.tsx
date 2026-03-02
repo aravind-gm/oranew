@@ -1,416 +1,562 @@
 'use client';
 
 /**
- * About ORA — Brand Storytelling Page
+ * About ORA — Cinematic Brand Experience
  * 
- * This is not a generic About page.
- * This is brand-building for a premium fashion jewellery house.
+ * Creative direction: Jacquemus × Cartier editorial × SKIMS storytelling
  * 
  * Sections:
- * 1. Hero — "Wear Your Aura"
- * 2. Our Beginning
- * 3. What ORA Means
- * 4. Our Philosophy
- * 5. For The Modern Woman
- * 6. Brand Manifesto
- * 7. Founder Story — A New Generation of Jewellery
- * 8. Closing
+ * 1. HERO — Immersive full-viewport statement
+ * 2. FOUNDER STORY — Split editorial layout
+ * 3. ORA MANIFESTO — Cinematic dark section with scroll reveals
+ * 4. CRAFT & PHILOSOPHY — Visual grid with hover reveals
+ * 5. EMOTIONAL BRAND — Ambient gradient identity section
+ * 6. CLOSING CTA — Minimal centered call to action
  */
 
-import { motion } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'framer-motion';
+import Image from 'next/image';
 import Link from 'next/link';
+import { useRef } from 'react';
 
-// Shared animation config
-const fadeUp = {
-  initial: { opacity: 0, y: 30 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true, margin: '-60px' },
-  transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] },
+/* ─── Animation presets ─── */
+const stagger = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.15, delayChildren: 0.2 } },
 };
 
-const fadeIn = {
-  initial: { opacity: 0 },
-  whileInView: { opacity: 1 },
-  viewport: { once: true, margin: '-40px' },
-  transition: { duration: 1, ease: 'easeOut' },
+const fadeSlideUp = {
+  hidden: { opacity: 0, y: 40 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] },
+  },
 };
+
+const fadeSlideLeft = {
+  hidden: { opacity: 0, x: 40 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] },
+  },
+};
+
+const revealLine = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] },
+  },
+};
+
+const scaleIn = {
+  hidden: { opacity: 0, scale: 0.95 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    transition: { duration: 1, ease: [0.22, 1, 0.36, 1] },
+  },
+};
+
+/* ─── Rose gold divider component ─── */
+function RoseGoldDivider() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scaleX: 0 }}
+      whileInView={{ opacity: 1, scaleX: 1 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+      className="flex items-center justify-center gap-4 py-2"
+    >
+      <span className="w-16 md:w-24 h-px bg-gradient-to-r from-transparent to-[#C6A85B]/40" />
+      <span className="w-1.5 h-1.5 rounded-full bg-[#C6A85B]/50" />
+      <span className="w-16 md:w-24 h-px bg-gradient-to-l from-transparent to-[#C6A85B]/40" />
+    </motion.div>
+  );
+}
 
 export default function AboutOraPage() {
+  const heroRef = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ['start start', 'end start'],
+  });
+  const heroY = useTransform(scrollYProgress, [0, 1], ['0%', '30%']);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.6], [1, 0]);
+
   return (
     <main className="bg-white min-h-screen overflow-x-hidden">
 
-      {/* ═══════════════════════════════════════════
-          SECTION 1: HERO — "Wear Your Aura"
-          ═══════════════════════════════════════════ */}
-      <section className="relative bg-oraLight/40 py-28 md:py-40 lg:py-52">
-        {/* Subtle decorative element */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-oraPink/10 blur-3xl" />
+      {/* ═══════════════════════════════════════════════════════════
+          SECTION 1: HERO — Immersive Full Viewport Statement
+          Parallax scroll · Animated gradient · Floating glow
+          ═══════════════════════════════════════════════════════════ */}
+      <section
+        ref={heroRef}
+        className="relative h-[100svh] min-h-[700px] flex items-center justify-center overflow-hidden"
+      >
+        {/* Animated gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#FDF2F5] via-[#F6C1CF]/20 to-white" />
+
+        {/* Floating ambient glow orbs */}
+        <motion.div
+          animate={{
+            y: [0, -20, 0],
+            opacity: [0.3, 0.5, 0.3],
+          }}
+          transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute top-1/4 left-1/4 w-[400px] h-[400px] rounded-full bg-[#F6C1CF]/20 blur-[100px] pointer-events-none"
+        />
+        <motion.div
+          animate={{
+            y: [0, 15, 0],
+            opacity: [0.2, 0.4, 0.2],
+          }}
+          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
+          className="absolute bottom-1/4 right-1/4 w-[350px] h-[350px] rounded-full bg-[#E75480]/10 blur-[80px] pointer-events-none"
+        />
+
+        {/* Grain texture overlay */}
+        <div className="absolute inset-0 ora-grain pointer-events-none" />
+
+        {/* Hero content with parallax */}
+        <motion.div
+          style={{ y: heroY, opacity: heroOpacity }}
+          className="relative z-10 max-w-4xl mx-auto px-6 text-center"
+        >
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            className="text-[10px] md:text-xs tracking-[0.4em] uppercase text-[#C6A85B]/80 mb-8 md:mb-10 font-medium"
+          >
+            The Story of ORA
+          </motion.p>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-serif font-light text-[#1A1A1A] leading-[1.05] mb-8 md:mb-10"
+          >
+            Wear Your Aura.
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.9 }}
+            className="text-base sm:text-lg md:text-xl font-light text-neutral-500 leading-relaxed max-w-lg mx-auto mb-12 md:mb-14"
+          >
+            Jewellery designed for the woman
+            <br />
+            who already shines.
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 1.2 }}
+          >
+            <Link
+              href="/collections"
+              className="group inline-flex items-center gap-3 text-xs md:text-sm tracking-[0.2em] uppercase font-medium text-[#1A1A1A] border-b border-[#1A1A1A]/25 pb-2 hover:border-[#E75480] hover:text-[#E75480] transition-all duration-500"
+            >
+              Discover the Collection
+              <svg className="w-4 h-4 transition-transform duration-500 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </Link>
+          </motion.div>
+        </motion.div>
+
+        {/* Scroll indicator */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 2, duration: 1 }}
+          className="absolute bottom-8 left-1/2 -translate-x-1/2"
+        >
+          <motion.div
+            animate={{ y: [0, 8, 0] }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+            className="w-px h-10 bg-gradient-to-b from-transparent via-[#C6A85B]/40 to-transparent"
+          />
+        </motion.div>
+      </section>
+
+
+      {/* ═══════════════════════════════════════════════════════════
+          SECTION 2: THE FOUNDER STORY
+          Split layout: editorial image + narrative
+          ═══════════════════════════════════════════════════════════ */}
+      <section className="py-[120px] md:py-[160px] lg:py-[200px] bg-white relative">
+        <div className="absolute inset-0 ora-grain pointer-events-none opacity-30" />
+        <div className="relative max-w-7xl mx-auto px-6 lg:px-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+
+            {/* Left: Editorial image */}
+            <motion.div
+              variants={scaleIn}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: '-80px' }}
+              className="relative"
+            >
+              <div className="relative aspect-[3/4] bg-gradient-to-br from-[#F6C1CF]/20 via-[#FDF2F5] to-[#F7F7F7] overflow-hidden">
+                {/* Placeholder — editorial portrait zone */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center px-8">
+                    <div className="w-20 h-20 md:w-24 md:h-24 mx-auto mb-6 rounded-full bg-[#F6C1CF]/30 flex items-center justify-center">
+                      <span className="text-3xl md:text-4xl font-serif font-light text-[#E75480]/60">O</span>
+                    </div>
+                    <p className="text-xs tracking-[0.3em] uppercase text-[#C6A85B]/60 font-medium">Editorial Portrait</p>
+                    <p className="text-[10px] tracking-wider text-neutral-400 mt-2">Soft, natural, intentional</p>
+                  </div>
+                </div>
+
+                {/* Decorative corner accents */}
+                <div className="absolute top-4 left-4 w-12 h-12 border-t border-l border-[#C6A85B]/20" />
+                <div className="absolute bottom-4 right-4 w-12 h-12 border-b border-r border-[#C6A85B]/20" />
+              </div>
+            </motion.div>
+
+            {/* Right: Founder narrative */}
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: '-80px' }}
+              className="lg:py-8"
+            >
+              <motion.p variants={revealLine} className="text-[10px] md:text-xs tracking-[0.35em] uppercase text-[#C6A85B]/70 mb-6 font-medium">
+                The Beginning
+              </motion.p>
+
+              <motion.h2 variants={fadeSlideUp} className="text-3xl md:text-4xl lg:text-5xl font-serif font-light text-[#1A1A1A] leading-[1.15] mb-10 md:mb-12">
+                A New Generation
+                <br />
+                <span className="italic text-[#E75480]/80">of Jewellery</span>
+              </motion.h2>
+
+              <div className="space-y-7">
+                <motion.p variants={revealLine} className="text-base md:text-[17px] font-light text-neutral-500 leading-[1.8]">
+                  Growing up around the world of jewellery, we saw how pieces were often designed for occasions, traditions, or expectations.
+                </motion.p>
+
+                <motion.p variants={revealLine} className="text-base md:text-[17px] font-light text-neutral-500 leading-[1.8]">
+                  We wanted something different. Something that felt effortless.
+                  Something that felt wearable. Something that felt like <span className="italic text-neutral-700">you</span>.
+                </motion.p>
+
+                <motion.p variants={revealLine} className="text-base md:text-[17px] font-light text-neutral-500 leading-[1.8]">
+                  So ORA became more than a brand. It became a quiet reminder — that confidence doesn&apos;t need an occasion.
+                </motion.p>
+
+                <motion.p variants={revealLine} className="text-lg md:text-xl font-serif font-light italic text-[#1A1A1A] pt-4">
+                  It just needs you.
+                </motion.p>
+              </div>
+
+              <motion.div variants={revealLine} className="mt-12">
+                <RoseGoldDivider />
+              </motion.div>
+            </motion.div>
+
+          </div>
         </div>
+      </section>
+
+
+      {/* ═══════════════════════════════════════════════════════════
+          SECTION 3: THE ORA MANIFESTO — Cinematic Dark Section
+          Scroll-triggered line reveals · Rose gold accents
+          ═══════════════════════════════════════════════════════════ */}
+      <section className="relative py-[140px] md:py-[180px] lg:py-[220px] bg-[#111111] text-white overflow-hidden">
+        {/* Ambient glow */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-[#E75480]/5 blur-[120px]" />
+          <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] rounded-full bg-[#C6A85B]/5 blur-[100px]" />
+        </div>
+        <div className="absolute inset-0 ora-grain pointer-events-none opacity-40" />
 
         <div className="relative max-w-3xl mx-auto px-6 text-center">
-          <motion.div {...fadeUp}>
-            <p className="text-xs md:text-sm tracking-[0.3em] uppercase text-oraAccent/70 mb-6 font-medium">
-              About ORA
-            </p>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-serif font-light text-[#1A1A1A] leading-[1.15] mb-8">
-              Wear Your Aura.
-            </h1>
-            <p className="text-base md:text-lg lg:text-xl font-light text-neutral-500 leading-relaxed max-w-xl mx-auto">
-              Jewellery designed for the woman
-              <br className="hidden md:block" />
-              who already shines.
-            </p>
+          {/* Label */}
+          <motion.p
+            initial={{ opacity: 0, y: 15 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-60px' }}
+            transition={{ duration: 0.7 }}
+            className="text-[10px] md:text-xs tracking-[0.4em] uppercase text-[#C6A85B]/60 mb-16 md:mb-20 font-medium"
+          >
+            The ORA Manifesto
+          </motion.p>
+
+          {/* Manifesto lines — each reveals on scroll */}
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-60px' }}
+            className="space-y-12 md:space-y-16"
+          >
+            <motion.p variants={revealLine} className="text-xl md:text-2xl lg:text-3xl font-serif font-light text-white/90 leading-relaxed">
+              We believe in quiet power.
+            </motion.p>
+
+            <motion.div variants={revealLine} className="space-y-3">
+              <p className="text-base md:text-lg font-light text-white/50 leading-relaxed">
+                In elegance that does not ask for attention.
+              </p>
+              <p className="text-base md:text-lg font-light text-white/50 leading-relaxed">
+                In jewellery that moves with you.
+              </p>
+            </motion.div>
+
+            {/* Rose gold divider */}
+            <motion.div variants={revealLine}>
+              <div className="flex items-center justify-center gap-4">
+                <span className="w-12 md:w-20 h-px bg-gradient-to-r from-transparent to-[#C6A85B]/30" />
+                <span className="w-1 h-1 rounded-full bg-[#C6A85B]/40" />
+                <span className="w-12 md:w-20 h-px bg-gradient-to-l from-transparent to-[#C6A85B]/30" />
+              </div>
+            </motion.div>
+
+            <motion.div variants={revealLine} className="space-y-4">
+              <p className="text-base md:text-lg font-light text-white/45 leading-relaxed">Not louder.</p>
+              <p className="text-lg md:text-xl font-light text-white/75 leading-relaxed">Just stronger.</p>
+            </motion.div>
+
+            <motion.div variants={revealLine} className="space-y-4">
+              <p className="text-base md:text-lg font-light text-white/45 leading-relaxed">Not heavier.</p>
+              <p className="text-lg md:text-xl font-light text-white/75 leading-relaxed">Just meaningful.</p>
+            </motion.div>
+
+            {/* Highlight closing line */}
+            <motion.div
+              variants={revealLine}
+              className="pt-8 md:pt-12"
+            >
+              <p className="text-2xl md:text-3xl lg:text-4xl font-serif font-light italic text-[#E75480]/80 leading-tight">
+                Wear your aura.
+              </p>
+              {/* Animated underline */}
+              <motion.div
+                initial={{ scaleX: 0 }}
+                whileInView={{ scaleX: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 1.2, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                className="w-24 md:w-32 h-px bg-gradient-to-r from-[#E75480]/60 to-[#C6A85B]/40 mx-auto mt-4 origin-left"
+              />
+            </motion.div>
           </motion.div>
         </div>
       </section>
 
 
-      {/* ═══════════════════════════════════════════
-          SECTION 2: OUR BEGINNING
-          ═══════════════════════════════════════════ */}
-      <section className="py-24 md:py-32 lg:py-40 bg-white">
-        <div className="max-w-2xl mx-auto px-6">
-          <motion.div {...fadeUp}>
-            <h2 className="text-3xl md:text-4xl font-serif font-light text-[#1A1A1A] text-center mb-12 md:mb-16">
-              Our Beginning
-            </h2>
-          </motion.div>
+      {/* ═══════════════════════════════════════════════════════════
+          SECTION 4: CRAFT & PHILOSOPHY — Visual + Grid
+          ═══════════════════════════════════════════════════════════ */}
+      <section className="py-[120px] md:py-[160px] lg:py-[200px] bg-[#F7F7F7] relative">
+        <div className="absolute inset-0 ora-grain pointer-events-none opacity-20" />
+        <div className="relative max-w-7xl mx-auto px-6 lg:px-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
 
-          <motion.div
-            {...fadeUp}
-            transition={{ ...fadeUp.transition, delay: 0.15 }}
-            className="space-y-8 text-center"
-          >
-            <p className="text-base md:text-lg font-light text-neutral-600 leading-relaxed">
-              ORA was born from a simple belief —
-              <br />
-              that jewellery should feel personal.
-            </p>
+            {/* Left: Product macro visual */}
+            <motion.div
+              variants={scaleIn}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: '-80px' }}
+              className="relative order-2 lg:order-1"
+            >
+              <div className="relative aspect-square bg-gradient-to-br from-white via-[#FDF2F5] to-[#F6C1CF]/10 overflow-hidden">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center px-8">
+                    <div className="w-28 h-28 mx-auto mb-6 rounded-full bg-gradient-to-br from-[#F6C1CF]/30 to-[#C6A85B]/10 flex items-center justify-center">
+                      <span className="text-4xl font-serif font-light text-[#C6A85B]/50">✦</span>
+                    </div>
+                    <p className="text-xs tracking-[0.3em] uppercase text-[#C6A85B]/60 font-medium">Product Macro</p>
+                    <p className="text-[10px] tracking-wider text-neutral-400 mt-2">Detail · Texture · Craft</p>
+                  </div>
+                </div>
 
-            <div className="space-y-2 text-base md:text-lg font-light text-neutral-500 leading-relaxed">
-              <p>Not loud.</p>
-              <p>Not overwhelming.</p>
-              <p>Not reserved only for special occasions.</p>
-            </div>
+                {/* Corner accents */}
+                <div className="absolute top-6 left-6 w-16 h-16 border-t border-l border-[#C6A85B]/15" />
+                <div className="absolute bottom-6 right-6 w-16 h-16 border-b border-r border-[#C6A85B]/15" />
+              </div>
+            </motion.div>
 
-            <p className="text-base md:text-lg font-light text-neutral-600 leading-relaxed">
-              But something you wear every day —
-              <br />
-              as a quiet reminder of who you are.
-            </p>
+            {/* Right: Philosophy bullets with hover reveal */}
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: '-80px' }}
+              className="order-1 lg:order-2"
+            >
+              <motion.p variants={revealLine} className="text-[10px] md:text-xs tracking-[0.35em] uppercase text-[#C6A85B]/70 mb-6 font-medium">
+                Our Craft
+              </motion.p>
 
-            <p className="text-base md:text-lg font-light text-neutral-500 leading-relaxed pt-4">
-              We saw a gap between traditional heaviness and fast fashion noise.
-              <br />
-              So we created something softer.
-              <br />
-              Stronger.
-              <br />
-              More intentional.
-            </p>
-          </motion.div>
+              <motion.h2 variants={fadeSlideUp} className="text-3xl md:text-4xl lg:text-5xl font-serif font-light text-[#1A1A1A] leading-[1.15] mb-14 md:mb-16">
+                Philosophy
+                <br />
+                <span className="text-neutral-400">&amp; Intention</span>
+              </motion.h2>
+
+              <div className="space-y-0">
+                {[
+                  { text: 'Luxury should feel effortless', detail: 'Not a performance. A presence.' },
+                  { text: 'Minimal can be powerful', detail: 'Less noise. More meaning.' },
+                  { text: 'Jewellery should move with you', detail: 'From morning coffee to midnight conversations.' },
+                  { text: 'Confidence is the most beautiful accessory', detail: 'We just complement what\'s already there.' },
+                ].map((item, index) => (
+                  <motion.div
+                    key={index}
+                    variants={fadeSlideLeft}
+                    className="group border-b border-neutral-200/80 py-7 md:py-8 cursor-default"
+                  >
+                    <div className="flex items-start gap-5">
+                      <span className="flex-shrink-0 w-6 h-px bg-[#C6A85B]/40 mt-3.5 group-hover:w-10 group-hover:bg-[#E75480]/60 transition-all duration-500" />
+                      <div>
+                        <p className="text-base md:text-lg font-light text-[#1A1A1A] leading-relaxed group-hover:text-[#E75480] transition-colors duration-500">
+                          {item.text}
+                        </p>
+                        <p className="text-sm font-light text-neutral-400 mt-1.5 max-h-0 overflow-hidden opacity-0 group-hover:max-h-10 group-hover:opacity-100 transition-all duration-500">
+                          {item.detail}
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+
+          </div>
         </div>
       </section>
 
 
-      {/* ═══════════════════════════════════════════
-          SECTION 3: WHAT ORA MEANS
-          ═══════════════════════════════════════════ */}
-      <section className="py-24 md:py-32 lg:py-40 bg-oraLight/30">
-        <div className="max-w-2xl mx-auto px-6">
-          <motion.div {...fadeUp}>
-            <h2 className="text-3xl md:text-4xl font-serif font-light text-[#1A1A1A] text-center mb-12 md:mb-16">
-              What ORA Means
-            </h2>
-          </motion.div>
+      {/* ═══════════════════════════════════════════════════════════
+          SECTION 5: EMOTIONAL BRAND — Identity & Presence
+          Ambient gradient · Editorial typography
+          ═══════════════════════════════════════════════════════════ */}
+      <section className="relative py-[140px] md:py-[180px] lg:py-[220px] overflow-hidden">
+        {/* Ambient gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-b from-white via-[#FDF2F5]/40 to-white" />
+        <motion.div
+          animate={{
+            opacity: [0.15, 0.25, 0.15],
+          }}
+          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-[#F6C1CF]/30 blur-[150px] pointer-events-none"
+        />
+        <div className="absolute inset-0 ora-grain pointer-events-none opacity-20" />
 
+        <div className="relative max-w-3xl mx-auto px-6 text-center">
           <motion.div
-            {...fadeUp}
-            transition={{ ...fadeUp.transition, delay: 0.15 }}
-            className="space-y-8 text-center"
+            variants={stagger}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-80px' }}
           >
-            <p className="text-lg md:text-xl font-serif font-light text-[#1A1A1A] italic">
-              ORA represents presence.
-            </p>
-
-            <div className="space-y-4 text-base md:text-lg font-light text-neutral-500 leading-relaxed">
-              <p>It is the energy you carry.</p>
-              <p>The confidence you don&apos;t need to announce.</p>
-              <p>The glow that comes from within.</p>
-            </div>
-
-            <p className="text-base md:text-lg font-light text-neutral-600 leading-relaxed pt-4">
-              Our jewellery is designed to complement that energy —
-              <br />
-              never compete with it.
-            </p>
-          </motion.div>
-        </div>
-      </section>
-
-
-      {/* ═══════════════════════════════════════════
-          SECTION 4: OUR PHILOSOPHY
-          ═══════════════════════════════════════════ */}
-      <section className="py-24 md:py-32 lg:py-40 bg-white">
-        <div className="max-w-2xl mx-auto px-6">
-          <motion.div {...fadeUp}>
-            <h2 className="text-3xl md:text-4xl font-serif font-light text-[#1A1A1A] text-center mb-12 md:mb-16">
-              Our Philosophy
-            </h2>
-          </motion.div>
-
-          <motion.div
-            {...fadeUp}
-            transition={{ ...fadeUp.transition, delay: 0.15 }}
-            className="text-center"
-          >
-            <p className="text-base md:text-lg font-light text-neutral-600 leading-relaxed mb-12">
-              We believe:
-            </p>
-
-            <div className="space-y-6 max-w-md mx-auto">
-              {[
-                'Luxury should feel effortless',
-                'Minimal can be powerful',
-                'Jewellery should move with you',
-                'Confidence is the most beautiful accessory',
-              ].map((belief, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -10 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true, margin: '-30px' }}
-                  transition={{ duration: 0.6, delay: index * 0.12 }}
-                  className="flex items-start gap-4"
-                >
-                  <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-oraAccent/50 mt-2.5" />
-                  <p className="text-base md:text-lg font-light text-neutral-600 leading-relaxed text-left">
-                    {belief}
-                  </p>
-                </motion.div>
-              ))}
-            </div>
+            <motion.h2
+              variants={fadeSlideUp}
+              className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-serif font-light text-[#1A1A1A] leading-[1.15] mb-6"
+            >
+              ORA is not decoration.
+            </motion.h2>
 
             <motion.p
-              {...fadeIn}
-              transition={{ ...fadeIn.transition, delay: 0.5 }}
-              className="text-base md:text-lg font-light text-neutral-500 leading-relaxed mt-14"
+              variants={fadeSlideUp}
+              className="text-xl md:text-2xl font-serif font-light italic text-[#E75480]/70 mb-16 md:mb-20"
             >
-              Every ORA piece is curated to elevate everyday moments.
+              It is presence.
             </motion.p>
+
+            <motion.div variants={revealLine}>
+              <RoseGoldDivider />
+            </motion.div>
+
+            <motion.div variants={stagger} className="mt-16 md:mt-20 space-y-7">
+              <motion.p variants={revealLine} className="text-base md:text-[17px] font-light text-neutral-500 leading-[1.9]">
+                It is the energy you carry into a room before you speak.
+                <br />
+                The quiet confidence that doesn&apos;t need announcement.
+              </motion.p>
+
+              <motion.p variants={revealLine} className="text-base md:text-[17px] font-light text-neutral-500 leading-[1.9]">
+                It is identity expressed through restraint.
+                <br />
+                Self-expression through intention.
+              </motion.p>
+
+              <motion.p variants={revealLine} className="text-base md:text-[17px] font-light text-neutral-500 leading-[1.9]">
+                For the woman who doesn&apos;t wait for occasions — she creates them.
+                <br />
+                Who celebrates quietly. Who invests in how she feels.
+              </motion.p>
+            </motion.div>
           </motion.div>
         </div>
       </section>
 
 
-      {/* ═══════════════════════════════════════════
-          SECTION 5: FOR THE MODERN WOMAN
-          ═══════════════════════════════════════════ */}
-      <section className="py-24 md:py-32 lg:py-40 bg-oraLight/30">
-        <div className="max-w-2xl mx-auto px-6">
-          <motion.div {...fadeUp}>
-            <h2 className="text-3xl md:text-4xl font-serif font-light text-[#1A1A1A] text-center mb-12 md:mb-16">
-              For The Modern Woman
-            </h2>
-          </motion.div>
-
-          <motion.div
-            {...fadeUp}
-            transition={{ ...fadeUp.transition, delay: 0.15 }}
-            className="space-y-6 text-center"
-          >
-            <div className="space-y-3 text-base md:text-lg font-light text-neutral-500 leading-relaxed">
-              <p>She doesn&apos;t wait for occasions.</p>
-              <p>She creates them.</p>
-            </div>
-
-            <div className="space-y-3 text-base md:text-lg font-light text-neutral-500 leading-relaxed pt-4">
-              <p>She chooses herself.</p>
-              <p>She celebrates quietly.</p>
-              <p>She invests in how she feels.</p>
-            </div>
-
-            <p className="text-lg md:text-xl font-serif font-light text-[#1A1A1A] italic pt-8">
-              ORA is for her.
-            </p>
-          </motion.div>
-        </div>
-      </section>
-
-
-      {/* ═══════════════════════════════════════════
-          SECTION 6: THE ORA MANIFESTO
-          ═══════════════════════════════════════════ */}
-      <section className="py-28 md:py-36 lg:py-44 bg-[#1A1A1A] text-white relative overflow-hidden">
-        {/* Subtle ambient glow */}
+      {/* ═══════════════════════════════════════════════════════════
+          SECTION 6: CLOSING CTA — Minimal, Centered, Confident
+          ═══════════════════════════════════════════════════════════ */}
+      <section className="relative py-[140px] md:py-[180px] lg:py-[200px] bg-[#111111] text-white overflow-hidden">
+        {/* Subtle glow */}
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full bg-oraAccent/5 blur-3xl" />
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] rounded-full bg-[#E75480]/5 blur-[120px]" />
         </div>
-
-        <div className="relative max-w-2xl mx-auto px-6">
-          <motion.div {...fadeUp}>
-            <p className="text-xs md:text-sm tracking-[0.3em] uppercase text-oraAccent/60 text-center mb-8 font-medium">
-              The ORA Manifesto
-            </p>
-          </motion.div>
-
-          <motion.div
-            {...fadeUp}
-            transition={{ ...fadeUp.transition, delay: 0.15 }}
-            className="space-y-10 text-center"
-          >
-            <p className="text-lg md:text-xl font-serif font-light text-white/90 leading-relaxed">
-              We believe in quiet power.
-            </p>
-
-            <div className="space-y-2 text-base md:text-lg font-light text-white/60 leading-relaxed">
-              <p>In the kind of elegance that doesn&apos;t need attention —</p>
-              <p>but receives it anyway.</p>
-            </div>
-
-            <div className="space-y-2 text-base md:text-lg font-light text-white/60 leading-relaxed">
-              <p>We believe in celebrating small wins.</p>
-              <p>In dressing up for no reason.</p>
-              <p>In choosing confidence daily.</p>
-            </div>
-
-            <div className="space-y-2 text-base md:text-lg font-light text-white/60 leading-relaxed">
-              <p>We believe jewellery is not decoration.</p>
-              <p className="text-white/80 font-serif italic">It is expression.</p>
-            </div>
-
-            <div className="space-y-2 text-base md:text-lg font-light text-white/60 leading-relaxed">
-              <p>Not louder.</p>
-              <p className="text-white/80">Just stronger.</p>
-            </div>
-
-            <div className="space-y-2 text-base md:text-lg font-light text-white/60 leading-relaxed">
-              <p>Not heavier.</p>
-              <p className="text-white/80">Just meaningful.</p>
-            </div>
-
-            {/* Decorative separator */}
-            <div className="flex items-center justify-center gap-3 py-4">
-              <span className="w-8 h-px bg-oraAccent/30" />
-              <span className="w-1.5 h-1.5 rounded-full bg-oraAccent/40" />
-              <span className="w-8 h-px bg-oraAccent/30" />
-            </div>
-
-            <div className="space-y-2 text-base md:text-lg font-light text-white/60 leading-relaxed">
-              <p>ORA is for women who move with intention.</p>
-              <p>Who shine without permission.</p>
-              <p>Who carry presence in silence.</p>
-            </div>
-
-            <div className="space-y-2 text-base md:text-lg font-light text-white/60 leading-relaxed pt-4">
-              <p>You don&apos;t wear ORA to impress.</p>
-              <p className="text-white/90 font-serif">You wear ORA to remember who you are.</p>
-            </div>
-
-            <p className="text-xl md:text-2xl font-serif font-light text-oraAccent/80 italic pt-6">
-              Wear your aura.
-            </p>
-          </motion.div>
-        </div>
-      </section>
-
-
-      {/* ═══════════════════════════════════════════
-          SECTION 7: A NEW GENERATION OF JEWELLERY
-          ═══════════════════════════════════════════ */}
-      <section className="py-24 md:py-32 lg:py-40 bg-white">
-        <div className="max-w-2xl mx-auto px-6">
-          <motion.div {...fadeUp}>
-            <h2 className="text-3xl md:text-4xl font-serif font-light text-[#1A1A1A] text-center mb-12 md:mb-16">
-              A New Generation of Jewellery
-            </h2>
-          </motion.div>
-
-          <motion.div
-            {...fadeUp}
-            transition={{ ...fadeUp.transition, delay: 0.15 }}
-            className="space-y-8 text-center"
-          >
-            <p className="text-base md:text-lg font-light text-neutral-600 leading-relaxed">
-              ORA was created with a modern vision —
-              <br />
-              to reimagine jewellery for today&apos;s woman.
-            </p>
-
-            <p className="text-base md:text-lg font-light text-neutral-500 leading-relaxed">
-              Growing up around the world of jewellery,
-              <br />
-              we saw how pieces were often designed for occasions, traditions, or expectations.
-            </p>
-
-            <p className="text-base md:text-lg font-light text-neutral-600 leading-relaxed">
-              But we wanted something different.
-            </p>
-
-            <div className="space-y-3 text-base md:text-lg font-light text-neutral-500 leading-relaxed">
-              <p>Something that felt effortless.</p>
-              <p>Something that felt wearable.</p>
-              <p>Something that felt like <span className="italic text-neutral-600">you</span>.</p>
-            </div>
-
-            <div className="space-y-3 text-base md:text-lg font-light text-neutral-500 leading-relaxed pt-4">
-              <p>So ORA became more than a brand.</p>
-              <p>It became a reminder —</p>
-              <p className="text-neutral-600">that confidence doesn&apos;t need an event.</p>
-            </div>
-
-            <p className="text-lg md:text-xl font-serif font-light text-[#1A1A1A] italic pt-6">
-              It just needs you.
-            </p>
-          </motion.div>
-        </div>
-      </section>
-
-
-      {/* ═══════════════════════════════════════════
-          SECTION 8: CLOSING
-          ═══════════════════════════════════════════ */}
-      <section className="py-28 md:py-36 lg:py-44 bg-oraLight/40 relative overflow-hidden">
-        {/* Subtle decorative element */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full bg-oraPink/15 blur-3xl" />
-        </div>
+        <div className="absolute inset-0 ora-grain pointer-events-none opacity-30" />
 
         <div className="relative max-w-2xl mx-auto px-6 text-center">
-          <motion.div {...fadeUp}>
-            <div className="space-y-6">
-              <p className="text-base md:text-lg font-light text-neutral-500 leading-relaxed">
-                Because jewellery isn&apos;t just what you wear.
-                <br />
-                It&apos;s how you feel wearing it.
-              </p>
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-60px' }}
+          >
+            <motion.p
+              variants={revealLine}
+              className="text-lg md:text-xl font-light text-white/40 leading-relaxed mb-6"
+            >
+              Because jewellery isn&apos;t just what you wear.
+              <br />
+              It&apos;s how you feel wearing it.
+            </motion.p>
 
-              <p className="text-base md:text-lg font-light text-neutral-500 leading-relaxed">
-                And when you feel confident —
-                <br />
-                <span className="text-[#1A1A1A] font-serif italic text-lg md:text-xl">you wear your aura.</span>
-              </p>
-            </div>
+            <motion.h2
+              variants={fadeSlideUp}
+              className="text-3xl md:text-4xl lg:text-5xl font-serif font-light italic text-white/90 leading-tight mb-16 md:mb-20"
+            >
+              ORA is for her.
+            </motion.h2>
 
-            {/* CTA */}
-            <div className="mt-16">
+            <motion.div variants={fadeSlideUp}>
               <Link
                 href="/collections"
-                className="inline-flex items-center gap-2 px-10 py-4 bg-[#1A1A1A] text-white text-sm font-medium tracking-wider uppercase rounded-none hover:bg-neutral-800 transition-colors duration-300"
+                className="group inline-flex items-center gap-3 px-12 py-5 border border-white/20 text-xs md:text-sm tracking-[0.2em] uppercase font-medium text-white hover:bg-white hover:text-[#111111] transition-all duration-500"
               >
-                Explore the Collection
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                Explore ORA
+                <svg className="w-4 h-4 transition-transform duration-500 group-hover:translate-x-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </Link>
-            </div>
+            </motion.div>
 
-            {/* Micro brand line */}
-            <p className="mt-12 text-xs tracking-[0.25em] uppercase text-oraAccent/50 font-medium">
+            <motion.p
+              variants={revealLine}
+              className="mt-16 text-[10px] tracking-[0.35em] uppercase text-[#C6A85B]/40 font-medium"
+            >
               Subtle. Strong. Unforgettable.
-            </p>
+            </motion.p>
           </motion.div>
         </div>
       </section>
