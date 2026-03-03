@@ -377,6 +377,7 @@ app.get('/api/health/detailed', detailedHealthCheck);
 // API Routes
 app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/products/bogo-eligible', bogoRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/cart', cartRoutes);
@@ -392,7 +393,6 @@ app.use('/api/announcements', announcementsRoutes);
 app.use('/api/pages', pagesRoutes);
 app.use('/api/shopall-cms', shopallCmsRoutes);
 app.use('/api/combos', comboRoutes);
-app.use('/api/products/bogo-eligible', bogoRoutes);
 app.use('/api/offers', offersRoutes);
 
 // Shipping config (public)
