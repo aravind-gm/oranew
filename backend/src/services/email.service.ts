@@ -472,17 +472,6 @@ export const sendAbandonedCartEmail = async (data: {
   }
 };
 
-export default {
-  sendOrderPlacedEmail,
-  sendOrderConfirmedEmail,
-  sendOrderShippedEmail,
-  sendOrderDeliveredEmail,
-  sendAbandonedCartEmail,
-  sendShippingReassuranceEmail,
-  sendReviewRequestEmail,
-  sendReorderSuggestionEmail,
-};
-
 // ═══════════════════════════════════════════════════════════════
 // POST-PURCHASE LIFECYCLE EMAILS (Phase 9)
 // ═══════════════════════════════════════════════════════════════
@@ -653,4 +642,15 @@ export const sendReorderSuggestionEmail = async (data: {
     console.error('Failed to send reorder suggestion email:', error);
     throw error;
   }
+};
+
+export default {
+  sendOrderPlacedEmail,
+  sendOrderConfirmedEmail,
+  sendOrderShippedEmail,
+  sendOrderDeliveredEmail,
+  sendAbandonedCartEmail,
+  sendShippingReassuranceEmail,
+  sendReviewRequestEmail,
+  sendReorderSuggestionEmail,
 };
