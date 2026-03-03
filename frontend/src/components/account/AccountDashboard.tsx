@@ -204,9 +204,9 @@ export default function AccountDashboard({ user }: AccountDashboardProps) {
   ];
 
   return (
-    <div className="min-h-screen" style={{ background: '#FDFBF7' }}>
-      {/* ── Subtle top gold accent line ── */}
-      <div className="h-[2px] bg-gradient-to-r from-transparent via-gold-400 to-transparent" />
+    <div className="min-h-screen bg-gradient-to-b from-[#FDF2F5]/50 via-[#FDFBF7] to-[#F9F5EB]/30] relative">
+      {/* ── Animated top gold accent line ── */}
+      <div className="h-[3px] bg-gradient-to-r from-[#E75480]/60 via-[#C6A85B] to-[#E75480]/60" style={{ backgroundSize: '200% 100%', animation: 'goldShimmer 3s ease infinite' }} />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
 
@@ -219,13 +219,13 @@ export default function AccountDashboard({ user }: AccountDashboardProps) {
             <div className="flex items-center gap-5 md:gap-6">
               {/* Monogram ring */}
               <div className="relative shrink-0">
-                <div className="w-[72px] h-[72px] md:w-[88px] md:h-[88px] rounded-full border-[1.5px] border-gold-400/60 flex items-center justify-center bg-neutral-50">
-                  <span className="font-serif text-2xl md:text-3xl font-semibold tracking-wide text-neutral-800">
+                <div className="w-[72px] h-[72px] md:w-[88px] md:h-[88px] rounded-full border-[2px] border-[#E75480]/30 flex items-center justify-center bg-gradient-to-br from-[#FDECEF] to-[#FDF2F5] shadow-lg shadow-[#F6C1CF]/20">
+                  <span className="font-serif text-2xl md:text-3xl font-semibold tracking-wide bg-gradient-to-br from-[#E75480] to-[#C6A85B] bg-clip-text text-transparent">
                     {initials}
                   </span>
                 </div>
-                {/* Gold dot indicator */}
-                <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-gold-400 ring-[2.5px] ring-white" />
+                {/* Animated dot indicator */}
+                <span className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-gradient-to-br from-[#E75480] to-[#C6A85B] ring-[2.5px] ring-white shadow-sm" style={{ animation: 'pulse-slow 2s infinite' }} />
               </div>
 
               <div>
@@ -278,21 +278,22 @@ export default function AccountDashboard({ user }: AccountDashboardProps) {
             STATS · Order summary ribbon
             ════════════════════════════════════ */}
         <section className="mb-12 md:mb-16">
-          <div className="grid grid-cols-3 divide-x divide-neutral-100">
+          <div className="grid grid-cols-3 gap-4 md:gap-6">
             {[
-              { label: 'Total Orders', value: orderStats.total, href: '/account/orders' },
-              { label: 'In Progress', value: orderStats.pending, href: '/account/orders?status=pending' },
-              { label: 'Delivered', value: orderStats.delivered, href: '/account/orders?status=delivered' },
+              { label: 'Total Orders', value: orderStats.total, href: '/account/orders', gradient: 'from-[#FDECEF] to-[#FDF2F5]', border: 'border-[#E75480]/10', color: 'text-[#E75480]', icon: '📦' },
+              { label: 'In Progress', value: orderStats.pending, href: '/account/orders?status=pending', gradient: 'from-[#FDF2F5] to-[#F9F5EB]', border: 'border-[#C6A85B]/10', color: 'text-[#C6A85B]', icon: '🚚' },
+              { label: 'Delivered', value: orderStats.delivered, href: '/account/orders?status=delivered', gradient: 'from-[#ecfdf5] to-[#d1fae5]', border: 'border-emerald-100', color: 'text-emerald-500', icon: '✅' },
             ].map((stat) => (
               <Link
                 key={stat.label}
                 href={stat.href}
-                className="group text-center py-6 md:py-8 first:pl-0 last:pr-0 hover:bg-neutral-50/60 transition-colors duration-300 rounded-lg"
+                className={`group text-center py-6 md:py-8 rounded-2xl bg-gradient-to-br ${stat.gradient} border ${stat.border} hover:shadow-lg hover:scale-[1.02] transition-all duration-300`}
               >
+                <span className="text-xl md:text-2xl block mb-2">{stat.icon}</span>
                 <p className="text-[11px] uppercase tracking-[0.2em] text-neutral-400 font-medium mb-2">
                   {stat.label}
                 </p>
-                <p className="font-serif text-4xl md:text-5xl font-semibold text-neutral-900 group-hover:text-gold-500 transition-colors duration-300">
+                <p className={`font-serif text-3xl md:text-4xl font-semibold ${stat.color} transition-colors duration-300`}>
                   {loadingStats ? (
                     <span className="inline-block w-8 h-8 rounded bg-neutral-100 animate-pulse" />
                   ) : (
@@ -315,16 +316,19 @@ export default function AccountDashboard({ user }: AccountDashboardProps) {
               Your Account
             </h2>
 
-            <div className="border border-neutral-100 rounded-2xl overflow-hidden divide-y divide-neutral-100 bg-white">
-              {navItems.map((item) => (
+            <div className="border border-[#E75480]/[0.08] rounded-2xl overflow-hidden divide-y divide-[#F6C1CF]/20 bg-white shadow-sm">
+              {navItems.map((item, idx) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="group flex items-center gap-5 px-6 py-5 hover:bg-stone-50 transition-all duration-300"
+                  className="group flex items-center gap-5 px-6 py-5 hover:bg-gradient-to-r hover:from-[#FDECEF]/50 hover:to-transparent transition-all duration-300"
                 >
                   {/* Icon */}
-                  <span className="shrink-0 w-10 h-10 rounded-full border border-primary-100 bg-primary-50 flex items-center justify-center
-                                   text-primary-400 group-hover:border-gold-400 group-hover:bg-gold-50 group-hover:text-gold-500 transition-all duration-300">
+                  <span className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300
+                    ${idx % 2 === 0 
+                      ? 'bg-gradient-to-br from-[#FDECEF] to-[#FDF2F5] text-[#E75480] border border-[#E75480]/10 group-hover:shadow-md group-hover:shadow-[#E75480]/10' 
+                      : 'bg-gradient-to-br from-[#F9F5EB] to-[#FDF2F5] text-[#C6A85B] border border-[#C6A85B]/10 group-hover:shadow-md group-hover:shadow-[#C6A85B]/10'
+                    }`}>
                     {item.icon}
                   </span>
 
@@ -361,8 +365,8 @@ export default function AccountDashboard({ user }: AccountDashboardProps) {
                   <Link
                     key={ql.href}
                     href={ql.href}
-                    className="group flex items-center gap-3 px-4 py-3.5 rounded-xl border border-neutral-100 bg-white
-                               hover:border-primary-200 hover:bg-primary-50 transition-all duration-300"
+                    className="group flex items-center gap-3 px-4 py-3.5 rounded-xl border border-[#E75480]/[0.08] bg-white
+                               hover:border-[#E75480]/20 hover:bg-gradient-to-r hover:from-[#FDECEF]/50 hover:to-[#FDF2F5]/30 hover:shadow-sm transition-all duration-300"
                   >
                     <span className="text-primary-300 group-hover:text-primary-500 transition-colors duration-300">
                       {ql.icon}
@@ -376,7 +380,7 @@ export default function AccountDashboard({ user }: AccountDashboardProps) {
             </div>
 
             {/* ── Concierge card (dark luxury) ── */}
-            <div className="relative overflow-hidden rounded-2xl bg-neutral-900 p-7 md:p-8">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1A1A1A] to-[#0A0A0A] p-7 md:p-8 border border-[#C6A85B]/10 shadow-xl">
               {/* Decorative corner element */}
               <div className="absolute top-0 right-0 w-28 h-28 opacity-[0.04]">
                 <svg viewBox="0 0 100 100" fill="none" className="w-full h-full">

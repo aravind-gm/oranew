@@ -82,10 +82,10 @@ export default function SettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-rose-50 via-pink-50 to-amber-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#FDF2F5] via-[#FDECEF]/50 to-[#F9F5EB]">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-rose-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading settings...</p>
+          <div className="w-16 h-16 border-4 border-[#E75480] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-neutral-500">Loading settings...</p>
         </div>
       </div>
     );
@@ -96,18 +96,18 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-amber-50 py-8 md:py-12">
+    <div className="min-h-screen bg-gradient-to-br from-[#FDF2F5]/50 via-[#FDFBF7] to-[#F9F5EB]/30 py-8 md:py-12">
       <div className="container mx-auto px-4 max-w-4xl">
         
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="font-serif text-3xl md:text-4xl font-bold text-gray-800">Account Settings</h1>
-            <p className="text-gray-600 mt-1">Manage your profile and preferences</p>
+            <h1 className="font-serif text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#1A1A1A] to-[#44403c] bg-clip-text text-transparent">Account Settings</h1>
+            <p className="text-neutral-400 mt-1">Manage your profile and preferences</p>
           </div>
           <Link 
             href="/account"
-            className="flex items-center gap-2 px-4 py-2 border border-rose-200 rounded-xl hover:bg-rose-50 transition-colors text-gray-700"
+            className="flex items-center gap-2 px-4 py-2 border border-[#E75480]/20 rounded-xl hover:bg-[#FDECEF]/50 transition-colors text-neutral-600"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -128,8 +128,8 @@ export default function SettingsPage() {
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all whitespace-nowrap ${
                 activeTab === tab.id
-                  ? 'bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-lg'
-                  : 'bg-white/80 text-gray-700 hover:bg-white border border-rose-100'
+                  ? 'bg-gradient-to-r from-[#E75480] to-[#E75480]/85 text-white shadow-lg shadow-[#E75480]/20'
+                  : 'bg-white/80 text-neutral-600 hover:bg-[#FDECEF]/50 border border-[#E75480]/10'
               }`}
             >
               <span>{tab.icon}</span>
@@ -139,7 +139,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Content */}
-        <div className="backdrop-blur-xl bg-white/90 rounded-3xl shadow-xl p-6 md:p-8 border border-rose-100">
+        <div className="backdrop-blur-xl bg-white/90 rounded-3xl shadow-xl p-6 md:p-8 border border-[#E75480]/[0.08]">
           
           {/* Success/Error Messages */}
           {success && (
@@ -163,13 +163,13 @@ export default function SettingsPage() {
             <form onSubmit={handleSaveProfile} className="space-y-6">
               {/* Avatar */}
               <div className="flex items-center gap-4 mb-8">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center text-white text-3xl font-serif font-bold shadow-lg">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#E75480] to-[#C6A85B] flex items-center justify-center text-white text-3xl font-serif font-bold shadow-lg shadow-[#E75480]/20">
                   {(profile.name?.[0] || user.email?.[0] || 'U').toUpperCase()}
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-800">{profile.name || 'Your Name'}</h3>
                   <p className="text-gray-500 text-sm">{profile.email}</p>
-                  <button type="button" className="text-rose-600 text-sm font-medium mt-1 hover:text-rose-700">
+                  <button type="button" className="text-[#E75480] text-sm font-medium mt-1 hover:text-[#C6A85B] transition-colors">
                     Change Photo
                   </button>
                 </div>
@@ -183,8 +183,8 @@ export default function SettingsPage() {
                     type="text"
                     value={profile.name}
                     onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-rose-100 bg-white 
-                               focus:border-rose-400 focus:ring-4 focus:ring-rose-100 
+                    className="w-full px-4 py-3 rounded-xl border-2 border-[#E75480]/15 bg-white 
+                               focus:border-[#E75480]/50 focus:ring-4 focus:ring-[#E75480]/10 
                                outline-none transition-all text-gray-800"
                     placeholder="Enter your full name"
                   />
@@ -210,8 +210,8 @@ export default function SettingsPage() {
                     type="tel"
                     value={profile.phone}
                     onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-rose-100 bg-white 
-                               focus:border-rose-400 focus:ring-4 focus:ring-rose-100 
+                    className="w-full px-4 py-3 rounded-xl border-2 border-[#E75480]/15 bg-white 
+                               focus:border-[#E75480]/50 focus:ring-4 focus:ring-[#E75480]/10 
                                outline-none transition-all text-gray-800"
                     placeholder="+91 XXXXX XXXXX"
                   />
@@ -223,8 +223,8 @@ export default function SettingsPage() {
                   <select
                     value={profile.gender}
                     onChange={(e) => setProfile({ ...profile, gender: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-rose-100 bg-white 
-                               focus:border-rose-400 focus:ring-4 focus:ring-rose-100 
+                    className="w-full px-4 py-3 rounded-xl border-2 border-[#E75480]/15 bg-white 
+                               focus:border-[#E75480]/50 focus:ring-4 focus:ring-[#E75480]/10 
                                outline-none transition-all text-gray-800"
                   >
                     <option value="">Select gender</option>
@@ -242,8 +242,8 @@ export default function SettingsPage() {
                     type="date"
                     value={profile.dateOfBirth}
                     onChange={(e) => setProfile({ ...profile, dateOfBirth: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-rose-100 bg-white 
-                               focus:border-rose-400 focus:ring-4 focus:ring-rose-100 
+                    className="w-full px-4 py-3 rounded-xl border-2 border-[#E75480]/15 bg-white 
+                               focus:border-[#E75480]/50 focus:ring-4 focus:ring-[#E75480]/10 
                                outline-none transition-all text-gray-800"
                   />
                 </div>
@@ -254,9 +254,9 @@ export default function SettingsPage() {
                   type="submit"
                   disabled={loading}
                   className="px-6 py-3 rounded-xl font-semibold text-white
-                             bg-gradient-to-r from-rose-500 to-pink-500
-                             hover:from-rose-600 hover:to-pink-600
-                             shadow-lg hover:shadow-xl transition-all
+                             bg-gradient-to-r from-[#E75480] to-[#E75480]/85
+                             hover:from-[#E75480] hover:to-[#C6A85B]
+                             shadow-lg shadow-[#E75480]/20 hover:shadow-xl transition-all
                              disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Saving...' : 'Save Changes'}
@@ -268,7 +268,7 @@ export default function SettingsPage() {
           {/* Security Tab */}
           {activeTab === 'security' && (
             <div className="space-y-6">
-              <div className="p-6 border-2 border-rose-100 rounded-2xl">
+              <div className="p-6 border-2 border-[#E75480]/10 rounded-2xl bg-gradient-to-r from-[#FDECEF]/30 to-transparent">
                 <h3 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
                   <span className="text-xl">🔐</span> Password
                 </h3>
@@ -283,19 +283,19 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="p-6 border-2 border-rose-100 rounded-2xl">
+              <div className="p-6 border-2 border-[#E75480]/10 rounded-2xl">
                 <h3 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
                   <span className="text-xl">📱</span> Two-Factor Authentication
                 </h3>
                 <p className="text-gray-600 text-sm mb-4">
                   Add an extra layer of security to your account.
                 </p>
-                <button className="px-4 py-2 bg-rose-50 text-rose-600 rounded-xl font-medium hover:bg-rose-100 transition-colors">
+                <button className="px-4 py-2 bg-[#FDECEF] text-[#E75480] rounded-xl font-medium hover:bg-[#F6C1CF]/40 transition-colors">
                   Enable 2FA
                 </button>
               </div>
 
-              <div className="p-6 border-2 border-rose-100 rounded-2xl">
+              <div className="p-6 border-2 border-[#E75480]/10 rounded-2xl">
                 <h3 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
                   <span className="text-xl">🖥️</span> Active Sessions
                 </h3>
@@ -342,7 +342,7 @@ export default function SettingsPage() {
                 { id: 'sms', label: 'SMS Notifications', desc: 'Receive updates via text messages', default: false },
                 { id: 'whatsapp', label: 'WhatsApp Updates', desc: 'Get updates on WhatsApp', default: true },
               ].map((item) => (
-                <div key={item.id} className="flex items-center justify-between p-4 border-2 border-rose-100 rounded-2xl">
+                <div key={item.id} className="flex items-center justify-between p-4 border-2 border-[#E75480]/10 rounded-2xl hover:bg-[#FDECEF]/20 transition-colors">
                   <div>
                     <h4 className="font-medium text-gray-800">{item.label}</h4>
                     <p className="text-sm text-gray-500">{item.desc}</p>
@@ -353,16 +353,16 @@ export default function SettingsPage() {
                       defaultChecked={item.default}
                       className="sr-only peer" 
                     />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-rose-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-500"></div>
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#E75480]/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#E75480]"></div>
                   </label>
                 </div>
               ))}
 
               <div className="flex justify-end pt-4">
                 <button className="px-6 py-3 rounded-xl font-semibold text-white
-                             bg-gradient-to-r from-rose-500 to-pink-500
-                             hover:from-rose-600 hover:to-pink-600
-                             shadow-lg hover:shadow-xl transition-all">
+                             bg-gradient-to-r from-[#E75480] to-[#E75480]/85
+                             hover:from-[#E75480] hover:to-[#C6A85B]
+                             shadow-lg shadow-[#E75480]/20 hover:shadow-xl transition-all">
                   Save Preferences
                 </button>
               </div>
