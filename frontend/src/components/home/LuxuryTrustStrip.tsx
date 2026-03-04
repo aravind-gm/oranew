@@ -23,7 +23,7 @@ const TRUST_ITEMS = [
   {
     id: 2,
     icon: RefreshCw,
-    title: '7-Day Easy Returns',
+    title: '5-Day Easy Returns',
     description: 'No questions asked',
   },
   {

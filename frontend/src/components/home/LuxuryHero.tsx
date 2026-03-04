@@ -1,104 +1,245 @@
 'use client';
 
 /**
- * LuxuryHero — Premium Emotional Above-the-Fold
- * 
- * Structure:
- *  - Large background model image (placeholder allowed)
- *  - Headline: "Own. Radiate. Adorn."
- *  - Subtext: Jewellery crafted for the modern woman.
- *  - Dual CTAs: Shop Bestsellers | Explore Combos
- *  - Trust line: ✨ 50,000+ Happy Customers | Free Shipping on All Orders
- *  - Minimal, luxury, no heavy overlays
+ * LuxuryHero — Multi-Slide Hero Carousel
+ *
+ * Features:
+ *  - Multiple slides with auto-advance (5s interval)
+ *  - Dot indicators + swipe support
+ *  - Reduced height (~65vh) per D2C standard
+ *  - Smooth crossfade transitions
+ *  - Each slide has its own headline, CTA, image
  */
 
-import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowRight, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+interface HeroSlide {
+  id: number;
+  image: string;
+  headline: string;
+  headlineAccent?: string;
+  subtitle: string;
+  cta: { label: string; href: string };
+  ctaSecondary?: { label: string; href: string };
+}
+
+const SLIDES: HeroSlide[] = [
+  {
+    id: 1,
+    image: '/banners.png',
+    headline: 'Own. Radiate.',
+    headlineAccent: 'Adorn.',
+    subtitle: 'Premium necklaces, rings & bracelets crafted for the modern woman.',
+    cta: { label: 'Shop Bestsellers', href: '/collections' },
+    ctaSecondary: { label: 'View All', href: '/collections' },
+  },
+  {
+    id: 2,
+    image: '/chain.jpeg',
+    headline: 'Necklaces That',
+    headlineAccent: 'Move With You',
+    subtitle: 'Layered, minimal, or statement — find the piece that defines your style.',
+    cta: { label: 'Shop Necklaces', href: '/collections?category=necklaces' },
+  },
+  {
+    id: 3,
+    image: '/ring.jpeg',
+    headline: 'Rings For',
+    headlineAccent: 'Every Moment',
+    subtitle: 'Stackable bands, bold solitaires, and everyday classics.',
+    cta: { label: 'Shop Rings', href: '/collections?category=rings' },
+  },
+  {
+    id: 4,
+    image: '/bracelets.jpeg',
+    headline: 'Bracelets',
+    headlineAccent: 'Wrapped in Grace',
+    subtitle: 'Delicate cuffs & charm bracelets for effortless elegance.',
+    cta: { label: 'Shop Bracelets', href: '/collections?category=bracelets' },
+  },
+];
 
 export default function LuxuryHero() {
+  const [current, setCurrent] = useState(0);
+  const [direction, setDirection] = useState(1);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const touchStartX = useRef(0);
+
+  const startTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setDirection(1);
+      setCurrent((prev) => (prev + 1) % SLIDES.length);
+    }, 5000);
+  }, []);
+
+  useEffect(() => {
+    startTimer();
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [startTimer]);
+
+  const goTo = (index: number) => {
+    setDirection(index > current ? 1 : -1);
+    setCurrent(index);
+    startTimer();
+  };
+
+  const goNext = () => {
+    setDirection(1);
+    setCurrent((prev) => (prev + 1) % SLIDES.length);
+    startTimer();
+  };
+
+  const goPrev = () => {
+    setDirection(-1);
+    setCurrent((prev) => (prev - 1 + SLIDES.length) % SLIDES.length);
+    startTimer();
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      diff > 0 ? goNext() : goPrev();
+    }
+  };
+
+  const slide = SLIDES[current];
+
+  const slideVariants = {
+    enter: (dir: number) => ({ opacity: 0, x: dir > 0 ? 60 : -60 }),
+    center: { opacity: 1, x: 0 },
+    exit: (dir: number) => ({ opacity: 0, x: dir > 0 ? -60 : 60 }),
+  };
+
   return (
-    <section className="relative w-full h-[100svh] min-h-[600px] max-h-[950px] overflow-hidden">
-      {/* Background Image */}
-      <div className="absolute inset-0">
-        <Image
-          src="/banners.png"
-          alt="ORA Jewellery — Premium Collection"
-          fill
-          className="object-cover object-center"
-          priority
-          quality={90}
-          sizes="100vw"
-        />
-        {/* Subtle gradient overlay — minimal, not heavy */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/25 to-black/50" />
-      </div>
+    <section
+      className="relative w-full h-[65svh] min-h-[420px] max-h-[680px] overflow-hidden"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Background Image — crossfade */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={slide.id}
+          initial={{ opacity: 0, scale: 1.05 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.8, ease: 'easeInOut' }}
+          className="absolute inset-0"
+        >
+          <Image
+            src={slide.image}
+            alt={`${slide.headline} ${slide.headlineAccent || ''}`}
+            fill
+            className="object-cover object-center"
+            priority={slide.id === 1}
+            quality={85}
+            sizes="100vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/30 to-black/55" />
+        </motion.div>
+      </AnimatePresence>
 
       {/* Content */}
       <div className="relative z-10 h-full flex items-center justify-center text-center text-white px-5">
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-          className="max-w-3xl"
-        >
-          {/* Headline */}
-          <motion.h1
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.9, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-serif font-light mb-4 md:mb-6 tracking-tight leading-[1.1]"
-          >
-            Own. Radiate. <span className="italic">Adorn.</span>
-          </motion.h1>
-
-          {/* Subtitle */}
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.5, ease: 'easeOut' }}
-            className="text-base sm:text-lg md:text-xl mb-8 md:mb-10 opacity-90 font-light max-w-lg mx-auto"
-          >
-            Premium chains, rings &amp; bracelets crafted for the modern woman.
-          </motion.p>
-
-          {/* Dual CTAs */}
+        <AnimatePresence mode="wait" custom={direction}>
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.7, ease: 'easeOut' }}
-            className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center"
+            key={slide.id}
+            custom={direction}
+            variants={slideVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="max-w-3xl"
           >
-            <Link
-              href="/collections?category=chains"
-              className="group inline-flex items-center justify-center gap-2.5 px-8 py-4 bg-white text-[#1A1A1A] font-medium rounded-full hover:bg-neutral-100 transition-all duration-300 shadow-lg hover:shadow-xl"
-            >
-              <span>Shop Chains</span>
-              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-            </Link>
-            <Link
-              href="/collections"
-              className="group inline-flex items-center justify-center gap-2.5 px-8 py-4 border-2 border-white/80 text-white font-medium rounded-full hover:bg-white/10 backdrop-blur-sm transition-all duration-300"
-            >
-              <span>View All Collections</span>
-              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-            </Link>
-          </motion.div>
+            {/* Headline */}
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-serif font-light mb-3 md:mb-5 tracking-tight leading-[1.1]">
+              {slide.headline}{' '}
+              {slide.headlineAccent && (
+                <span className="italic">{slide.headlineAccent}</span>
+              )}
+            </h1>
 
-          {/* Trust Line */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 1.1 }}
-            className="mt-8 md:mt-10 flex items-center justify-center gap-2 text-white/70 text-xs sm:text-sm tracking-wide"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-pink-300" />
-            <span>Anti-Tarnish · Skin-Safe</span>
-            <span className="text-white/40">|</span>
-            <span>Free Delivery Across India</span>
+            {/* Subtitle */}
+            <p className="text-sm sm:text-base md:text-lg mb-6 md:mb-8 opacity-90 font-light max-w-lg mx-auto">
+              {slide.subtitle}
+            </p>
+
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+              <Link
+                href={slide.cta.href}
+                className="group inline-flex items-center justify-center gap-2.5 px-7 py-3.5 bg-white text-[#1A1A1A] font-medium rounded-full hover:bg-neutral-100 transition-all duration-300 shadow-lg hover:shadow-xl text-sm"
+              >
+                <span>{slide.cta.label}</span>
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              </Link>
+              {slide.ctaSecondary && (
+                <Link
+                  href={slide.ctaSecondary.href}
+                  className="group inline-flex items-center justify-center gap-2.5 px-7 py-3.5 border-2 border-white/80 text-white font-medium rounded-full hover:bg-white/10 backdrop-blur-sm transition-all duration-300 text-sm"
+                >
+                  <span>{slide.ctaSecondary.label}</span>
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                </Link>
+              )}
+            </div>
           </motion.div>
-        </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* Navigation Arrows (desktop only) */}
+      <button
+        onClick={goPrev}
+        className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-white/10 backdrop-blur-sm rounded-full items-center justify-center text-white hover:bg-white/20 transition-all"
+        aria-label="Previous slide"
+      >
+        <ChevronLeft className="w-5 h-5" />
+      </button>
+      <button
+        onClick={goNext}
+        className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-white/10 backdrop-blur-sm rounded-full items-center justify-center text-white hover:bg-white/20 transition-all"
+        aria-label="Next slide"
+      >
+        <ChevronRight className="w-5 h-5" />
+      </button>
+
+      {/* Dot Indicators + Trust Line */}
+      <div className="absolute bottom-4 md:bottom-6 left-0 right-0 z-20 flex flex-col items-center gap-3">
+        {/* Dots */}
+        <div className="flex gap-2">
+          {SLIDES.map((s, i) => (
+            <button
+              key={s.id}
+              onClick={() => goTo(i)}
+              className={`transition-all duration-300 rounded-full ${
+                i === current
+                  ? 'w-7 h-2 bg-white'
+                  : 'w-2 h-2 bg-white/40 hover:bg-white/60'
+              }`}
+              aria-label={`Go to slide ${i + 1}`}
+            />
+          ))}
+        </div>
+
+        {/* Trust Line */}
+        <div className="flex items-center justify-center gap-2 text-white/60 text-[10px] sm:text-xs tracking-wide">
+          <Sparkles className="w-3 h-3 text-pink-300" />
+          <span>Anti-Tarnish · Skin-Safe</span>
+          <span className="text-white/30">|</span>
+          <span>Free Delivery Across India</span>
+        </div>
       </div>
     </section>
   );

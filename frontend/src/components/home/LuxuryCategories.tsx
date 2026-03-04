@@ -25,11 +25,11 @@ interface CategoryItem {
 const CATEGORIES: CategoryItem[] = [
   {
     id: 1,
-    title: 'Chains',
+    title: 'Necklaces',
     subtitle: 'Most Loved',
-    tagline: 'Layered, minimal, or statement — find the chain that speaks you.',
+    tagline: 'Layered, minimal, or statement — find the piece that speaks you.',
     image: '/chain.jpeg',
-    href: '/collections?category=chains',
+    href: '/collections?category=necklaces',
   },
   {
     id: 2,

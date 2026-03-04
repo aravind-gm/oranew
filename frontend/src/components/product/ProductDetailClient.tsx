@@ -494,7 +494,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L11.25 17.25L15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   ),
-                  label: 'Easy 7-Day Return',
+                  label: 'Easy 5-Day Return',
                 },
                 {
                   icon: (
@@ -680,7 +680,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
               </div>
               <div className="flex items-center gap-2.5 text-xs text-neutral-600">
                 <RotateCcw size={14} className="text-neutral-400 flex-shrink-0" />
-                <span>Easy 7-day returns from delivery date</span>
+                <span>Easy 5-day returns from delivery date</span>
               </div>
               <div className="flex items-center gap-2.5 text-xs text-neutral-600">
                 <Lock size={14} className="text-neutral-400 flex-shrink-0" />

@@ -47,12 +47,12 @@ export default function OraPhilosophy() {
             </p>
 
             <p className="text-base md:text-lg font-light text-neutral-500 leading-relaxed">
-              We design chains, rings &amp; bracelets that are anti-tarnish, skin-safe,
+              We design necklaces, rings &amp; bracelets that are anti-tarnish, skin-safe,
               and crafted to be worn every single day. No compromises. No occasion needed.
             </p>
 
             <p className="text-base md:text-lg font-light text-neutral-500 leading-relaxed">
-              From layered chains that move with you, to minimal rings that speak volumes — 
+              From layered necklaces that move with you, to minimal rings that speak volumes — 
               ORA is for the woman who doesn&apos;t wait for permission to shine.
             </p>
           </div>

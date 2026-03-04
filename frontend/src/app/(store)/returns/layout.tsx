@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Returns & Exchange Policy',
-  description: 'Easy 7-day returns and exchanges on ORA Jewellery. Learn about our hassle-free return process.',
+  description: 'Easy 5-day returns and exchanges on ORA Jewellery. Learn about our hassle-free return process.',
   alternates: { canonical: 'https://orashop.in/returns' },
   openGraph: {
     title: 'Returns & Exchange | ORA Jewellery',

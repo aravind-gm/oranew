@@ -31,7 +31,7 @@ const TRUST_ITEMS = [
   },
   {
     icon: RotateCcw,
-    label: '7-Day Easy Returns',
+    label: '5-Day Easy Returns',
     color: 'text-amber-600',
     bg: 'bg-amber-50',
   },
@@ -75,7 +75,7 @@ export function TrustStrip() {
 export function ReturnPolicyLine() {
   return (
     <p className="text-center text-[11px] sm:text-xs text-gray-400 mt-3 leading-relaxed">
-      Free returns within 7 days · No questions asked
+      Free returns within 5 days · No questions asked
     </p>
   );
 }

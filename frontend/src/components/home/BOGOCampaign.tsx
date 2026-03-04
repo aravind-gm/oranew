@@ -48,7 +48,7 @@ export default function BOGOCampaign() {
             Buy 1. Get 1 Free.
           </h2>
           <p className="text-base md:text-lg text-neutral-400 max-w-lg mx-auto mb-8 md:mb-10">
-            Pick any two chains, rings, or bracelets from our combo collection.
+            Pick any two necklaces, rings, or bracelets from our combo collection.
           </p>
         </motion.div>
 

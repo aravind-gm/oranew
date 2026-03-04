@@ -32,10 +32,10 @@ interface ShopByCategoryProps {
 const DEFAULT_CATEGORIES: CategoryItem[] = [
   {
     id: 1,
-    title: 'Chains',
+    title: 'Necklaces',
     subtitle: 'Layered, minimal, or statement',
     image: '/chain.jpeg',
-    href: '/collections?category=chains',
+    href: '/collections?category=necklaces',
   },
   {
     id: 2,
