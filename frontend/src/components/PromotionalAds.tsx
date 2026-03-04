@@ -155,12 +155,6 @@ export default function PromotionalAds() {
                 </div>
               )}
 
-              {/* Discount Badge */}
-              {currentAd.discount && (
-                <div className="absolute top-3 right-3 px-2 py-1 bg-[#9B2C46] text-white rounded-lg text-xs font-bold">
-                  -{currentAd.discount}%
-                </div>
-              )}
             </div>
 
             {/* Text Content */}
