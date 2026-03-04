@@ -94,11 +94,11 @@ export default function Header() {
 
   const menuItems = [
     { label: 'Shop All', href: '/collections' },
-    { label: 'New Arrivals', href: '/collections/new-arrivals' },
     { label: 'Combos for Her', href: '/collections/combos' },
     { label: 'Gifts for Her', href: '/collections/gifts-for-her' },
     { label: 'Tumblers', href: '/collections/tumblers' },
-    { label: 'Offers', href: '/collections/offers' },
+    { label: 'About', href: '/about-ora' },
+    { label: 'Contact', href: '/contact' },
   ];
 
   return (
