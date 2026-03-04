@@ -24,7 +24,7 @@ import { trackViewCart } from '@/lib/analytics';
 import RelatedProductsCart from '@/components/RelatedProductsCart';
 import CartUpsell from '@/components/cart/CartUpsell';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, Minus, Plus, ShoppingBag, Trash2, Shield, Truck, Package, Heart } from 'lucide-react';
+import { ChevronRight, Minus, Plus, ShoppingBag, Trash2, Shield, Truck, Package, Heart, Tag, Clock, Gift, Zap } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -402,6 +402,42 @@ export default function CartPage() {
         </motion.div>
 
         {/* ============================================================
+            FREE SHIPPING + COUPON STRIP
+            ============================================================ */}
+        <div className="mb-6 space-y-3">
+          {/* Free Shipping Celebration */}
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3"
+          >
+            <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <Truck className="w-4 h-4 text-emerald-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-emerald-800">🎉 FREE Shipping on your order!</p>
+              <p className="text-xs text-emerald-600">Estimated delivery in 5-7 business days</p>
+            </div>
+          </motion.div>
+
+          {/* Coupon Teaser */}
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3"
+          >
+            <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <Tag className="w-4 h-4 text-amber-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-amber-800">Have a coupon? Apply it at checkout!</p>
+              <p className="text-xs text-amber-600">Coupons can be applied on the next step</p>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* ============================================================
             STOCK ERRORS (if any)
             ============================================================ */}
         <AnimatePresence>
@@ -483,6 +519,16 @@ export default function CartPage() {
                   </div>
                 </div>
 
+                {/* Savings Callout */}
+                {subtotal >= 1000 && (
+                  <div className="flex items-center gap-2 bg-pink-50 border border-pink-200 rounded-lg px-3 py-2">
+                    <Gift className="w-4 h-4 text-pink-600 flex-shrink-0" />
+                    <p className="text-xs text-pink-700 font-medium">
+                      You&apos;re saving ₹{Math.round(subtotal * 0.15).toLocaleString('en-IN')} with free shipping!
+                    </p>
+                  </div>
+                )}
+
                 {/* Total */}
                 <div className="border-t border-gray-100 mt-6 pt-6">
                   <div className="flex justify-between items-baseline">
@@ -498,7 +544,7 @@ export default function CartPage() {
                   </div>
                 </div>
 
-                {/* Checkout Button - Desktop */}
+                {/* Express Checkout Button - Desktop */}
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -513,11 +559,17 @@ export default function CartPage() {
                     </>
                   ) : (
                     <>
-                      <Shield className="w-5 h-5" />
-                      Secure Checkout
+                      <Zap className="w-5 h-5" />
+                      Checkout Now
                     </>
                   )}
                 </motion.button>
+
+                {/* Urgency Note */}
+                <div className="flex items-center justify-center gap-1.5 mt-3 text-xs text-gray-500">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Complete checkout in under 60 seconds</span>
+                </div>
 
                 {/* Trust Badges */}
                 <TrustBadges />
@@ -531,6 +583,50 @@ export default function CartPage() {
       </div>
 
       {/* ============================================================
+          WHY SHOP WITH ORA — Trust & Value Section
+          ============================================================ */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-10">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="bg-gradient-to-r from-pink-50/80 via-white to-rose-50/80 border border-pink-100 rounded-2xl p-6 sm:p-8"
+        >
+          <h3 className="font-serif text-lg sm:text-xl text-center text-gray-900 mb-6">Why Shop With ORA</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-3 bg-emerald-50 rounded-full flex items-center justify-center">
+                <Truck className="w-6 h-6 text-emerald-600" />
+              </div>
+              <p className="text-sm font-semibold text-gray-900">Free Delivery</p>
+              <p className="text-xs text-gray-500 mt-1">On every order</p>
+            </div>
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-3 bg-blue-50 rounded-full flex items-center justify-center">
+                <Package className="w-6 h-6 text-blue-600" />
+              </div>
+              <p className="text-sm font-semibold text-gray-900">5-Day Returns</p>
+              <p className="text-xs text-gray-500 mt-1">Hassle-free returns</p>
+            </div>
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-3 bg-amber-50 rounded-full flex items-center justify-center">
+                <Shield className="w-6 h-6 text-amber-600" />
+              </div>
+              <p className="text-sm font-semibold text-gray-900">100% Authentic</p>
+              <p className="text-xs text-gray-500 mt-1">Anti-tarnish jewellery</p>
+            </div>
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-3 bg-purple-50 rounded-full flex items-center justify-center">
+                <Gift className="w-6 h-6 text-purple-600" />
+              </div>
+              <p className="text-sm font-semibold text-gray-900">Premium Packaging</p>
+              <p className="text-xs text-gray-500 mt-1">Gift-ready boxes</p>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* ============================================================
           RELATED PRODUCTS - "You May Also Like"
           ============================================================ */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -540,7 +636,12 @@ export default function CartPage() {
       {/* ============================================================
           MOBILE STICKY CHECKOUT BAR
           ============================================================ */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-4 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+        {/* Free shipping mini banner */}
+        <div className="flex items-center justify-center gap-1.5 mb-2 text-xs text-emerald-700 font-medium">
+          <Truck className="w-3.5 h-3.5" />
+          <span>FREE Shipping • Estimated 5-7 days</span>
+        </div>
         <div className="flex items-center gap-4">
           {/* Total Display */}
           <div className="flex-1">

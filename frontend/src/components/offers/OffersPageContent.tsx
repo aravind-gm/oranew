@@ -218,8 +218,8 @@ export default function OffersPageContent() {
           </div>
         ) : (
           <>
-            {/* 4-column Desktop, 2-column Tablet, 1-column Mobile */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6 lg:gap-7">
+            {/* 4-column Desktop, 2-column Tablet/Mobile */}
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-7">
               {products.map((product) => (
                 <OfferProductCard key={product.id} product={product} />
               ))}

@@ -162,23 +162,8 @@ export default function RelatedProductsCart() {
             </p>
           </div>
 
-          {/* Mobile: Horizontal Scroll */}
-          <div className="overflow-x-auto sm:hidden pb-2 -mx-4 px-4 scrollbar-hide">
-            <div className="flex gap-4 min-w-min">
-              {addonProducts.map((product, idx) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onQuickAdd={handleQuickAdd}
-                  isMobile
-                  index={idx}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Desktop: Grid */}
-          <div className="hidden sm:grid grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Product Grid — 2-col mobile, 2-col tablet, 3-col desktop */}
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
             {addonProducts.map((product, idx) => (
               <ProductCard
                 key={product.id}
@@ -219,23 +204,8 @@ export default function RelatedProductsCart() {
             </Link>
           </div>
 
-          {/* Mobile: Horizontal Scroll */}
-          <div className="overflow-x-auto sm:hidden pb-2 -mx-4 px-4 scrollbar-hide">
-            <div className="flex gap-4 min-w-min">
-              {relatedProducts.map((product, idx) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onQuickAdd={handleQuickAdd}
-                  isMobile
-                  index={idx}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Desktop: Grid */}
-          <div className="hidden sm:grid grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Product Grid — 2-col mobile, 2-col tablet, 3-col desktop */}
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
             {relatedProducts.map((product, idx) => (
               <ProductCard
                 key={product.id}

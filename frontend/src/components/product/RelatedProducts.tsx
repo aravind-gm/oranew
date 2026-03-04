@@ -63,7 +63,7 @@ export default function RelatedProducts({
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {[...Array(4)].map((_, i) => (
           <div
             key={i}
@@ -81,7 +81,7 @@ export default function RelatedProducts({
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-serif font-light text-[#1A1A1A]">You May Also Like</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {products.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}
