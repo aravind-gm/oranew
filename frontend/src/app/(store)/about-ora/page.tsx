@@ -344,9 +344,9 @@ export default function AboutOraPage() {
         </div>
         <div className="relative max-w-5xl mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
-            <AnimatedCounter end={50} suffix="K+" label="Happy Customers" />
-            <AnimatedCounter end={500} suffix="+" label="Unique Designs" />
-            <AnimatedCounter end={4} suffix=".9" label="Star Rating" />
+            <AnimatedCounter end={100} suffix="%" label="Anti-Tarnish" />
+            <AnimatedCounter end={5} suffix="-Day" label="Easy Returns" />
+            <AnimatedCounter end={925} suffix="" label="Sterling Silver" />
             <AnimatedCounter end={100} suffix="%" label="Handcrafted" />
           </div>
         </div>

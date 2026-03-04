@@ -111,8 +111,8 @@ export default function Header() {
       }}
     >
       {/* Main Header */}
-      <div className="bg-white border-b border-oraLight px-4 lg:px-6 relative overflow-hidden">
-        <div className="max-w-7xl mx-auto flex items-center justify-between h-16 lg:h-20 relative overflow-hidden">
+      <div className="bg-white border-b border-oraLight px-4 lg:px-6 relative">
+        <div className="max-w-7xl mx-auto flex items-center justify-between h-16 lg:h-20 relative">
           {/* Logo - Brand Dominant */}
           <Link href="/" className="flex-shrink-0 group flex items-center justify-center" style={{ marginTop: '8px' }}>
             <Image
