@@ -3,21 +3,19 @@
 /**
  * ORA Premium Home Page — Luxury D2C Conversion Flow
  *
- * Architecture: Inspire → Bestsellers → Campaign → Categories → Trust → Close
+ * Architecture: Inspire → Products → Categories → Brand → Lifestyle → More → Trust → Close
  *
  * Sections:
  *  1. LuxuryHero        — Emotional above-the-fold hook
  *  2. Bestsellers       — First product grid (most loved, 8 items)
- *  3. BOGOCampaign      — Revenue driver (Buy 1 Get 1 Free)
- *  4. LuxuryCategories  — 4 clean category cards (no clutter)
- *  5. VideoReelStrip    — The ORA Life lifestyle strip
+ *  3. LuxuryCategories  — 3 categories: Chains, Rings, Bracelets
+ *  4. OraPhilosophy     — Brand story & philosophy
+ *  5. VideoReelStrip    — The ORA Life lifestyle strip (fast loop)
  *  6. NewArrivals       — Smaller grid (4 items only)
- *  7. LuxuryTrustStrip  — Trust icons (Gift, Returns, Shipping, Premium)
- *  8. LuxuryNewsletter  — Dark bg, minimal email capture
- *  9. StickyCartBar     — Mobile sticky bottom bar
- *
- * Performance: Hero priority-loaded, all else lazy, skeleton loaders
- * Mobile: 2-col grids, sticky cart bar, larger touch targets
+ *  7. BOGOCampaign      — Revenue driver (Buy 1 Get 1 Free)
+ *  8. LuxuryTrustStrip  — Trust icons (Gift, Returns, Shipping, Premium)
+ *  9. LuxuryNewsletter  — Dark bg, minimal email capture
+ * 10. StickyCartBar     — Mobile sticky bottom bar
  */
 
 import Bestsellers from '@/components/home/Bestsellers';
@@ -27,37 +25,41 @@ import LuxuryHero from '@/components/home/LuxuryHero';
 import LuxuryNewsletter from '@/components/home/LuxuryNewsletter';
 import LuxuryTrustStrip from '@/components/home/LuxuryTrustStrip';
 import NewArrivals from '@/components/home/NewArrivals';
+import OraPhilosophy from '@/components/home/OraPhilosophy';
 import StickyCartBar from '@/components/home/StickyCartBar';
 import VideoReelStrip from '@/components/home/VideoReelStrip';
 
 export default function HomePage() {
   return (
     <main className="bg-white min-h-screen overflow-x-hidden">
-      {/* 1. LUXURY HERO — Emotional hook */}
+      {/* 1. HERO — Emotional hook */}
       <LuxuryHero />
 
-      {/* 2. BESTSELLERS — First product grid customers see */}
+      {/* 2. BESTSELLERS — First product grid */}
       <Bestsellers />
 
-      {/* 3. BOGO CAMPAIGN — Revenue driver, above categories */}
-      <BOGOCampaign />
-
-      {/* 4. SHOP BY CATEGORY — 4 clean categories only */}
+      {/* 3. CATEGORIES — Chains, Rings, Bracelets */}
       <LuxuryCategories />
 
-      {/* 5. THE ORA LIFE — Infinite liquid scroll lifestyle strip */}
+      {/* 4. BRAND STORY — The ORA Philosophy */}
+      <OraPhilosophy />
+
+      {/* 5. THE ORA LIFE — Fast infinite lifestyle strip */}
       <VideoReelStrip />
 
-      {/* 6. NEW ARRIVALS — Smaller grid, limited */}
+      {/* 6. NEW ARRIVALS — Fresh drops */}
       <NewArrivals />
 
-      {/* 7. TRUST STRIP — Clean icons, white bg */}
+      {/* 7. BOGO CAMPAIGN — Revenue driver */}
+      <BOGOCampaign />
+
+      {/* 8. TRUST STRIP — Clean icons */}
       <LuxuryTrustStrip />
 
-      {/* 8. NEWSLETTER — Dark bg, minimal */}
+      {/* 9. NEWSLETTER — Dark bg, minimal */}
       <LuxuryNewsletter />
 
-      {/* 9. STICKY CART BAR — Mobile only */}
+      {/* 10. STICKY CART BAR — Mobile only */}
       <StickyCartBar />
     </main>
   );

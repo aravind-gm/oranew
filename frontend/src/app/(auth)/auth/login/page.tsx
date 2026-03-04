@@ -851,7 +851,7 @@ export default function LoginPage() {
               className="mt-7 pt-7"
               style={{ borderTop: '1px solid rgba(0,0,0,0.05)' }}
             >
-              <Link href="/checkout/guest">
+              <Link href="/">
                 <button
                   type="button"
                   className="w-full py-3.5 rounded-2xl text-[11px] font-bold uppercase tracking-widest text-neutral-500 hover:text-slate-700 hover:bg-white/80 transition-all duration-200"

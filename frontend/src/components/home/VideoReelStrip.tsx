@@ -30,12 +30,14 @@ interface VideoReelStripProps {
 }
 
 const DEFAULT_REELS: ReelItem[] = [
-  { id: 1, type: 'image', src: '/chain.jpeg', overlayText: 'Wrapped with Love' },
-  { id: 2, type: 'image', src: '/ring.jpeg', overlayText: 'Styled Daily' },
+  { id: 1, type: 'image', src: '/chain.jpeg', overlayText: 'Layer It Your Way' },
+  { id: 2, type: 'image', src: '/ring.jpeg', overlayText: 'Styled Every Day' },
   { id: 3, type: 'image', src: '/bracelets.jpeg', overlayText: 'Made for Her' },
   { id: 4, type: 'image', src: '/banners.png', overlayText: 'Everyday Luxury' },
   { id: 5, type: 'image', src: '/chain.jpeg', overlayText: 'Radiate Confidence' },
   { id: 6, type: 'image', src: '/ring.jpeg', overlayText: 'Own Your Glow' },
+  { id: 7, type: 'image', src: '/bracelets.jpeg', overlayText: 'Gift Her Something Special' },
+  { id: 8, type: 'image', src: '/banners.png', overlayText: 'The ORA Feeling' },
 ];
 
 export default function VideoReelStrip({
@@ -56,7 +58,7 @@ export default function VideoReelStrip({
       return;
     }
 
-    scrollRef.current += 0.5;
+    scrollRef.current += 1.5;
     const container = containerRef.current;
     const halfWidth = container.scrollWidth / 2;
 

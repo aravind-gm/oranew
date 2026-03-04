@@ -9,7 +9,7 @@
  */
 
 import { motion } from 'framer-motion';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Sparkles } from 'lucide-react';
 import { FormEvent, useState } from 'react';
 
 export default function LuxuryNewsletter() {
@@ -22,8 +22,13 @@ export default function LuxuryNewsletter() {
 
     setStatus('loading');
     try {
-      // Wire to Klaviyo/Mailchimp in production
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.orashop.in';
+      const res = await fetch(`${apiUrl}/api/contact/subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) throw new Error('Subscribe failed');
       setStatus('success');
       setEmail('');
       setTimeout(() => setStatus('idle'), 4000);
@@ -34,14 +39,21 @@ export default function LuxuryNewsletter() {
   };
 
   return (
-    <section className="py-16 md:py-20 bg-[#0F0F14]">
-      <div className="max-w-xl mx-auto px-5 text-center">
+    <section className="py-16 md:py-24 bg-[#0F0F14] relative overflow-hidden">
+      {/* Subtle glow */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-pink-500/5 blur-[100px]" />
+      </div>
+
+      <div className="relative z-10 max-w-xl mx-auto px-5 text-center">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-40px' }}
           transition={{ duration: 0.6 }}
         >
+          <Sparkles className="w-5 h-5 text-pink-400/60 mx-auto mb-4" />
+
           <h2 className="text-2xl sm:text-3xl font-serif font-light text-white mb-3">
             Join the ORA Family
           </h2>

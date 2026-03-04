@@ -17,32 +17,32 @@ const TRUST_ITEMS = [
   {
     id: 1,
     icon: Gift,
-    title: 'Premium Quality',
-    description: 'Beautifully wrapped, every time',
+    title: 'Gift-Ready Packaging',
+    description: 'Every order beautifully boxed',
   },
   {
     id: 2,
     icon: RefreshCw,
-    title: 'Easy Returns',
-    description: '30-day hassle-free returns',
+    title: '7-Day Easy Returns',
+    description: 'No questions asked',
   },
   {
     id: 3,
     icon: Truck,
     title: 'Free Shipping',
-    description: 'Free delivery across India',
+    description: 'On all orders across India',
   },
   {
     id: 4,
     icon: Award,
-    title: 'Premium Finish',
-    description: 'Crafted with care & precision',
+    title: 'Premium Quality',
+    description: 'Anti-tarnish & skin-safe',
   },
 ];
 
 export default function LuxuryTrustStrip() {
   return (
-    <section className="py-12 md:py-16 bg-white border-y border-neutral-100">
+    <section className="py-12 md:py-16 bg-[#FAFAF8] border-y border-neutral-100">
       <div className="max-w-6xl mx-auto px-5 lg:px-8">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-10">
           {TRUST_ITEMS.map((item, index) => (
@@ -55,7 +55,7 @@ export default function LuxuryTrustStrip() {
               className="text-center"
             >
               {/* Icon */}
-              <div className="w-12 h-12 md:w-14 md:h-14 bg-neutral-50 rounded-full flex items-center justify-center mx-auto mb-3 text-secondary-500">
+              <div className="w-12 h-12 md:w-14 md:h-14 bg-white rounded-full flex items-center justify-center mx-auto mb-3 text-[#1A1A1A] shadow-sm">
                 <item.icon className="w-5 h-5 md:w-6 md:h-6" strokeWidth={1.5} />
               </div>
 

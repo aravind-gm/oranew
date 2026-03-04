@@ -60,7 +60,7 @@ export default function LuxuryHero() {
             transition={{ duration: 0.8, delay: 0.5, ease: 'easeOut' }}
             className="text-base sm:text-lg md:text-xl mb-8 md:mb-10 opacity-90 font-light max-w-lg mx-auto"
           >
-            Jewellery crafted for the modern woman.
+            Premium chains, rings &amp; bracelets crafted for the modern woman.
           </motion.p>
 
           {/* Dual CTAs */}
@@ -71,17 +71,17 @@ export default function LuxuryHero() {
             className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center"
           >
             <Link
-              href="/collections?sort=bestseller"
+              href="/collections?category=chains"
               className="group inline-flex items-center justify-center gap-2.5 px-8 py-4 bg-white text-[#1A1A1A] font-medium rounded-full hover:bg-neutral-100 transition-all duration-300 shadow-lg hover:shadow-xl"
             >
-              <span>Shop Bestsellers</span>
+              <span>Shop Chains</span>
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </Link>
             <Link
-              href="/collections?type=combo"
+              href="/collections"
               className="group inline-flex items-center justify-center gap-2.5 px-8 py-4 border-2 border-white/80 text-white font-medium rounded-full hover:bg-white/10 backdrop-blur-sm transition-all duration-300"
             >
-              <span>Explore Combos</span>
+              <span>View All Collections</span>
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </Link>
           </motion.div>
@@ -93,8 +93,8 @@ export default function LuxuryHero() {
             transition={{ duration: 0.8, delay: 1.1 }}
             className="mt-8 md:mt-10 flex items-center justify-center gap-2 text-white/70 text-xs sm:text-sm tracking-wide"
           >
-            <Sparkles className="w-3.5 h-3.5 text-secondary-400" />
-            <span>Premium Fashion Jewellery</span>
+            <Sparkles className="w-3.5 h-3.5 text-pink-300" />
+            <span>Anti-Tarnish · Skin-Safe</span>
             <span className="text-white/40">|</span>
             <span>Free Delivery Across India</span>
           </motion.div>

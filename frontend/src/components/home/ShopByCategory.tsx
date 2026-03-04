@@ -32,27 +32,20 @@ interface ShopByCategoryProps {
 const DEFAULT_CATEGORIES: CategoryItem[] = [
   {
     id: 1,
+    title: 'Chains',
+    subtitle: 'Layered, minimal, or statement',
+    image: '/chain.jpeg',
+    href: '/collections?category=chains',
+  },
+  {
+    id: 2,
     title: 'Rings',
     subtitle: 'Contemporary rings for every occasion',
     image: '/ring.jpeg',
     href: '/collections?category=rings',
   },
   {
-    id: 2,
-    title: 'Necklaces',
-    subtitle: 'Refined pendants and chains',
-    image: '/chain.jpeg',
-    href: '/collections?category=necklace',
-  },
-  {
     id: 3,
-    title: 'Pendants',
-    subtitle: 'Expressions of elegance',
-    image: '/banners.png',
-    href: '/collections?category=pendants',
-  },
-  {
-    id: 4,
     title: 'Bracelets',
     subtitle: 'Delicate accents for the wrist',
     image: '/bracelets.jpeg',

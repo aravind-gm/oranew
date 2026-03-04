@@ -89,10 +89,10 @@ export default function Bestsellers() {
           className="text-center mb-10 md:mb-14"
         >
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-light text-[#1A1A1A] mb-3">
-            Featured Styles
+            Trending Now
           </h2>
           <p className="text-base md:text-lg text-neutral-500 max-w-xl mx-auto">
-            Our most gifted pieces.
+            The pieces everyone&apos;s loving right now.
           </p>
         </motion.div>
 
