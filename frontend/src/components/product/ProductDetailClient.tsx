@@ -393,20 +393,32 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
           {/* Gallery (sticky on desktop) */}
           <div className="lg:sticky lg:top-24 lg:self-start">
             <ProductGallery images={product.images} productName={product.name} />
-
-            {/* Rating badge below gallery (mobile + desktop) */}
-            <div className="flex items-center gap-2 mt-4">
-              <div className="flex items-center gap-1">
-                <span className="text-amber-500 text-base">★</span>
-                <span className="text-sm font-semibold text-neutral-800">{Number(product.averageRating || 0).toFixed(1)}</span>
-              </div>
-              <span className="text-neutral-300">|</span>
-              <span className="text-xs text-neutral-500">{product.reviewCount} Reviews</span>
-            </div>
           </div>
 
           {/* ═══ Product Info Column ═══ */}
           <div className="space-y-5">
+
+            {/* Category label */}
+            <p className="text-xs tracking-[0.2em] uppercase text-neutral-400 font-medium">
+              {product.category.name}
+            </p>
+
+            {/* Product name */}
+            <h1 className="text-xl sm:text-2xl font-medium text-neutral-800 leading-snug -mt-2">
+              {product.name}
+            </h1>
+
+            {/* Rating inline */}
+            {product.reviewCount > 0 && (
+              <div className="flex items-center gap-2 -mt-2">
+                <div className="flex items-center gap-1">
+                  <span className="text-amber-500 text-sm">★</span>
+                  <span className="text-sm font-semibold text-neutral-700">{Number(product.averageRating || 0).toFixed(1)}</span>
+                </div>
+                <span className="text-neutral-300 text-xs">|</span>
+                <span className="text-xs text-neutral-500">{product.reviewCount} Reviews</span>
+              </div>
+            )}
 
             {/* Price block — hero */}
             <div>
@@ -422,11 +434,6 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
               </div>
               <p className="text-xs text-neutral-400 mt-1">MRP incl. of all taxes</p>
             </div>
-
-            {/* Product name */}
-            <h1 className="text-xl sm:text-2xl font-medium text-neutral-800 leading-snug">
-              {product.name}
-            </h1>
 
             {/* Material callout */}
             {product.material && (
@@ -642,26 +649,33 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
             {/* ═══ Offers Section ═══ */}
             <div className="border border-neutral-100 rounded-xl overflow-hidden">
-              <div className="px-4 py-3 bg-neutral-50 border-b border-neutral-100">
+              <div className="px-4 py-3 bg-gradient-to-r from-primary-50 to-pink-50 border-b border-neutral-100 flex items-center gap-2">
+                <svg className="w-4 h-4 text-primary-500" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
+                </svg>
                 <h3 className="text-sm font-semibold text-neutral-800">
-                  Offers For You{' '}
-                  <span className="text-xs font-normal text-neutral-400">(Applied at checkout)</span>
+                  Offers For You
                 </h3>
               </div>
               <div className="divide-y divide-neutral-100">
                 {[
-                  { code: 'ORA10', desc: `10% OFF on orders above ₹999`, minOrder: 999 },
-                  { code: 'ORA15', desc: `15% OFF on orders above ₹1,999`, minOrder: 1999 },
-                ].map(({ code, desc }) => (
-                  <div key={code} className="flex items-center gap-3 px-4 py-3">
-                    <div className="w-8 h-8 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0">
-                      <svg className="w-4 h-4 text-primary-500" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                  { code: 'ORA10', desc: `10% OFF on orders above ₹999`, highlight: false },
+                  { code: 'ORA15', desc: `15% OFF on orders above ₹1,999`, highlight: true },
+                  { code: 'ORAFIRST', desc: `Extra 5% OFF on your first order`, highlight: false },
+                ].map(({ code, desc, highlight }) => (
+                  <div key={code} className={`flex items-center gap-3 px-4 py-3 ${highlight ? 'bg-green-50/50' : ''}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${highlight ? 'bg-green-100' : 'bg-primary-50'}`}>
+                      <svg className={`w-4 h-4 ${highlight ? 'text-green-600' : 'text-primary-500'}`} fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
                       </svg>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-neutral-700">{desc}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm text-neutral-700">{desc}</p>
+                        {highlight && <span className="text-[10px] font-bold text-green-700 bg-green-100 px-1.5 py-0.5 rounded">BEST</span>}
+                      </div>
                       <p className="text-xs text-neutral-400">Use code: <span className="font-semibold text-primary-500">{code}</span></p>
                     </div>
                   </div>
@@ -725,6 +739,12 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
         {/* ═══ Pair It Up To Complete The Look ═══ */}
         <section className="py-8 sm:py-10 border-t border-neutral-100">
+          <div className="mb-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-neutral-900">
+              Pair It Up To Complete The Look
+            </h2>
+            <p className="text-sm text-neutral-400 mt-1">Frequently bought together — save more when you bundle</p>
+          </div>
           <FrequentlyBoughtTogether
             categoryId={product.category.id}
             currentProductId={product.id}
@@ -739,6 +759,12 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
         {/* Complete The Look */}
         <section className="py-8 sm:py-10 border-t border-neutral-100">
+          <div className="mb-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-neutral-900">
+              You May Also Like
+            </h2>
+            <p className="text-sm text-neutral-400 mt-1">Handpicked pieces from the same collection</p>
+          </div>
           <CompleteTheLook categoryId={product.category.id} currentProductId={product.id} />
         </section>
 
@@ -797,6 +823,12 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
         {/* You May Also Like */}
         <section className="py-8 sm:py-10 border-t border-neutral-100">
+          <div className="mb-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-neutral-900">
+              More From {product.category.name}
+            </h2>
+            <p className="text-sm text-neutral-400 mt-1">Explore similar styles you&apos;ll love</p>
+          </div>
           <RelatedProducts
             categoryId={product.category.id}
             currentProductId={product.id}
@@ -806,6 +838,12 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
         {/* Recently Viewed */}
         <section className="py-8 sm:py-10 border-t border-neutral-100">
+          <div className="mb-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-neutral-900">
+              Recently Viewed
+            </h2>
+            <p className="text-sm text-neutral-400 mt-1">Pick up where you left off</p>
+          </div>
           <RecentlyViewedProducts excludeProductId={product.id} layout="horizontal" />
         </section>
       </div>

@@ -32,9 +32,11 @@ export default function Footer() {
             <h4 className="font-serif text-sm sm:text-base mb-4 sm:mb-6 text-white">Shop</h4>
             <ul className="space-y-2 sm:space-y-3">
               <li><Link href="/collections" className="text-sm text-white/50 hover:text-white transition-colors inline-block py-1">All Collections</Link></li>
-              <li><Link href="/collections?category=necklaces" className="text-sm text-white/50 hover:text-white transition-colors inline-block py-1">Necklaces</Link></li>
-              <li><Link href="/collections?category=rings" className="text-sm text-white/50 hover:text-white transition-colors inline-block py-1">Rings</Link></li>
-              <li><Link href="/collections?category=bracelets" className="text-sm text-white/50 hover:text-white transition-colors inline-block py-1">Bracelets</Link></li>
+              <li><Link href="/collections/new-arrivals" className="text-sm text-white/50 hover:text-white transition-colors inline-block py-1">New Arrivals</Link></li>
+              <li><Link href="/collections/combos" className="text-sm text-white/50 hover:text-white transition-colors inline-block py-1">Combos for Her</Link></li>
+              <li><Link href="/collections/gifts-for-her" className="text-sm text-white/50 hover:text-white transition-colors inline-block py-1">Gifts for Her</Link></li>
+              <li><Link href="/collections/tumblers" className="text-sm text-white/50 hover:text-white transition-colors inline-block py-1">Tumblers</Link></li>
+              <li><Link href="/collections/offers" className="text-sm text-white/50 hover:text-white transition-colors inline-block py-1">Offers</Link></li>
             </ul>
           </div>
 

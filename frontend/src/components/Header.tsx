@@ -93,12 +93,12 @@ export default function Header() {
   const cartCount = mounted ? items.length : 0;
 
   const menuItems = [
-    { label: 'Necklaces', href: '/collections?category=necklaces' },
-    { label: 'Rings', href: '/collections?category=rings' },
-    { label: 'Bracelets', href: '/collections?category=bracelets' },
-    { label: 'New Arrivals', href: '/collections?sort=-createdAt' },
-    { label: 'Combos', href: '/collections?type=combo' },
-    { label: 'Offers', href: '/collections?type=offers' },
+    { label: 'Shop All', href: '/collections' },
+    { label: 'New Arrivals', href: '/collections/new-arrivals' },
+    { label: 'Combos for Her', href: '/collections/combos' },
+    { label: 'Gifts for Her', href: '/collections/gifts-for-her' },
+    { label: 'Tumblers', href: '/collections/tumblers' },
+    { label: 'Offers', href: '/collections/offers' },
   ];
 
   return (
@@ -131,7 +131,7 @@ export default function Header() {
             <form onSubmit={handleSearch} className="w-full relative">
               <input
                 type="search"
-                placeholder="Search necklaces, rings, bracelets..."
+                placeholder="Search jewellery, tumblers & more..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full h-12 pl-4 pr-12 border border-white rounded-lg bg-white text-neutral-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-oraAccent focus:border-transparent"
@@ -310,7 +310,7 @@ export default function Header() {
             <form onSubmit={handleSearch} className="relative">
               <input
                 type="search"
-                placeholder="Search necklaces, rings, bracelets..."
+                placeholder="Search jewellery, tumblers & more..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full h-10 pl-4 pr-10 border border-neutral-200 rounded-lg bg-white text-neutral-900 placeholder-gray-500 text-sm"

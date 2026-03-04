@@ -12,7 +12,7 @@
  */
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { ArrowRight, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -199,20 +199,24 @@ export default function LuxuryHero() {
         </AnimatePresence>
       </div>
 
-      {/* Navigation Arrows (desktop only) */}
+      {/* Navigation Arrows (desktop only) — minimal thin lines */}
       <button
         onClick={goPrev}
-        className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-white/10 backdrop-blur-sm rounded-full items-center justify-center text-white hover:bg-white/20 transition-all"
+        className="hidden md:flex absolute left-5 top-1/2 -translate-y-1/2 z-20 w-8 h-8 items-center justify-center text-white/60 hover:text-white transition-all"
         aria-label="Previous slide"
       >
-        <ChevronLeft className="w-5 h-5" />
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="12 4 6 10 12 16" />
+        </svg>
       </button>
       <button
         onClick={goNext}
-        className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-white/10 backdrop-blur-sm rounded-full items-center justify-center text-white hover:bg-white/20 transition-all"
+        className="hidden md:flex absolute right-5 top-1/2 -translate-y-1/2 z-20 w-8 h-8 items-center justify-center text-white/60 hover:text-white transition-all"
         aria-label="Next slide"
       >
-        <ChevronRight className="w-5 h-5" />
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="8 4 14 10 8 16" />
+        </svg>
       </button>
 
       {/* Dot Indicators + Trust Line */}

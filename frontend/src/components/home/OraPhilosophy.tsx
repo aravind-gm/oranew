@@ -57,7 +57,7 @@ export default function OraPhilosophy() {
             </p>
           </div>
 
-          {/* Stats row */}
+          {/* Brand promises row */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -66,18 +66,18 @@ export default function OraPhilosophy() {
             className="mt-12 flex items-center justify-center gap-8 sm:gap-12"
           >
             <div className="text-center">
-              <p className="text-2xl sm:text-3xl font-serif font-light text-[#1A1A1A]">50K+</p>
-              <p className="text-xs text-neutral-400 mt-1 tracking-wide uppercase">Happy Customers</p>
+              <p className="text-2xl sm:text-3xl font-serif font-light text-[#1A1A1A]">✦</p>
+              <p className="text-xs text-neutral-400 mt-1 tracking-wide uppercase">Anti-Tarnish</p>
             </div>
             <div className="w-[1px] h-10 bg-neutral-200" />
             <div className="text-center">
-              <p className="text-2xl sm:text-3xl font-serif font-light text-[#1A1A1A]">200+</p>
-              <p className="text-xs text-neutral-400 mt-1 tracking-wide uppercase">Unique Designs</p>
+              <p className="text-2xl sm:text-3xl font-serif font-light text-[#1A1A1A]">♡</p>
+              <p className="text-xs text-neutral-400 mt-1 tracking-wide uppercase">Skin-Safe</p>
             </div>
             <div className="w-[1px] h-10 bg-neutral-200" />
             <div className="text-center">
-              <p className="text-2xl sm:text-3xl font-serif font-light text-[#1A1A1A]">4.8★</p>
-              <p className="text-xs text-neutral-400 mt-1 tracking-wide uppercase">Avg Rating</p>
+              <p className="text-2xl sm:text-3xl font-serif font-light text-[#1A1A1A]">◇</p>
+              <p className="text-xs text-neutral-400 mt-1 tracking-wide uppercase">Premium Finish</p>
             </div>
           </motion.div>
 
