@@ -21,6 +21,7 @@
 import api from '@/lib/api';
 import { getStateNames, getDistrictsByState, validatePhoneNumber, validatePincode } from '@/lib/addressData';
 import { trackBeginCheckout, trackAddPaymentInfo, setEnhancedConversions } from '@/lib/analytics';
+import { loadRazorpayScript } from '@/lib/razorpay';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
 import { CheckoutSkeleton } from '@/components/checkout/SkeletonBlock';
@@ -504,8 +505,58 @@ export default function CheckoutPage() {
         return;
       }
 
-      // Online: proceed to Razorpay payment page
-      router.push(`/checkout/payment?orderId=${createdOrder.id}`);
+      // Online: open Razorpay modal directly (no extra page hop)
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        throw new Error('Failed to load payment gateway. Please check your connection and try again.');
+      }
+
+      const paymentResponse = await api.post('/payments/create', { orderId: createdOrder.id });
+      if (!paymentResponse.data.success) {
+        throw new Error(paymentResponse.data.error?.message || 'Failed to create payment');
+      }
+
+      const { razorpayOrderId, razorpayKeyId, amount, currency } = paymentResponse.data;
+      const keyId = razorpayKeyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+      if (!keyId) throw new Error('Razorpay key not configured.');
+
+      if (!window.Razorpay) throw new Error('Razorpay not loaded');
+
+      const razorpay = new window.Razorpay({
+        key: keyId,
+        amount,
+        currency: currency || 'INR',
+        order_id: razorpayOrderId,
+        name: 'ORA Jewellery',
+        description: `Order #${createdOrder.id}`,
+        handler: async (rzpResponse: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => {
+          try {
+            const verifyRes = await api.post('/payments/verify', {
+              orderId: createdOrder.id,
+              razorpay_payment_id: rzpResponse.razorpay_payment_id,
+              razorpay_order_id: rzpResponse.razorpay_order_id,
+              razorpay_signature: rzpResponse.razorpay_signature,
+            });
+            if (!verifyRes.data.success) throw new Error('Payment verification failed');
+            const { clearCart } = useCartStore.getState();
+            clearCart();
+            router.push(`/checkout/success?orderId=${createdOrder.id}`);
+          } catch {
+            setErrors({ submit: 'Payment verification failed. Please contact support.' });
+            setLoading(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setLoading(false);
+            setErrors({ submit: 'Payment cancelled. Your order has been saved — you can retry.' });
+          },
+        },
+        theme: { color: '#D4AF77' },
+      });
+      razorpay.open();
+      // Keep loading=true while modal is open; it resets in handler/ondismiss
+      return;
     } catch (err: unknown) {
       let errorMessage = 'Failed to create order';
       
