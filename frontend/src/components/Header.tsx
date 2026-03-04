@@ -112,32 +112,34 @@ export default function Header() {
     >
       {/* Main Header */}
       <div className="bg-white border-b border-neutral-100 px-4 lg:px-6 relative">
-        <div className="max-w-7xl mx-auto flex items-center justify-between h-16 lg:h-[72px] relative">
-          {/* Logo */}
-          <Link href="/" className="flex-shrink-0 flex items-center">
+        <div className="max-w-7xl mx-auto flex items-center h-16 lg:h-[72px] gap-4 lg:gap-8">
+
+          {/* Logo — left, fixed width */}
+          <Link href="/" className="flex-shrink-0">
             <Image
               src="/oralogo.png"
               alt="ORA Jewellery"
               width={819}
               height={345}
-              className="h-8 lg:h-10 w-auto object-contain"
+              className="block object-contain"
+              style={{ width: '130px', height: 'auto' }}
               priority
             />
           </Link>
 
-          {/* Desktop Search Bar */}
-          <div className="hidden md:flex flex-1 max-w-2xl mx-8">
+          {/* Search Bar — center, expands to fill space */}
+          <div className="hidden md:flex flex-1">
             <form onSubmit={handleSearch} className="w-full relative">
               <input
                 type="search"
                 placeholder="Search jewellery, tumblers & more..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-12 pl-4 pr-12 border border-white rounded-lg bg-white text-neutral-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-oraAccent focus:border-transparent"
+                className="w-full h-11 pl-5 pr-12 border border-neutral-200 rounded-full bg-neutral-50 text-neutral-900 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-pink-200 focus:border-pink-300 focus:bg-white transition-all"
               />
               <button
                 type="submit"
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-oraAccent transition-colors"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-oraAccent transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -147,7 +149,7 @@ export default function Header() {
           </div>
 
           {/* Right Side Icons */}
-          <div className="flex items-center gap-3 lg:gap-5 overflow-visible">
+          <div className="flex items-center gap-1 flex-shrink-0">
             {/* Mobile Search */}
             <Link
               href="/search"
