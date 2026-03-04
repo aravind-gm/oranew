@@ -33,7 +33,7 @@ export default function Footer() {
             <ul className="space-y-2 sm:space-y-3">
               <li><Link href="/collections" className="text-sm text-white/50 hover:text-white transition-colors inline-block py-1">All Collections</Link></li>
               <li><Link href="/collections?category=necklace" className="text-sm text-white/50 hover:text-white transition-colors inline-block py-1">Necklaces</Link></li>
-              <li><Link href="/collections?category=earrings" className="text-sm text-white/50 hover:text-white transition-colors inline-block py-1">Earrings</Link></li>
+              <li><Link href="/collections?category=pendants" className="text-sm text-white/50 hover:text-white transition-colors inline-block py-1">Pendants</Link></li>
               <li><Link href="/collections?category=bracelets" className="text-sm text-white/50 hover:text-white transition-colors inline-block py-1">Bracelets</Link></li>
               <li><Link href="/collections?category=rings" className="text-sm text-white/50 hover:text-white transition-colors inline-block py-1">Rings</Link></li>
             </ul>

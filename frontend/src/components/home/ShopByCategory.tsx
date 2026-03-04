@@ -46,10 +46,10 @@ const DEFAULT_CATEGORIES: CategoryItem[] = [
   },
   {
     id: 3,
-    title: 'Earrings',
-    subtitle: 'From studs to statement drops',
+    title: 'Pendants',
+    subtitle: 'Expressions of elegance',
     image: '/banners.png',
-    href: '/collections?category=earrings',
+    href: '/collections?category=pendants',
   },
   {
     id: 4,
