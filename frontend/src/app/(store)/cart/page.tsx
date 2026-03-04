@@ -24,7 +24,7 @@ import { trackViewCart } from '@/lib/analytics';
 import RelatedProductsCart from '@/components/RelatedProductsCart';
 import CartUpsell from '@/components/cart/CartUpsell';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, Minus, Plus, ShoppingBag, Trash2, Shield, Truck, Package, Heart, Tag, Clock, Gift, Zap } from 'lucide-react';
+import { ChevronRight, Minus, Plus, ShoppingBag, Trash2, Shield, Truck, Package, Heart, Clock, Gift, Zap } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -419,22 +419,6 @@ export default function CartPage() {
               <p className="text-xs text-emerald-600">Estimated delivery in 5-7 business days</p>
             </div>
           </motion.div>
-
-          {/* Coupon Teaser */}
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3"
-          >
-            <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <Tag className="w-4 h-4 text-amber-600" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-amber-800">Have a coupon? Apply it at checkout!</p>
-              <p className="text-xs text-amber-600">Coupons can be applied on the next step</p>
-            </div>
-          </motion.div>
         </div>
 
         {/* ============================================================
@@ -518,16 +502,6 @@ export default function CartPage() {
                     <span className="text-emerald-600 font-medium">FREE</span>
                   </div>
                 </div>
-
-                {/* Savings Callout */}
-                {subtotal >= 1000 && (
-                  <div className="flex items-center gap-2 bg-pink-50 border border-pink-200 rounded-lg px-3 py-2">
-                    <Gift className="w-4 h-4 text-pink-600 flex-shrink-0" />
-                    <p className="text-xs text-pink-700 font-medium">
-                      You&apos;re saving ₹{Math.round(subtotal * 0.15).toLocaleString('en-IN')} with free shipping!
-                    </p>
-                  </div>
-                )}
 
                 {/* Total */}
                 <div className="border-t border-gray-100 mt-6 pt-6">

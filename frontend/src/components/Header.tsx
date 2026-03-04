@@ -290,6 +290,11 @@ export default function Header() {
       </nav>
       )}
 
+      {/* Accent line — pink/coral gradient */}
+      {!isAdminPage && (
+        <div className="h-[3px] w-full bg-gradient-to-r from-pink-400 via-rose-400 to-orange-300" />
+      )}
+
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div className="md:hidden absolute inset-0 top-full left-0 right-0 bg-white shadow-lg max-h-screen overflow-y-auto">

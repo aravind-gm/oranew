@@ -271,6 +271,8 @@ export default function CheckoutPage() {
   // Refs for auto-scroll-to-error
   const fieldRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const paymentSectionRef = useRef<HTMLDivElement>(null);
+  // Guard: prevents empty-cart redirect from firing after clearCart in payment handler
+  const orderCompletedRef = useRef(false);
   
   const [address, setAddress] = useState<ShippingAddress>({
     fullName: '',
@@ -328,8 +330,9 @@ export default function CheckoutPage() {
       .catch(() => { /* silent — saved addresses are optional */ });
   }, [user]);
 
-  // Empty cart redirect
+  // Empty cart redirect (guarded: skip if order just completed)
   useEffect(() => {
+    if (orderCompletedRef.current) return;
     if (items.length === 0) {
       router.push('/cart');
     }
@@ -499,6 +502,7 @@ export default function CheckoutPage() {
 
       // COD: order is confirmed immediately — go to success
       if (response.data.codOrder) {
+        orderCompletedRef.current = true;
         const { clearCart } = useCartStore.getState();
         clearCart();
         router.push(`/checkout/success?orderNumber=${createdOrder.orderNumber}`);
@@ -538,6 +542,7 @@ export default function CheckoutPage() {
               razorpay_signature: rzpResponse.razorpay_signature,
             });
             if (!verifyRes.data.success) throw new Error('Payment verification failed');
+            orderCompletedRef.current = true;
             const { clearCart } = useCartStore.getState();
             clearCart();
             router.push(`/checkout/success?orderId=${createdOrder.id}`);

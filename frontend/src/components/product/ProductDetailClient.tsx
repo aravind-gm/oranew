@@ -647,42 +647,6 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
             {/* Free Shipping Threshold */}
             <FreeShippingThreshold />
 
-            {/* ═══ Offers Section ═══ */}
-            <div className="border border-neutral-100 rounded-xl overflow-hidden">
-              <div className="px-4 py-3 bg-gradient-to-r from-primary-50 to-pink-50 border-b border-neutral-100 flex items-center gap-2">
-                <svg className="w-4 h-4 text-primary-500" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
-                </svg>
-                <h3 className="text-sm font-semibold text-neutral-800">
-                  Offers For You
-                </h3>
-              </div>
-              <div className="divide-y divide-neutral-100">
-                {[
-                  { code: 'ORA10', desc: `10% OFF on orders above ₹999`, highlight: false },
-                  { code: 'ORA15', desc: `15% OFF on orders above ₹1,999`, highlight: true },
-                  { code: 'ORAFIRST', desc: `Extra 5% OFF on your first order`, highlight: false },
-                ].map(({ code, desc, highlight }) => (
-                  <div key={code} className={`flex items-center gap-3 px-4 py-3 ${highlight ? 'bg-green-50/50' : ''}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${highlight ? 'bg-green-100' : 'bg-primary-50'}`}>
-                      <svg className={`w-4 h-4 ${highlight ? 'text-green-600' : 'text-primary-500'}`} fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm text-neutral-700">{desc}</p>
-                        {highlight && <span className="text-[10px] font-bold text-green-700 bg-green-100 px-1.5 py-0.5 rounded">BEST</span>}
-                      </div>
-                      <p className="text-xs text-neutral-400">Use code: <span className="font-semibold text-primary-500">{code}</span></p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* ═══ Delivery & Returns Box ═══ */}
             <div className="rounded-xl border border-neutral-100 p-4 space-y-2.5">
               <h3 className="text-xs font-semibold text-neutral-800 uppercase tracking-wider mb-2">
