@@ -111,17 +111,16 @@ export default function Header() {
       }}
     >
       {/* Main Header */}
-      <div className="bg-white border-b border-oraLight px-4 lg:px-6 relative">
-        <div className="max-w-7xl mx-auto flex items-center justify-between h-16 lg:h-20 relative">
-          {/* Logo - Brand Dominant */}
-          <Link href="/" className="flex-shrink-0 group flex items-center justify-center" style={{ marginTop: '8px' }}>
+      <div className="bg-white border-b border-neutral-100 px-4 lg:px-6 relative">
+        <div className="max-w-7xl mx-auto flex items-center justify-between h-16 lg:h-[72px] relative">
+          {/* Logo */}
+          <Link href="/" className="flex-shrink-0 flex items-center">
             <Image
               src="/oralogo.png"
               alt="ORA Jewellery"
-              width={220}
-              height={80}
-              className="h-10 lg:h-12 w-auto object-contain transition-opacity group-hover:opacity-90"
-              style={{ width: 'clamp(150px, 16vw, 220px)', transform: 'scale(3.5)' }}
+              width={819}
+              height={345}
+              className="h-8 lg:h-10 w-auto object-contain"
               priority
             />
           </Link>
