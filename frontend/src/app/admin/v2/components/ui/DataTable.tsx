@@ -406,11 +406,22 @@ interface TableActionsProps {
 
 export function TableActions({ children }: TableActionsProps) {
   const [open, setOpen] = useState(false);
+  const btnRef = React.useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = React.useState({ top: 0, left: 0 });
+
+  const handleOpen = () => {
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setPos({ top: rect.bottom + 4, left: rect.right - 192 }); // 192 = w-48
+    }
+    setOpen(!open);
+  };
 
   return (
     <div className="relative">
       <button
-        onClick={() => setOpen(!open)}
+        ref={btnRef}
+        onClick={handleOpen}
         className="p-1.5 rounded-lg hover:bg-[#f6f7f9] transition-colors"
       >
         <MoreHorizontal size={18} className="text-[#9ca3af]" />
@@ -419,11 +430,23 @@ export function TableActions({ children }: TableActionsProps) {
       {open && (
         <>
           <div
-            className="fixed inset-0 z-10"
+            className="fixed inset-0 z-[50]"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-[#e5e7eb] py-1 z-20">
-            {children}
+          <div
+            className="fixed w-48 bg-white rounded-lg shadow-lg border border-[#e5e7eb] py-1 z-[51]"
+            style={{ top: pos.top, left: Math.max(pos.left, 8) }}
+          >
+            {React.Children.map(children, (child) =>
+              React.isValidElement<TableActionItemProps>(child)
+                ? React.cloneElement(child, {
+                    onClick: () => {
+                      setOpen(false);
+                      child.props.onClick();
+                    },
+                  } as Partial<TableActionItemProps>)
+                : child
+            )}
           </div>
         </>
       )}

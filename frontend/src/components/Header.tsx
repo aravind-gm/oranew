@@ -196,12 +196,13 @@ export default function Header() {
                     <span className="text-xs font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded">ADMIN</span>
                   )}
                 </button>
-                <div className="hidden group-hover:block absolute right-0 top-full pt-2 w-48 z-[9999] origin-top-right transition-all opacity-100 scale-100">
-                  <div className="bg-white rounded-lg shadow-2xl border border-neutral-200 py-2 overflow-visible">
-                  <Link href="/account" className="block px-4 py-2 text-sm text-neutral-900 hover:bg-oraLight/40 transition-colors">My Account</Link>
-                  <Link href="/account/orders" className="block px-4 py-2 text-sm text-neutral-900 hover:bg-oraLight/40 transition-colors">Orders</Link>
-                  {isAdmin && <Link href="/admin" className="block px-4 py-2 text-sm text-neutral-700 hover:bg-oraLight/40 transition-colors">Admin</Link>}
-                  <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-oraLight/40 transition-colors">Sign Out</button>
+                <div className="hidden group-hover:block absolute right-0 top-full pt-2 z-[9999] origin-top-right">
+                  <div className="bg-white rounded-lg shadow-2xl border border-neutral-200 py-2 min-w-[160px] w-max">
+                    <Link href="/account" className="block px-4 py-2.5 text-sm text-neutral-900 hover:bg-oraLight/40 transition-colors whitespace-nowrap">My Account</Link>
+                    <Link href="/account/orders" className="block px-4 py-2.5 text-sm text-neutral-900 hover:bg-oraLight/40 transition-colors whitespace-nowrap">Orders</Link>
+                    {isAdmin && <Link href="/admin/v2" className="block px-4 py-2.5 text-sm text-neutral-700 hover:bg-oraLight/40 transition-colors whitespace-nowrap">Admin</Link>}
+                    <div className="border-t border-neutral-100 my-1" />
+                    <button onClick={handleLogout} className="block w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors whitespace-nowrap">Sign Out</button>
                   </div>
                 </div>
               </div>

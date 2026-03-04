@@ -46,6 +46,7 @@ export const createProduct = async (
       weight,
       dimensions,
       stockQuantity,
+      lowStockThreshold,
       isFeatured,
       isActive,
       images,
@@ -54,6 +55,21 @@ export const createProduct = async (
       collections,
       occasions,
       isFeaturedGift,
+      // BOGO fields
+      isBOGOEligible,
+      bogoPriceTier,
+      bogoCategory,
+      bogoActive,
+      // Tumbler fields
+      isTumbler,
+      capacity,
+      isBestseller,
+      // Offer fields
+      isOnOffer,
+      offerType,
+      offerValue,
+      offerExpiry,
+      showCountdown,
     } = req.body;
 
     // Validation
@@ -136,6 +152,7 @@ export const createProduct = async (
           weight,
           dimensions,
           stockQuantity: parseInt(stockQuantity || '0'),
+          lowStockThreshold: lowStockThreshold ? parseInt(lowStockThreshold, 10) : 5,
           isFeatured: isFeatured || false,
           isActive: isActive !== false,
           metaTitle,
@@ -143,6 +160,21 @@ export const createProduct = async (
           collections: collections || [],
           occasions: occasions || [],
           isFeaturedGift: isFeaturedGift || false,
+          // BOGO
+          isBOGOEligible: isBOGOEligible || false,
+          bogoPriceTier: bogoPriceTier ? parseInt(bogoPriceTier, 10) : 0,
+          bogoCategory: bogoCategory || null,
+          bogoActive: bogoActive || false,
+          // Tumbler
+          isTumbler: isTumbler || false,
+          capacity: capacity || null,
+          isBestseller: isBestseller || false,
+          // Offers
+          isOnOffer: isOnOffer || false,
+          offerType: offerType || null,
+          offerValue: offerValue ? parseFloat(offerValue) : null,
+          offerExpiry: offerExpiry ? new Date(offerExpiry) : null,
+          showCountdown: showCountdown || false,
         },
       });
 
@@ -541,6 +573,7 @@ export const updateProduct = async (
     // (e.g. isDeleted, deletedAt, bogoActive, gstRate) bypassing all validation.
     const {
       name,
+      slug,
       description,
       shortDescription,
       price,
@@ -584,6 +617,22 @@ export const updateProduct = async (
 
     if (name !== undefined) {
       updateData.name = String(name).trim();
+    }
+    // Use explicit slug from frontend if provided (preserves SEO);
+    // only regenerate from name if slug is NOT sent.
+    if (slug !== undefined && String(slug).trim()) {
+      const candidateSlug = String(slug).trim();
+      const existingSlug = await prisma.product.findFirst({
+        where: { slug: candidateSlug, id: { not: id } },
+      });
+      if (existingSlug) {
+        const suffix = Math.random().toString(36).substring(2, 7);
+        updateData.slug = `${candidateSlug}-${suffix}`;
+      } else {
+        updateData.slug = candidateSlug;
+      }
+    } else if (name !== undefined) {
+      // Fallback: regenerate from name only if no slug provided
       const newSlug = slugify(String(name));
       const existingSlug = await prisma.product.findFirst({
         where: { slug: newSlug, id: { not: id } },
@@ -636,9 +685,50 @@ export const updateProduct = async (
     if (offerValue !== undefined) updateData.offerValue = parseFloat(offerValue);
     if (offerExpiry !== undefined) updateData.offerExpiry = new Date(offerExpiry);
     if (showCountdown !== undefined) updateData.showCountdown = Boolean(showCountdown);
-    if (images !== undefined) {
-      // images are handled as nested upserts — not a raw spread
-      // (handled separately by image-specific endpoints; ignore here if empty)
+    // Sync images: delete old, create new in a transaction
+    if (images !== undefined && Array.isArray(images) && images.length > 0) {
+      const updated = await prisma.$transaction(async (tx) => {
+        // Update product fields
+        const updatedProduct = await tx.product.update({
+          where: { id },
+          data: updateData,
+        });
+
+        // Delete existing images
+        await tx.productImage.deleteMany({ where: { productId: id } });
+
+        // Create new images
+        await tx.productImage.createMany({
+          data: images.map((img: any, index: number) => ({
+            productId: id,
+            imageUrl: img.url || img.imageUrl,
+            altText: img.alt || updatedProduct.name,
+            sortOrder: index,
+            isPrimary: img.isPrimary || index === 0,
+          })),
+        });
+
+        return tx.product.findUnique({
+          where: { id },
+          include: { images: true, category: true },
+        });
+      });
+
+      console.log('[Product Controller] ✅ Product updated successfully (with images):', {
+        productId: id,
+        productName: updated!.name,
+        fieldsUpdated: Object.keys(updateData),
+        imageCount: updated!.images.length,
+      });
+
+      logAdminAction(req, 'UPDATE', 'PRODUCT', id, {
+        fieldsUpdated: [...Object.keys(updateData), 'images'],
+      });
+
+      return res.json({
+        success: true,
+        data: updated,
+      });
     }
 
     const updated = await prisma.product.update({
