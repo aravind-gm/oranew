@@ -341,24 +341,16 @@ export const login = async (
 
     if (password) {
       // PASSWORD LOGIN FLOW
-      console.log(`[Auth] 🔐 Password login attempt for: ${email}`);
-      console.log(`[Auth] 📧 Email received:`, email);
-      console.log(`[Auth] 🔑 Password length:`, password?.length);
       
       // Find user by email
       const user = await prisma.user.findUnique({
         where: { email: emailLower },
       });
 
-      console.log(`[Auth] 👤 User found:`, !!user);
       if (user) {
-        console.log(`[Auth] 🔐 Has passwordHash:`, !!user.passwordHash);
-        console.log(`[Auth] 📝 User ID:`, user.id);
-        console.log(`[Auth] ✉️  User email:`, user.email);
       }
 
       if (!user) {
-        console.log(`[Auth] ❌ LOGIN FAILED: User not found for email: ${emailLower}`);
         return res.status(401).json({
           success: false,
           error: 'Invalid email or password',
@@ -367,7 +359,6 @@ export const login = async (
 
       // Check if user has password set
       if (!user.passwordHash) {
-        console.log(`[Auth] ❌ LOGIN FAILED: Account is OTP-only (no password set)`);
         return res.status(401).json({
           success: false,
           error: 'This account uses OTP login. Please use the OTP option instead.',
@@ -376,10 +367,8 @@ export const login = async (
 
       // Verify password
       const passwordMatch = await bcrypt.compare(password, user.passwordHash);
-      console.log(`[Auth] 🔑 Password match result:`, passwordMatch);
 
       if (!passwordMatch) {
-        console.log(`[Auth] ❌ LOGIN FAILED: Password mismatch for ${email}`);
         return res.status(401).json({
           success: false,
           error: 'Invalid email or password',
@@ -416,15 +405,6 @@ export const login = async (
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
-      console.log(`[Auth] ✅ User logged in with password: ${email}`);
-      console.log(`[Auth] 🍪 Cookies set:`, {
-        access_token: 'SET',
-        refresh_token: 'SET',
-        domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : 'localhost',
-        sameSite: 'strict',
-        secure: process.env.NODE_ENV === 'production',
-      });
-      
       return res.status(200).json({
         success: true,
         user: {
@@ -440,7 +420,6 @@ export const login = async (
       });
     } else {
       // OTP LOGIN FLOW (EXISTING LOGIC)
-      console.log(`[Auth] 📧 OTP login request for: ${email}`);
       
       // Generate 8-digit OTP
       const otp = generate8DigitOTP();
@@ -450,7 +429,6 @@ export const login = async (
       const otpHash = await bcrypt.hash(otp, 10);
       await storeOtp(emailLower, { hash: otpHash, expiresAt: expiresAt.toISOString(), attempts: 0 });
 
-      console.log(`[Auth] 🔢 Generated OTP for ${email}: ${otp} (expires at ${expiresAt})`);
 
       // Try to send email with enhanced error handling
       try {
@@ -660,7 +638,6 @@ export const register = async (
       const otpHash = await bcrypt.hash(otp, 10);
       await storeOtp(emailLower, { hash: otpHash, expiresAt: expiresAt.toISOString(), attempts: 0 });
 
-      console.log(`[Auth] 🔢 Generated registration OTP for ${email}: ${otp}`);
 
       // Try to send welcome email with OTP
       try {

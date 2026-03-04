@@ -3,7 +3,7 @@
 /**
  * Dynamic Collections Category Page
  * Handles routes like /collections/[category] for any category not
- * explicitly defined (new-arrivals, combos, gifts-for-her, valentine, tumblers, offers).
+ * explicitly defined (new-arrivals, combos, gifts-for-her, tumblers, offers).
  * 
  * Renders a real collection page driven by the category slug from the URL.
  */

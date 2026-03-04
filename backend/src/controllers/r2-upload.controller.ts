@@ -633,20 +633,11 @@ export const getBanners = async (
   next: NextFunction
 ) => {
   try {
-    console.log('[getBanners] Request received', {
-      headers: req.headers.authorization ? '***' : 'NO_AUTH',
-      user: req.user?.id,
-      role: req.user?.role,
-      query: req.query,
-    });
-
     if (!req.user) {
-      console.error('[getBanners] No user in request');
       throw new AppError('Authentication required', 401);
     }
 
     if (req.user.role !== 'ADMIN') {
-      console.error('[getBanners] User is not admin', { role: req.user.role });
       throw new AppError('Only admin can view banners', 403);
     }
 
@@ -656,8 +647,6 @@ export const getBanners = async (
     if (position) where.position = position as string;
     if (page) where.page = page as string;
 
-    console.log('[getBanners] Query filter:', where);
-
     const banners = await prisma.banner.findMany({
       where,
       orderBy: [
@@ -665,8 +654,6 @@ export const getBanners = async (
         { sortOrder: 'asc' },
       ],
     });
-
-    console.log('[getBanners] Found banners:', banners.length);
 
     res.json({
       success: true,

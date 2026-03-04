@@ -68,7 +68,7 @@ const faqs = [
       },
       {
         q: 'Can I pay cash on delivery?',
-        a: 'Cash on delivery is available for orders below ₹50,000.',
+        a: 'Cash on delivery is available for orders below ₹5,000.',
       },
     ],
   },

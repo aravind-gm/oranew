@@ -98,15 +98,15 @@ export default function PrivacyPage() {
             <h2 className="text-2xl font-serif font-semibold text-text-primary mb-4">8. Contact Us</h2>
             <p>
               If you have questions about this Privacy Policy, please contact us at{' '}
-              <a href="mailto:privacy@orajewellery.com" className="text-accent hover:underline">
-                privacy@orajewellery.com
+              <a href="mailto:admin@orashop.in" className="text-accent hover:underline">
+                admin@orashop.in
               </a>
             </p>
           </section>
         </div>
 
         <div className="mt-12 pt-8 border-t border-border text-sm text-text-muted">
-          <p>Last updated: January 12, 2026</p>
+          <p>Last updated: March 4, 2026</p>
         </div>
       </div>
     </div>

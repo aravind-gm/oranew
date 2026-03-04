@@ -17,7 +17,7 @@
  *  9. StickyCartBar     — Mobile sticky bottom bar
  *
  * Removed:
- *  - BrandManifesto, GiftByPriceHearts, ValentineCombos, VideoReelStrip
+ *  - BrandManifesto, GiftByPriceHearts, SeasonalCombos, VideoReelStrip
  *  - InfiniteProductCarousel, FinalCTA (clutter / scroll-heavy)
  *  - Duplicate grids, repeated sections, red discount badges
  *

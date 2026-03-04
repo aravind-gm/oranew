@@ -27,6 +27,7 @@ import shopallCmsRoutes from './routes/shopall-cms.routes';
 import comboRoutes from './routes/combo.routes';
 import bogoRoutes from './routes/bogo.routes';
 import offersRoutes from './routes/offers.routes';
+import contactRoutes from './routes/contact.routes';
 
 import { isStorageConfigured, testStorageConnection } from './config/supabase';
 import { runPendingMigrations } from './config/migrations';
@@ -393,6 +394,7 @@ app.use('/api/announcements', announcementsRoutes);
 app.use('/api/pages', pagesRoutes);
 app.use('/api/shopall-cms', shopallCmsRoutes);
 app.use('/api/combos', comboRoutes);
+app.use('/api/contact', contactRoutes);
 app.use('/api/offers', offersRoutes);
 
 // Shipping config (public)

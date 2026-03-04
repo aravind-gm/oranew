@@ -27,8 +27,6 @@ export const validateCoupon = asyncHandler(async (req: AuthRequest, res: Respons
     throw new AppError('Authentication required', 401);
   }
 
-  console.log('[Coupon.validate] Code:', code, 'Amount:', orderAmount);
-
   // Find coupon
   const coupon = await withRetry(() =>
     prisma.coupon.findUnique({
@@ -87,8 +85,6 @@ export const validateCoupon = asyncHandler(async (req: AuthRequest, res: Respons
     discountAmount = orderAmount;
   }
 
-  console.log('[Coupon.validate] ✓ Coupon valid. Discount:', discountAmount);
-
   res.json({
     success: true,
     message: 'Coupon applied successfully',
@@ -119,8 +115,6 @@ export const redeemCoupon = asyncHandler(async (req: AuthRequest, res: Response)
   if (!userId) {
     throw new AppError('Authentication required', 401);
   }
-
-  console.log('[Coupon.redeem] Code:', code, 'OrderId:', orderId);
 
   // Find coupon
   const coupon = await withRetry(() =>
@@ -157,8 +151,6 @@ export const redeemCoupon = asyncHandler(async (req: AuthRequest, res: Response)
       },
     })
   ) as any;
-
-  console.log('[Coupon.redeem] ✓ Coupon redeemed. New usage count:', (updatedCoupon as any).usageCount);
 
   res.json({
     success: true,

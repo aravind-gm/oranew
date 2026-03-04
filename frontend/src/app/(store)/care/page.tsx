@@ -89,40 +89,40 @@ export default function CarePage() {
 
           <section>
             <h2 className="text-2xl font-serif font-semibold text-text-primary mb-4">
-              Gold Jewellery Care
+              Fashion Jewellery Care
             </h2>
-            <p>Gold is durable but requires regular cleaning to maintain its shine:</p>
+            <p>Fashion and plated jewellery needs gentle care to maintain its finish:</p>
             <ul className="list-disc pl-6 space-y-2 mt-4">
-              <li>Soak in warm water with mild soap for 10-15 minutes</li>
-              <li>Gently scrub with a soft-bristled brush</li>
-              <li>Rinse thoroughly and dry with a soft cloth</li>
-              <li>Professional cleaning recommended every 6 months</li>
+              <li>Wipe gently with a soft, dry cloth after every wear</li>
+              <li>Remove before washing hands, bathing, or swimming</li>
+              <li>Apply perfume, hairspray, and lotions before wearing your jewellery</li>
+              <li>Avoid contact with water, sweat, and chemicals to preserve plating</li>
             </ul>
           </section>
 
           <section>
             <h2 className="text-2xl font-serif font-semibold text-text-primary mb-4">
-              Silver Jewellery Care
+              Maintaining the Finish
             </h2>
-            <p>Silver tarnishes naturally but can be easily restored:</p>
+            <p>Keep your gold-plated and silver-finished pieces looking new:</p>
             <ul className="list-disc pl-6 space-y-2 mt-4">
-              <li>Use a silver polishing cloth regularly</li>
-              <li>Store in anti-tarnish bags or with silica gel packets</li>
-              <li>Avoid exposure to sulfur-containing foods (eggs, onions)</li>
-              <li>Professional cleaning for intricate designs</li>
+              <li>Store each piece individually in a soft cloth or zip-lock bag</li>
+              <li>Keep away from direct sunlight and humid environments</li>
+              <li>Do not use harsh cleaning agents or jewellery dips</li>
+              <li>Use a microfibre cloth to gently buff and restore shine</li>
             </ul>
           </section>
 
           <section>
             <h2 className="text-2xl font-serif font-semibold text-text-primary mb-4">
-              Diamond & Gemstone Care
+              Stone & Embellishment Care
             </h2>
-            <p>Keep your precious stones sparkling:</p>
+            <p>For pieces with artificial stones or rhinestones:</p>
             <ul className="list-disc pl-6 space-y-2 mt-4">
-              <li>Clean with warm soapy water and a soft brush</li>
-              <li>Check settings regularly for loose stones</li>
-              <li>Avoid harsh chemicals and ultrasonic cleaners for delicate stones</li>
-              <li>Professional inspection recommended annually</li>
+              <li>Handle gently — do not bend or pull at stone settings</li>
+              <li>Clean around stones with a soft brush if needed</li>
+              <li>Avoid knocking stones against hard surfaces</li>
+              <li>If a stone feels loose, stop wearing the piece and contact us</li>
             </ul>
           </section>
 
@@ -168,20 +168,18 @@ export default function CarePage() {
 
           <section>
             <h2 className="text-2xl font-serif font-semibold text-text-primary mb-4">
-              Professional Services
+              Our Warranty
             </h2>
             <p>
-              ORA offers professional cleaning and maintenance services for all jewellery purchased from us. 
-              Contact our customer service to schedule an appointment.
+              All ORA pieces come with a quality assurance guarantee. If you notice any defects 
+              within our return window, we&apos;re happy to assist with an exchange or refund.
             </p>
             <div className="bg-background-white p-6 rounded-xl shadow-luxury mt-4">
-              <h3 className="font-semibold text-text-primary mb-3">Services Offered:</h3>
+              <h3 className="font-semibold text-text-primary mb-3">What We Cover:</h3>
               <ul className="space-y-2">
-                <li>✨ Professional cleaning</li>
-                <li>🔍 Stone inspection and tightening</li>
-                <li>✏️ Engraving services</li>
-                <li>🔧 Ring resizing</li>
-                <li>💎 Stone replacement</li>
+                <li>✨ Manufacturing defects</li>
+                <li>🔍 Loose stones on delivery</li>
+                <li>📦 Damage during shipping</li>
               </ul>
             </div>
           </section>
@@ -204,7 +202,7 @@ export default function CarePage() {
         </div>
 
         <div className="mt-12 pt-8 border-t border-border text-sm text-text-muted">
-          <p>Last updated: January 12, 2026</p>
+          <p>Last updated: March 4, 2026</p>
         </div>
       </div>
     </div>

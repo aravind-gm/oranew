@@ -9,6 +9,8 @@
 import { motion } from 'framer-motion';
 import { Phone, Mail, MapPin, Clock, Truck, Shield, CheckCircle, Package } from 'lucide-react';
 import { useState } from 'react';
+import api from '@/lib/api';
+import toast from 'react-hot-toast';
 
 // Metadata must be defined in a Server Component parent or layout
 // Since this is 'use client', metadata is inherited from layout.tsx
@@ -22,10 +24,28 @@ export default function ContactPage() {
     message: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
-    console.log('Form submitted:', formData);
+    setSubmitting(true);
+    try {
+      await api.post('/contact', {
+        fullName: formData.fullName,
+        email: formData.email,
+        phone: formData.phone,
+        orderId: formData.orderId,
+        message: formData.message,
+      });
+      setSubmitted(true);
+      toast.success('Message sent! We\'ll get back to you soon.');
+      setFormData({ fullName: '', email: '', phone: '', orderId: '', message: '' });
+    } catch {
+      toast.error('Failed to send message. Please email us directly at admin@orashop.in');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -154,12 +174,13 @@ export default function ContactPage() {
 
                 <button
                   type="submit"
-                  className="w-full py-3.5 rounded-xl text-white font-medium transition-all duration-200"
+                  disabled={submitting}
+                  className="w-full py-3.5 rounded-xl text-white font-medium transition-all duration-200 disabled:opacity-60"
                   style={{ backgroundColor: '#E75480' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#C2185B')}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#E75480')}
+                  onMouseEnter={(e) => !submitting && (e.currentTarget.style.backgroundColor = '#C2185B')}
+                  onMouseLeave={(e) => !submitting && (e.currentTarget.style.backgroundColor = '#E75480')}
                 >
-                  Send Message
+                  {submitting ? 'Sending...' : submitted ? 'Sent ✓' : 'Send Message'}
                 </button>
               </form>
             </motion.div>

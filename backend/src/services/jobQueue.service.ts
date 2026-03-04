@@ -403,8 +403,37 @@ async function processPaymentReconciliation(): Promise<void> {
         ]);
         failed++;
       }
-    } catch (err) {
-      console.error(`[JobQueue] Error reconciling payment ${payment.id}:`, err);
+    } catch (err: any) {
+      // If Razorpay returns 404, the order ID is invalid/missing — mark as FAILED
+      // to stop it from being retried on every reconciliation run.
+      if (err?.statusCode === 404 || err?.error?.code === 'BAD_REQUEST_ERROR') {
+        try {
+          await prisma.$transaction([
+            prisma.payment.update({
+              where: { id: payment.id },
+              data: {
+                status: 'FAILED',
+                gatewayResponse: {
+                  ...(typeof payment.gatewayResponse === 'object' && payment.gatewayResponse ? payment.gatewayResponse : {}),
+                  reconciledAt: new Date().toISOString(),
+                  reconciledBy: 'bullmq-worker',
+                  error_description: `Razorpay order not found (404) — transactionId: ${payment.transactionId}`,
+                },
+              },
+            }),
+            prisma.order.update({
+              where: { id: payment.orderId },
+              data: { paymentStatus: 'FAILED', status: 'CANCELLED', cancelledAt: new Date() },
+            }),
+          ]);
+          console.warn(`[JobQueue] Marked payment ${payment.id} as FAILED — Razorpay order not found (404)`);
+          failed++;
+        } catch (innerErr) {
+          console.error(`[JobQueue] Failed to mark payment ${payment.id} as FAILED after 404:`, innerErr);
+        }
+      } else {
+        console.error(`[JobQueue] Error reconciling payment ${payment.id}:`, err);
+      }
     }
   }
 
@@ -586,11 +615,14 @@ async function processPaymentParityCheck(): Promise<void> {
     take: 50,
   });
 
-  // Find confirmed payments whose orders are not CONFIRMED
+  // Find confirmed payments whose orders are in an unexpected state.
+  // Valid downstream states after payment confirmation are excluded:
+  // PROCESSING, SHIPPED, DELIVERED, RETURNED, REFUNDED — these are all fine.
+  // Only PENDING and CANCELLED are genuine mismatches worth alerting on.
   const orphanPayments = await prisma.payment.findMany({
     where: {
       status: 'CONFIRMED',
-      order: { status: { not: 'CONFIRMED' } },
+      order: { status: { in: ['PENDING', 'CANCELLED'] } },
       createdAt: { lt: new Date(Date.now() - 30 * 60 * 1000) },
     },
     select: {

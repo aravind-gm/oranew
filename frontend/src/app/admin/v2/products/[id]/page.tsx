@@ -979,7 +979,7 @@ export default function ProductFormPage() {
                     Collections
                   </label>
                   <div className="space-y-2">
-                    {['gifts-for-her', 'gifts-for-him', 'valentine-special', 'premium-gifts'].map((collection) => (
+                    {['gifts-for-her', 'gifts-for-him', 'seasonal-special', 'premium-gifts'].map((collection) => (
                       <Checkbox
                         key={collection}
                         label={collection.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
@@ -1001,7 +1001,7 @@ export default function ProductFormPage() {
                     Occasions
                   </label>
                   <div className="space-y-2">
-                    {['birthday', 'anniversary', 'valentine', 'just-because', 'wedding', 'graduation'].map((occasion) => (
+                    {['birthday', 'anniversary', 'seasonal', 'just-because', 'wedding', 'graduation'].map((occasion) => (
                       <Checkbox
                         key={occasion}
                         label={occasion.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}

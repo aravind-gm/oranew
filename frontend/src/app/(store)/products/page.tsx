@@ -14,7 +14,7 @@
  * 1. Editorial Hero (lifestyle, headline, CTAs)
  * 2. What's New This Season (3 editorial cards)
  * 3. Curated New Drop (4 featured products)
- * 4. Valentine's Gifting Highlight
+ * 4. Gift Ideas Highlight
  * 5. Why These Pieces (trust layer)
  * 6. Exit CTA (deeper funnel)
  */
@@ -67,11 +67,11 @@ interface EditorialCard {
 
 const EDITORIAL_CARDS: EditorialCard[] = [
   {
-    id: 'valentine-edit',
-    title: 'Valentine Edit',
+    id: 'gift-ideas',
+    title: 'Gift Ideas',
     description: 'Thoughtful gifts under ₹1500 — designed for moments that matter.',
-    emoji: '💝',
-    link: '/valentines-special'
+    emoji: '🎁',
+    link: '/collections/gifts-for-her'
   },
   {
     id: 'everyday-luxe',
@@ -217,11 +217,11 @@ export default function ProductsPage() {
                     <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
                   </Link>
                   <Link 
-                    href="/valentines-special"
+                    href="/collections/gifts-for-her"
                     className="inline-flex items-center justify-center gap-3 px-8 py-4 border-2 border-text-primary/20 text-text-primary font-medium rounded-full transition-all duration-300 hover:border-accent hover:bg-accent/5"
                   >
                     <Heart className="w-4 h-4" />
-                    <span>Valentine Specials</span>
+                    <span>Gift Ideas</span>
                   </Link>
                 </motion.div>
               </motion.div>
@@ -401,7 +401,7 @@ export default function ProductsPage() {
       </section>
 
       {/* ================================================================
-          SECTION 4: VALENTINE'S GIFTING HIGHLIGHT
+          SECTION 4: GIFT IDEAS HIGHLIGHT
           ================================================================ */}
       <section className="py-16 lg:py-24 bg-gradient-to-r from-primary/15 to-accent/10 border-y border-border/50">
         <div className="container-luxury">
@@ -444,11 +444,11 @@ export default function ProductsPage() {
 
               {/* CTA */}
               <Link 
-                href="/valentines-special"
+                href="/collections/gifts-for-her"
                 className="inline-flex items-center gap-3 px-8 py-4 bg-primary text-text-primary font-medium rounded-full transition-all duration-300 hover:bg-primary-dark hover:shadow-luxury-hover group"
               >
                 <Heart className="w-5 h-5" />
-                <span>Shop Valentine Combos</span>
+                <span>Shop Gift Combos</span>
                 <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
               </Link>
             </div>
@@ -459,7 +459,7 @@ export default function ProductsPage() {
                 <div className="w-full h-full bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center">
                   <div className="text-center">
                     <Heart className="w-20 h-20 text-primary/40 mx-auto mb-4" />
-                    <p className="text-text-secondary text-sm">Valentine's Specials</p>
+                    <p className="text-text-secondary text-sm">Gift Specials</p>
                     <p className="text-text-muted text-xs mt-1">Under ₹1500</p>
                   </div>
                 </div>

@@ -363,9 +363,39 @@ async function reconcilePayments(): Promise<void> {
       } else {
         skipped++;
       }
-    } catch (err) {
-      console.error(`[Reconcile] Error processing payment ${payment.id}:`, err);
-      captureException(err, { paymentId: payment.id, orderId: payment.orderId });
+    } catch (err: any) {
+      // If Razorpay returns 404, the order ID no longer exists — mark as FAILED
+      // to prevent this payment from looping through reconciliation on every run.
+      if (err?.statusCode === 404 || err?.error?.code === 'BAD_REQUEST_ERROR') {
+        try {
+          await prisma.$transaction([
+            prisma.payment.update({
+              where: { id: payment.id },
+              data: {
+                status: 'FAILED',
+                gatewayResponse: {
+                  ...(typeof payment.gatewayResponse === 'object' && payment.gatewayResponse ? payment.gatewayResponse : {}),
+                  reconciledAt: new Date().toISOString(),
+                  reconciledBy: 'scheduler',
+                  error_description: `Razorpay order not found (404) — transactionId: ${payment.transactionId}`,
+                },
+              },
+            }),
+            prisma.order.update({
+              where: { id: payment.orderId },
+              data: { paymentStatus: 'FAILED', status: 'CANCELLED', cancelledAt: new Date() },
+            }),
+          ]);
+          console.warn(`[Reconcile] Marked payment ${payment.id} as FAILED — Razorpay order not found (404)`);
+          failed++;
+        } catch (innerErr) {
+          console.error(`[Reconcile] Failed to mark payment ${payment.id} as FAILED after 404:`, innerErr);
+          captureException(innerErr, { paymentId: payment.id, orderId: payment.orderId });
+        }
+      } else {
+        console.error(`[Reconcile] Error processing payment ${payment.id}:`, err);
+        captureException(err, { paymentId: payment.id, orderId: payment.orderId });
+      }
     }
   }
 

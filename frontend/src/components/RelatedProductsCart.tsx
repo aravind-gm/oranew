@@ -11,7 +11,7 @@
  * Features:
  * - Smart product recommendations based on cart items
  * - "You may also like" section (best-sellers & same category)
- * - "Perfect Valentine Add-Ons" section (gift-tagged & tumblers)
+ * - "Recommended Add-Ons" section (gift-tagged & tumblers)
  * - Horizontal scroll on mobile, grid on desktop
  * - Silent add-to-cart (mini popup instead of navigation)
  * - Premium styling with ORA brand colors (blush pink, warm off-white)
@@ -53,7 +53,7 @@ interface Product {
 
 export default function RelatedProductsCart() {
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
-  const [valentineProducts, setValentineProducts] = useState<Product[]>([]);
+  const [addonProducts, setAddonProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { addItem, items } = useCartStore();
   const { showNotification } = useCartNotificationStore();
@@ -70,17 +70,17 @@ export default function RelatedProductsCart() {
         sort: '-sales',
       };
 
-      // Fetch "Perfect Valentine Add-Ons":
-      // Tagged as valentine/gift/tumbler products
-      const valentineParams = {
+      // Fetch "Recommended Add-Ons":
+      // Tagged as gift/tumbler products
+      const addonParams = {
         limit: 6,
-        tags: ['valentine', 'gift', 'tumbler'],
+        tags: ['gift', 'tumbler', 'addon'],
         sort: '-createdAt',
       };
 
-      const [relatedRes, valentineRes] = await Promise.all([
+      const [relatedRes, addonRes] = await Promise.all([
         api.get('/products', { params: relatedParams }),
-        api.get('/products', { params: valentineParams }),
+        api.get('/products', { params: addonParams }),
       ]);
 
       // Set products, filtering out items already in cart
@@ -90,16 +90,16 @@ export default function RelatedProductsCart() {
         (p: Product) => !cartIds.has(p.id)
       ).slice(0, 6);
       
-      const valentineProds = (valentineRes.data.products || []).filter(
+      const addonProds = (addonRes.data.products || []).filter(
         (p: Product) => !cartIds.has(p.id)
       ).slice(0, 6);
 
       setRelatedProducts(relatedProds);
-      setValentineProducts(valentineProds);
+      setAddonProducts(addonProds);
     } catch (error) {
       console.error('Failed to fetch related products:', error);
       setRelatedProducts([]);
-      setValentineProducts([]);
+      setAddonProducts([]);
     } finally {
       setIsLoading(false);
     }
@@ -133,19 +133,19 @@ export default function RelatedProductsCart() {
     return null;
   }
 
-  const hasValentineProducts = valentineProducts.length > 0;
+  const hasAddonProducts = addonProducts.length > 0;
   const hasRelatedProducts = relatedProducts.length > 0;
 
-  if (!hasValentineProducts && !hasRelatedProducts) {
+  if (!hasAddonProducts && !hasRelatedProducts) {
     return null;
   }
 
   return (
     <div className="space-y-12 mt-12 sm:mt-16">
       {/* ========================================================================
-          "PERFECT VALENTINE ADD-ONS" SECTION
+          "RECOMMENDED ADD-ONS" SECTION
           ======================================================================== */}
-      {hasValentineProducts && (
+      {hasAddonProducts && (
         <motion.section
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -155,7 +155,7 @@ export default function RelatedProductsCart() {
         >
           <div className="mb-8">
             <h3 className="text-xl sm:text-2xl lg:text-3xl font-serif font-medium text-text-primary mb-2">
-              Perfect Valentine Add-Ons
+              Recommended Add-Ons
             </h3>
             <p className="text-sm sm:text-base text-text-secondary">
               Curated gifts and tumblers to complete your collection
@@ -165,7 +165,7 @@ export default function RelatedProductsCart() {
           {/* Mobile: Horizontal Scroll */}
           <div className="overflow-x-auto sm:hidden pb-2 -mx-4 px-4 scrollbar-hide">
             <div className="flex gap-4 min-w-min">
-              {valentineProducts.map((product, idx) => (
+              {addonProducts.map((product, idx) => (
                 <ProductCard
                   key={product.id}
                   product={product}
@@ -179,7 +179,7 @@ export default function RelatedProductsCart() {
 
           {/* Desktop: Grid */}
           <div className="hidden sm:grid grid-cols-2 lg:grid-cols-3 gap-6">
-            {valentineProducts.map((product, idx) => (
+            {addonProducts.map((product, idx) => (
               <ProductCard
                 key={product.id}
                 product={product}

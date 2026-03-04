@@ -34,9 +34,8 @@ export default function ExitIntentModal({ isOpen, onDismiss }: ExitIntentModalPr
       setStatus('success');
       setTimeout(onDismiss, 2000);
     } catch {
-      // Non-fatal: record locally, show success UX anyway
-      setStatus('success');
-      setTimeout(onDismiss, 2000);
+      // Show error state so user knows it failed
+      setStatus('error');
     }
   };
 
@@ -81,6 +80,18 @@ export default function ExitIntentModal({ isOpen, onDismiss }: ExitIntentModalPr
           <p className="text-sm font-medium" style={{ color: '#E75480' }}>
             ✓ Check your inbox for your discount code.
           </p>
+        ) : status === 'error' ? (
+          <div>
+            <p className="text-sm font-medium text-red-500 mb-3">
+              Something went wrong. Please try again.
+            </p>
+            <button
+              onClick={() => setStatus('idle')}
+              className="text-sm underline text-neutral-500 hover:text-neutral-700"
+            >
+              Try again
+            </button>
+          </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             <input

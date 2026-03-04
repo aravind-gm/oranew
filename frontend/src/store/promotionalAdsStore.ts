@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 export interface PromotionalAd {
   id: string;
-  type: 'valentine' | 'bestseller' | 'combo' | 'stock-alert';
+  type: 'seasonal' | 'bestseller' | 'combo' | 'stock-alert';
   productId?: string;
   productName: string;
   productImage: string;

@@ -18,7 +18,7 @@
 
 import { usePromotionalAdsStore } from '@/store/promotionalAdsStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Heart, Zap } from 'lucide-react';
+import { X, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -26,43 +26,31 @@ import { useEffect, useState } from 'react';
 
 const PROMOTIONAL_ADS = [
   {
-    id: 'valentine-gift-1',
-    type: 'valentine' as const,
-    productName: 'Valentine Gift Combo',
-    productImage: '/banners.png',
-    discount: 20,
-    ctaText: 'Explore',
-    badge: '💕 Limited',
-    href: '/valentine-drinkware',
-  },
-  {
     id: 'bestseller-1',
     type: 'bestseller' as const,
-    productName: 'Bestseller Necklace',
+    productName: 'Bestselling Necklaces',
     productImage: '/necklace.png',
     ctaText: 'View',
-    badge: '⭐ Popular',
-    href: '/collections?sort=-sales',
+    badge: 'Popular',
+    href: '/collections?category=necklace',
   },
   {
-    id: 'combo-1',
+    id: 'new-arrival-1',
     type: 'combo' as const,
-    productName: 'Perfect Combo Set',
+    productName: 'New Arrivals',
     productImage: '/rings.png',
-    discount: 15,
-    ctaText: 'Shop',
-    badge: '🎁 Combo',
-    href: '/collections?type=combo',
+    ctaText: 'Explore',
+    badge: 'New',
+    href: '/collections?sort=-createdAt',
   },
   {
-    id: 'stock-alert-1',
+    id: 'bracelets-1',
     type: 'stock-alert' as const,
-    productName: 'Limited Stock Offer',
+    productName: 'Trending Bracelets',
     productImage: '/bracelet.png',
-    discount: 25,
-    ctaText: 'Grab Now',
-    badge: '⚡ Trending',
-    href: '/collections',
+    ctaText: 'Shop Now',
+    badge: 'Trending',
+    href: '/collections?category=bracelets',
   },
 ];
 
@@ -183,7 +171,7 @@ export default function PromotionalAds() {
 
               {/* CTA Button */}
               <button className="w-full py-2 px-3 bg-gradient-to-r from-[#9B2C46] to-[#C1354F] text-white rounded-lg font-medium text-sm hover:shadow-md transition-shadow duration-200 flex items-center justify-center gap-2">
-                <Heart className="w-4 h-4" />
+                <Sparkles className="w-4 h-4" />
                 <span>{currentAd.ctaText}</span>
               </button>
 

@@ -39,8 +39,6 @@ export const protectSupabase = async (
       throw new AppError('Not authorized, no token provided', 401);
     }
 
-    console.log('[Supabase Auth] 🔐 Validating Supabase token...');
-
     try {
       // Verify with Supabase
       const supabase = getSupabaseAdmin();
@@ -50,12 +48,6 @@ export const protectSupabase = async (
         console.error('[Supabase Auth] ❌ Token validation failed:', error?.message);
         throw new AppError('Invalid token', 401);
       }
-
-      console.log('[Supabase Auth] ✅ Token verified:', {
-        userId: data.user.id,
-        email: data.user.email,
-        phone: data.user.phone,
-      });
 
       // Attach Supabase user to request
       req.supabaseUser = {

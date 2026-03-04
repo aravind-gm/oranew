@@ -24,7 +24,7 @@ export interface GiftProduct {
   isNew?: boolean;
   isBestseller?: boolean;
   giftWrapAvailable?: boolean;
-  trendingTag?: string; // e.g., "Trending for Valentine's"
+  trendingTag?: string;
 }
 
 interface GiftProductCardProps {

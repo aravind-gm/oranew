@@ -436,38 +436,18 @@ export const verifyPayment = asyncHandler(async (req: any, res: Response) => {
  * configured in server.ts to receive raw body for signature verification.
  */
 export const webhook = async (req: Request, res: Response) => {
-  console.log('[Webhook] ════════════════════════════════════════════════');
-  console.log('[Webhook] Webhook received at:', new Date().toISOString());
-  
-  // ────────────────────────────────────────────
-  // DEBUG: Log request info for troubleshooting
-  // ────────────────────────────────────────────
-  console.log('[Webhook] Request path:', req.originalUrl);
-  console.log('[Webhook] Content-Type:', req.headers['content-type']);
-  console.log('[Webhook] Body type:', typeof req.body, Buffer.isBuffer(req.body) ? '(Buffer)' : '');
-  
-  // Log all headers containing 'razorpay' for debugging
-  const razorpayHeaders = Object.keys(req.headers).filter(h => h.toLowerCase().includes('razorpay'));
-  console.log('[Webhook] Razorpay headers found:', razorpayHeaders.length > 0 ? razorpayHeaders : 'NONE');
-  
   // ────────────────────────────────────────────
   // STEP 1: Extract raw body (CRITICAL for signature)
   // ────────────────────────────────────────────
   let rawBody: Buffer;
   if (Buffer.isBuffer(req.body)) {
     rawBody = req.body;
-    console.log('[Webhook] ✓ Body is Buffer (correct)');
   } else if ((req as any).rawBody && Buffer.isBuffer((req as any).rawBody)) {
     rawBody = (req as any).rawBody;
-    console.log('[Webhook] ✓ Using rawBody attachment');
   } else {
-    // HARD REJECT: If raw body is missing, signature verification is impossible.
-    // Do NOT fall back to JSON.stringify — that produces a different byte sequence
-    // than what Razorpay signed, making HMAC verification unreliable.
-    console.error('[Webhook] ❌ HARD REJECT: Raw body missing — cannot verify signature');
+    console.error('[Webhook] HARD REJECT: Raw body missing — cannot verify signature');
     return res.status(400).json({ success: false, reason: 'Raw body missing — signature unverifiable' });
   }
-  console.log('[Webhook] Raw body length:', rawBody.length);
 
   // ────────────────────────────────────────────
   // STEP 2: Validate signature exists (ALWAYS REQUIRED)
@@ -482,10 +462,7 @@ export const webhook = async (req: Request, res: Response) => {
     });
     return res.status(400).json({ success: false, reason: 'Signature missing' });
   }
-  console.log('[Webhook] ✓ Signature present:', signature.substring(0, 20) + '...');
-  
   if (!rawBody || !rawBody.length) {
-    console.log('[Webhook] ❌ Raw body missing');
     return res.status(400).json({ success: false, reason: 'Raw body missing' });
   }
 
@@ -494,7 +471,7 @@ export const webhook = async (req: Request, res: Response) => {
   // ────────────────────────────────────────────
   const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_KEY_SECRET;
   if (!webhookSecret) {
-    console.log('[Webhook] ❌ Webhook secret not configured');
+    console.error('[Webhook] Webhook secret not configured');
     return res.status(500).json({ success: false, reason: 'Webhook secret not configured' });
   }
   
@@ -534,7 +511,7 @@ export const webhook = async (req: Request, res: Response) => {
   try {
     event = JSON.parse(rawBody.toString());
   } catch (err) {
-    console.log('[Webhook] ❌ Invalid JSON:', err);
+    console.error('[Webhook] Invalid JSON in webhook body');
     return res.status(400).json({ success: false, reason: 'Invalid JSON' });
   }
 
@@ -555,13 +532,11 @@ export const webhook = async (req: Request, res: Response) => {
     }
   }
 
-  const eventType = event?.event;
-  console.log('[Webhook] Event type:', eventType);
-
   // ────────────────────────────────────────────
   // STEP 5: Route to appropriate handler
   // ────────────────────────────────────────────
   // ONLY handle payment.captured, payment.failed, and payment.refunded
+  const eventType = event?.event;
   if (eventType === 'payment.captured') {
     return handlePaymentCaptured(event, res);
   } else if (eventType === 'payment.failed') {
@@ -569,7 +544,6 @@ export const webhook = async (req: Request, res: Response) => {
   } else if (eventType === 'payment.refunded') {
     return handlePaymentRefunded(event, res);
   } else {
-    console.log('[Webhook] Ignoring event type:', eventType);
     return res.status(200).json({ success: true, reason: 'Event ignored' });
   }
 };

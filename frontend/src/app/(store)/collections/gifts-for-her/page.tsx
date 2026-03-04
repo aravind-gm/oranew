@@ -21,6 +21,9 @@ import {
 } from '@/components/gifts/SupportingSections';
 import StickyMobileCTA from '@/components/gifts/StickyMobileCTA';
 import { Loader2 } from 'lucide-react';
+import { useCartStore } from '@/store/cartStore';
+import { useWishlistStore } from '@/store/wishlistStore';
+import toast from 'react-hot-toast';
 
 interface ProductResponse {
   data?: any[];
@@ -86,7 +89,7 @@ export default function GiftsForHerPage() {
         isNew: p.isNew || false,
         isBestseller: p.isBestseller || false,
         giftWrapAvailable: true, // Default true for gifts collection
-        trendingTag: p.trending ? 'Trending for Valentine\'s' : undefined,
+        trendingTag: p.trending ? 'Trending Now' : undefined,
       }));
 
       setProducts(transformedProducts);
@@ -180,8 +183,40 @@ export default function GiftsForHerPage() {
                 <GiftProductCard 
                   key={product.id} 
                   product={product}
-                  onAddToCart={(id) => console.log('Add to cart:', id)}
-                  onWishlistToggle={(id) => console.log('Toggle wishlist:', id)}
+                  onAddToCart={(id) => {
+                    const p = products.find(pr => pr.id === id);
+                    if (p) {
+                      useCartStore.getState().addItem({
+                        id: `cart-${p.id}`,
+                        productId: p.id,
+                        name: p.name,
+                        image: p.images[0] || '',
+                        price: p.price,
+                        quantity: 1,
+                      });
+                      toast.success('Added to bag!');
+                    }
+                  }}
+                  onWishlistToggle={(id) => {
+                    const p = products.find(pr => pr.id === id);
+                    if (p) {
+                      const store = useWishlistStore.getState();
+                      if (store.isInWishlist(p.id)) {
+                        store.removeItem(p.id);
+                        toast.success('Removed from wishlist');
+                      } else {
+                        store.addItem({
+                          id: `wish-${p.id}`,
+                          productId: p.id,
+                          slug: p.slug,
+                          name: p.name,
+                          image: p.images[0] || '',
+                          price: p.price,
+                        });
+                        toast.success('Added to wishlist!');
+                      }
+                    }
+                  }}
                 />
               ))}
             </div>

@@ -12,6 +12,7 @@ import { motion } from 'framer-motion';
 import { Mail } from 'lucide-react';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import api from '@/lib/api';
 
 export default function Newsletter() {
   const [email, setEmail] = useState('');
@@ -34,7 +35,7 @@ export default function Newsletter() {
     setLoading(true);
     
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await api.post('/users/subscribe', { email: email.trim() });
       toast.success('Thank you for joining the ORA Circle.');
       setEmail('');
     } catch (error) {
@@ -81,7 +82,7 @@ export default function Newsletter() {
             />
             <button
               type="submit"
-              className="px-8 py-3.5 bg-oraAccent hover:bg-pink-600 text-white font-medium rounded-lg hover:bg-[#333] transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              className="px-8 py-3.5 bg-oraAccent hover:bg-pink-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
               disabled={loading}
             >
               {loading ? 'Subscribing...' : 'Subscribe'}

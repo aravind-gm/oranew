@@ -1,5 +1,5 @@
 // Seed Admin User for ORA Jewellery
-// Run with: npx ts-node prisma/seed-admin.ts
+// Run with: ADMIN_PASSWORD="YourPass" npx ts-node prisma/seed-admin.ts
 
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
@@ -10,10 +10,15 @@ async function main() {
   console.log('🌱 Seeding admin user...');
 
   const adminEmail = 'admin@orashop.in';
-  const adminPassword = 'admin123';
-  
+  const adminPassword = process.env.ADMIN_PASSWORD;
+
+  if (!adminPassword || adminPassword.length < 8) {
+    console.error('❌ ADMIN_PASSWORD env var is required (min 8 chars).');
+    process.exit(1);
+  }
+
   // Hash the password
-  const passwordHash = await bcrypt.hash(adminPassword, 10);
+  const passwordHash = await bcrypt.hash(adminPassword, 12);
   
   // Upsert admin user
   const admin = await prisma.user.upsert({
