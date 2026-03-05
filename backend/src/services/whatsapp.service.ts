@@ -13,7 +13,7 @@
  * Setup for FREE providers:
  * 
  * 1. CallMeBot (EASIEST — completely free):
- *    - Each partner sends "I allow callmebot to send me messages" to +34 644 51 98 02 on WhatsApp
+ *    - Each partner sends "I allow callmebot to send me messages" to +34 644 66 32 62 on WhatsApp
  *    - They receive an API key
  *    - Set WHATSAPP_PROVIDER=callmebot
  *    - Set CALLMEBOT_PHONES="+919842253984:apikey1,+917890123456:apikey2"
@@ -101,7 +101,7 @@ const logProvider: WhatsAppProvider = {
 // CALLMEBOT PROVIDER (FREE — no cost at all)
 // ============================================
 // Setup: Partner sends "I allow callmebot to send me messages"
-// to +34 644 51 98 02 on WhatsApp, gets an API key.
+// to +34 644 66 32 62 on WhatsApp, gets an API key.
 // Set CALLMEBOT_PHONES="+919842253984:apikey1,+917890123456:apikey2"
 
 const callmebotProvider: WhatsAppProvider = {
