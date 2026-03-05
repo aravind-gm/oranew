@@ -15,8 +15,8 @@ const ALLOWED_MIME_TYPES = [
   'image/webp',
 ];
 
-// Maximum file size: 2MB
-const MAX_FILE_SIZE = 2 * 1024 * 1024;
+// Maximum file size: 5MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 /**
  * Validates uploaded images for security
