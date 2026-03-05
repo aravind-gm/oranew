@@ -184,17 +184,19 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 
 // ============================================
+// COOKIE PARSER - For HttpOnly Cookie Authentication
+// ============================================
+// CRITICAL: Must be BEFORE upload routes so that auth middleware
+// inside upload routes can read req.cookies.access_token
+app.use(cookieParser());
+
+// ============================================
 // UPLOAD ROUTES - MUST BE BEFORE express.json()
 // ============================================
 // Multer needs to handle multipart/form-data directly
 // Applying express.json() before upload routes will cause 400 errors
 app.use('/api/upload', uploadRoutes);
 app.use('/api/r2', r2UploadRoutes);
-
-// ============================================
-// COOKIE PARSER - For HttpOnly Cookie Authentication
-// ============================================
-app.use(cookieParser());
 
 // ============================================
 // GLOBAL RATE LIMITER (100 req / 15 min per IP)
