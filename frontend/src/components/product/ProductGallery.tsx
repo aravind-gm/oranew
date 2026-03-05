@@ -18,20 +18,20 @@ interface ProductGalleryProps {
   productName: string;
 }
 
-/* ─── Zoom scale factors ─── */
-const DESKTOP_ZOOM = 2.8;
-const MOBILE_ZOOM = 3;
+/* ─── Zoom config ─── */
+const DESKTOP_ZOOM = 2.8;   // cursor-follow zoom on desktop
+const MOBILE_ZOOM_SCALE = 3; // native scroll zoom on mobile
 
 export default function ProductGallery({ images, productName }: ProductGalleryProps) {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
+  /* Desktop zoom state */
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
 
-  /* Mobile-specific state */
+  /* Mobile zoom state */
   const [isMobileZoomOpen, setIsMobileZoomOpen] = useState(false);
-  const [touchStartPos, setTouchStartPos] = useState<{ x: number; y: number } | null>(null);
-  const imageContainerRef = useRef<HTMLDivElement>(null);
-  const mobileZoomRef = useRef<HTMLDivElement>(null);
+  const mobileScrollRef = useRef<HTMLDivElement>(null);
 
   const selectedImage = images[selectedImageIndex] || images[0];
 
@@ -52,68 +52,49 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
     setZoomPosition({ x, y });
   };
 
-  /* ─── Mobile: tap opens full-screen zoom overlay ─── */
-  const handleTap = useCallback(() => {
-    // Only on touch devices (no mouse hover)
-    if (window.matchMedia('(hover: none)').matches) {
+  /* ─── Mobile: tap opens full-screen scrollable zoom ─── */
+  const handleImageTap = useCallback(() => {
+    if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
       setIsMobileZoomOpen(true);
-      setZoomPosition({ x: 50, y: 50 });
-    }
-  }, []);
-
-  /* Track touch position in mobile zoom overlay */
-  const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length === 1) {
-      const touch = e.touches[0];
-      setTouchStartPos({ x: touch.clientX, y: touch.clientY });
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = ((touch.clientX - rect.left) / rect.width) * 100;
-      const y = ((touch.clientY - rect.top) / rect.height) * 100;
-      setZoomPosition({ x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) });
-    }
-  }, []);
-
-  const handleTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length === 1) {
-      e.preventDefault(); // prevent page scroll while panning
-      const touch = e.touches[0];
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = ((touch.clientX - rect.left) / rect.width) * 100;
-      const y = ((touch.clientY - rect.top) / rect.height) * 100;
-      setZoomPosition({ x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) });
     }
   }, []);
 
   const closeMobileZoom = useCallback(() => {
     setIsMobileZoomOpen(false);
-    setZoomPosition({ x: 50, y: 50 });
   }, []);
 
-  /* Lock body scroll when mobile zoom is open */
+  /* Lock body scroll + scroll to center when mobile zoom opens */
   useEffect(() => {
     if (isMobileZoomOpen) {
       document.body.style.overflow = 'hidden';
-      return () => { document.body.style.overflow = ''; };
-    }
-  }, [isMobileZoomOpen]);
 
-  /* Swipe left/right to change image in mobile zoom */
-  const handleMobileZoomTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-    if (!touchStartPos) return;
-    const touch = e.changedTouches[0];
-    const deltaX = touch.clientX - touchStartPos.x;
-    const deltaY = touch.clientY - touchStartPos.y;
-    // Only count as swipe if horizontal distance > vertical and > 60px
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 60) {
-      if (deltaX > 0) {
-        handlePrevious();
-      } else {
-        handleNext();
-      }
-      setZoomPosition({ x: 50, y: 50 });
+      // Wait for the image container to render, then scroll to center
+      const timer = setTimeout(() => {
+        const el = mobileScrollRef.current;
+        if (el) {
+          el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
+          el.scrollTop = (el.scrollHeight - el.clientHeight) / 2;
+        }
+      }, 50);
+
+      return () => {
+        clearTimeout(timer);
+        document.body.style.overflow = '';
+      };
     }
-    setTouchStartPos(null);
-  }, [touchStartPos, handlePrevious, handleNext]);
+  }, [isMobileZoomOpen, selectedImageIndex]);
+
+  /* When switching image inside zoom overlay, re-center */
+  const handleZoomImageSwitch = useCallback((index: number) => {
+    setSelectedImageIndex(index);
+    setTimeout(() => {
+      const el = mobileScrollRef.current;
+      if (el) {
+        el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
+        el.scrollTop = (el.scrollHeight - el.clientHeight) / 2;
+      }
+    }, 50);
+  }, []);
 
   return (
     <>
@@ -139,7 +120,6 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
                   className="object-cover"
                   sizes="72px"
                 />
-                {/* Video indicator for future */}
                 {image.altText?.toLowerCase().includes('video') && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                     <div className="w-6 h-6 rounded-full bg-white/90 flex items-center justify-center">
@@ -157,12 +137,11 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
         {/* ── Main Image ── */}
         <div className="relative flex-1">
           <div
-            ref={imageContainerRef}
             className="relative w-full aspect-[3/4] md:aspect-[4/5] overflow-hidden rounded-xl bg-neutral-50 group cursor-zoom-in"
             onMouseMove={handleMouseMove}
             onMouseEnter={() => setIsZoomed(true)}
             onMouseLeave={() => { setIsZoomed(false); setZoomPosition({ x: 50, y: 50 }); }}
-            onClick={handleTap}
+            onClick={handleImageTap}
           >
             {selectedImage && (
               <>
@@ -172,9 +151,7 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
                   fill
                   priority
                   unoptimized={isSupabaseImage(selectedImage.imageUrl)}
-                  className={`object-cover transition-transform duration-300 ease-out ${
-                    isZoomed ? `scale-[${DESKTOP_ZOOM}]` : 'scale-100'
-                  }`}
+                  className="object-cover transition-transform duration-300 ease-out"
                   style={
                     isZoomed
                       ? { transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`, transform: `scale(${DESKTOP_ZOOM})` }
@@ -183,32 +160,32 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
                   sizes="(max-width: 768px) 100vw, 50vw"
                 />
 
-                {/* Zoom hint — desktop hover */}
+                {/* Zoom hint — desktop only (hover reveal) */}
                 <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm text-neutral-500 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-sm hidden md:flex">
                   <ZoomIn size={16} />
                 </div>
 
-                {/* Zoom hint — mobile tap */}
-                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm text-neutral-500 p-2 rounded-full shadow-sm flex md:hidden items-center gap-1.5">
-                  <ZoomIn size={14} />
-                  <span className="text-[10px] font-medium tracking-wide">TAP TO ZOOM</span>
+                {/* Zoom hint — mobile only (always visible) */}
+                <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm text-neutral-500 px-2.5 py-1.5 rounded-full shadow-sm flex md:hidden items-center gap-1.5">
+                  <ZoomIn size={13} />
+                  <span className="text-[10px] font-medium tracking-wide uppercase">Tap to zoom</span>
                 </div>
               </>
             )}
 
-            {/* Navigation Arrows — refined pill style */}
+            {/* Navigation Arrows — desktop only (hidden on mobile to avoid sticky hover) */}
             {images.length > 1 && (
               <>
                 <button
                   onClick={(e) => { e.stopPropagation(); handlePrevious(); }}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center bg-white/90 backdrop-blur-sm hover:bg-white rounded-full transition-all duration-200 z-10 shadow-sm opacity-0 group-hover:opacity-100"
+                  className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 items-center justify-center bg-white/90 backdrop-blur-sm hover:bg-white rounded-full transition-all duration-200 z-10 shadow-sm opacity-0 group-hover:opacity-100"
                   aria-label="Previous image"
                 >
                   <ChevronLeft size={18} className="text-neutral-700" />
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleNext(); }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center bg-white/90 backdrop-blur-sm hover:bg-white rounded-full transition-all duration-200 z-10 shadow-sm opacity-0 group-hover:opacity-100"
+                  className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 items-center justify-center bg-white/90 backdrop-blur-sm hover:bg-white rounded-full transition-all duration-200 z-10 shadow-sm opacity-0 group-hover:opacity-100"
                   aria-label="Next image"
                 >
                   <ChevronRight size={18} className="text-neutral-700" />
@@ -230,67 +207,77 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
       </div>
 
       {/* ════════════════════════════════════════════════════════════════════
-          MOBILE FULL-SCREEN ZOOM OVERLAY
+          MOBILE FULL-SCREEN ZOOM — Native scroll panning
+          
+          Instead of transformOrigin tricks, we render the image at 3x size
+          inside a scrollable container. The browser's native touch scroll
+          handles all panning with momentum, inertia, and edge bounce.
           ════════════════════════════════════════════════════════════════════ */}
       {isMobileZoomOpen && selectedImage && (
         <div className="fixed inset-0 z-[9999] bg-black flex flex-col md:hidden">
-          {/* Top bar */}
-          <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/60 to-transparent">
-            <span className="text-white/80 text-xs font-medium">
+          {/* ─── Top bar ─── */}
+          <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 pt-3 pb-8 bg-gradient-to-b from-black/70 to-transparent">
+            <span className="text-white/80 text-xs font-medium font-sans">
               {selectedImageIndex + 1} / {images.length}
             </span>
             <button
               onClick={closeMobileZoom}
-              className="w-9 h-9 flex items-center justify-center bg-white/15 backdrop-blur-sm rounded-full"
+              className="w-10 h-10 flex items-center justify-center bg-white/15 backdrop-blur-sm rounded-full active:bg-white/25"
               aria-label="Close zoom"
             >
-              <X size={18} className="text-white" />
+              <X size={20} className="text-white" />
             </button>
           </div>
 
-          {/* Hint text */}
-          <div className="absolute top-14 left-0 right-0 z-10 text-center pointer-events-none">
-            <p className="text-white/50 text-[10px] tracking-[0.15em] uppercase font-medium">
-              Drag to explore · Swipe to change image
+          {/* ─── Drag hint ─── */}
+          <div className="absolute top-14 left-0 right-0 z-20 text-center pointer-events-none">
+            <p className="text-white/40 text-[10px] tracking-[0.2em] uppercase font-medium font-sans">
+              Drag to explore
             </p>
           </div>
 
-          {/* Zoomed image — touch to pan */}
+          {/* ─── Scrollable zoom area (the magic) ─── */}
           <div
-            ref={mobileZoomRef}
-            className="flex-1 relative overflow-hidden"
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleMobileZoomTouchEnd}
+            ref={mobileScrollRef}
+            className="flex-1 overflow-auto overscroll-contain"
+            style={{ WebkitOverflowScrolling: 'touch' }}
           >
-            <Image
-              src={selectedImage.imageUrl}
-              alt={selectedImage.altText || productName}
-              fill
-              priority
-              unoptimized={isSupabaseImage(selectedImage.imageUrl)}
-              className="object-cover"
+            {/* 
+              Inner container is MOBILE_ZOOM_SCALE × the viewport.
+              The <img> fills this oversized box, so you get a zoomed image
+              that you pan by scrolling naturally with your finger.
+            */}
+            <div
               style={{
-                transform: `scale(${MOBILE_ZOOM})`,
-                transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`,
-                transition: 'transform-origin 0.1s ease-out',
+                width: `${MOBILE_ZOOM_SCALE * 100}vw`,
+                height: `${MOBILE_ZOOM_SCALE * 100}vh`,
+                position: 'relative',
               }}
-              sizes="100vw"
-            />
+            >
+              <Image
+                src={selectedImage.imageUrl}
+                alt={selectedImage.altText || productName}
+                fill
+                priority
+                unoptimized={isSupabaseImage(selectedImage.imageUrl)}
+                className="object-cover"
+                sizes={`${MOBILE_ZOOM_SCALE * 100}vw`}
+              />
+            </div>
           </div>
 
-          {/* Bottom thumbnail strip */}
+          {/* ─── Bottom thumbnail strip ─── */}
           {images.length > 1 && (
-            <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/70 to-transparent pt-6 pb-4 px-4">
-              <div className="flex gap-2 justify-center">
+            <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-8 pb-5 px-4">
+              <div className="flex gap-2.5 justify-center">
                 {images.map((image, index) => (
                   <button
                     key={image.id}
-                    onClick={() => { setSelectedImageIndex(index); setZoomPosition({ x: 50, y: 50 }); }}
+                    onClick={() => handleZoomImageSwitch(index)}
                     className={`relative w-12 h-12 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
                       selectedImageIndex === index
-                        ? 'border-white shadow-lg'
-                        : 'border-white/30 opacity-60'
+                        ? 'border-white shadow-lg scale-110'
+                        : 'border-white/30 opacity-50'
                     }`}
                   >
                     <Image
