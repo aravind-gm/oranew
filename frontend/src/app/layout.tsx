@@ -5,7 +5,7 @@ import AuthStateSync from '@/components/AuthStateSync';
 import PromotionalAds from '@/components/PromotionalAds';
 import Footer from '@/components/Footer';
 import Header from '@/components/Header';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Cormorant_Garamond, Inter } from 'next/font/google';
 import './globals.css';
 
@@ -22,6 +22,12 @@ const cormorant = Cormorant_Garamond({
   display: 'swap',
 });
 
+// Next.js 14+ requires viewport as a separate export
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL('https://orashop.in'),
   title: {
@@ -30,7 +36,6 @@ export const metadata: Metadata = {
   },
   description: 'own. radiate. adorn. — Discover ORA\'s curated collection of premium fashion jewellery. Necklaces, bracelets, rings, earrings and more. Everyday luxury under ₹1,500.',
   keywords: 'jewellery, fashion jewellery, premium jewellery, necklaces, earrings, bracelets, rings, ORA, luxury jewellery, Indian jewellery, affordable jewellery',
-  viewport: 'width=device-width, initial-scale=1', // CRITICAL: Mobile responsiveness
   icons: {
     icon: '/oralogo.png',
     apple: '/oralogo.png',

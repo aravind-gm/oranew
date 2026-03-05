@@ -149,7 +149,7 @@ export default function AboutOraPage() {
   const heroScale = useTransform(scrollYProgress, [0, 1], [1, 1.1]);
 
   return (
-    <main className="bg-white min-h-screen overflow-x-hidden">
+    <main className="bg-white min-h-screen">
 
       {/* ═══════════════════════════════════════════════════════════
           SECTION 1: HERO — Cinematic Full Viewport

@@ -30,7 +30,7 @@ import Newsletter from '@/components/home/Newsletter';
 
 export default function HomePage() {
   return (
-    <main className="bg-white min-h-screen overflow-x-hidden">
+    <main className="bg-white min-h-screen">
       {/* 1. HERO — Brand identity, not promotions */}
       <HomeHero
         heroImage="/banners.png"

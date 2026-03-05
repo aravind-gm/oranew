@@ -31,7 +31,7 @@ import VideoReelStrip from '@/components/home/VideoReelStrip';
 
 export default function HomePage() {
   return (
-    <main className="bg-white min-h-screen overflow-x-hidden">
+    <main className="bg-white min-h-screen">
       {/* 1. HERO — Emotional hook */}
       <LuxuryHero />
 

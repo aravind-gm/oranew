@@ -52,7 +52,10 @@
   /* Global Reset */
   * {
     @apply border-neutral-200;
-    /* Prevent horizontal overflow on mobile */
+  }
+
+  /* Prevent overflow on content elements only — not on fixed/absolute positioned elements */
+  img, video, svg, canvas {
     max-width: 100%;
   }
 
@@ -60,12 +63,12 @@
     scroll-behavior: smooth;
     /* Prevent text size adjustment on orientation change */
     -webkit-text-size-adjust: 100%;
+    /* Prevent horizontal scroll — placed on html, not body, to avoid breaking position:fixed */
+    overflow-x: hidden;
   }
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    /* Mobile-first: prevent horizontal scroll */
-    overflow-x: hidden;
     /* Improved touch scrolling */
     -webkit-overflow-scrolling: touch;
   }
@@ -90,13 +93,14 @@
     @apply text-sm sm:text-base leading-relaxed;
   }
 
-  /* Minimum tap target size for all interactive elements */
-  button, a, input, select, textarea {
+  /* Minimum tap target size for form inputs and standalone buttons only */
+  button, input, select, textarea {
     min-height: 44px;
   }
 
-  /* Exception for inline links */
-  p a, span a, li a {
+  /* Links should NOT have forced min-height — they wrap product cards, inline text, etc. */
+  /* Exception: reset buttons inside card links */
+  a {
     min-height: auto;
   }
 }
