@@ -151,8 +151,8 @@ const nextConfig = {
     formats: ['image/webp', 'image/avif'],
     // Cache images for 1 year (immutable)
     minimumCacheTTL: 31536000,
-    // Device sizes for srcset
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
+    // Device sizes for srcset (2400 added for zoom variant)
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 2400],
     // Image sizes for srcset
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },

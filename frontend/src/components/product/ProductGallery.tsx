@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeft, ChevronRight, ZoomIn, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ZoomIn, X, Minus, Plus } from 'lucide-react';
 import Image from 'next/image';
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { isSupabaseImage } from '@/lib/imageUrlHelper';
@@ -19,8 +19,25 @@ interface ProductGalleryProps {
 }
 
 /* ─── Zoom config ─── */
-const DESKTOP_ZOOM = 2.8;   // cursor-follow zoom on desktop
-const MOBILE_ZOOM_SCALE = 3; // native scroll zoom on mobile
+const DESKTOP_ZOOM = 2.8;
+const MOBILE_ZOOM_MIN = 2;
+const MOBILE_ZOOM_MAX = 5;
+const MOBILE_ZOOM_DEFAULT = 2.5;
+const MOBILE_ZOOM_STEP = 0.5;
+
+/**
+ * Derive the high-res zoom URL from the hero URL.
+ * CDN pattern: .../products/{id}/hero.webp → .../products/{id}/zoom.webp
+ * For Supabase legacy URLs, just return the original.
+ */
+function getZoomUrl(imageUrl: string): string {
+  // CDN URLs have /hero.webp — swap to /zoom.webp (2400px variant)
+  if (imageUrl.includes('/hero.webp') || imageUrl.includes('/hero')) {
+    return imageUrl.replace('/hero.webp', '/zoom.webp').replace('/hero', '/zoom');
+  }
+  // For Supabase or other legacy URLs, return as-is
+  return imageUrl;
+}
 
 export default function ProductGallery({ images, productName }: ProductGalleryProps) {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -31,9 +48,12 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
 
   /* Mobile zoom state */
   const [isMobileZoomOpen, setIsMobileZoomOpen] = useState(false);
+  const [mobileZoomLevel, setMobileZoomLevel] = useState(MOBILE_ZOOM_DEFAULT);
   const mobileScrollRef = useRef<HTMLDivElement>(null);
+  const lastTapRef = useRef<number>(0);
 
   const selectedImage = images[selectedImageIndex] || images[0];
+  const zoomImageUrl = selectedImage ? getZoomUrl(selectedImage.imageUrl) : '';
 
   const handlePrevious = useCallback(() => {
     setSelectedImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
@@ -55,6 +75,7 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
   /* ─── Mobile: tap opens full-screen scrollable zoom ─── */
   const handleImageTap = useCallback(() => {
     if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
+      setMobileZoomLevel(MOBILE_ZOOM_DEFAULT);
       setIsMobileZoomOpen(true);
     }
   }, []);
@@ -63,37 +84,60 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
     setIsMobileZoomOpen(false);
   }, []);
 
-  /* Lock body scroll + scroll to center when mobile zoom opens */
-  useEffect(() => {
-    if (isMobileZoomOpen) {
-      document.body.style.overflow = 'hidden';
-
-      // Wait for the image container to render, then scroll to center
-      const timer = setTimeout(() => {
-        const el = mobileScrollRef.current;
-        if (el) {
-          el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
-          el.scrollTop = (el.scrollHeight - el.clientHeight) / 2;
-        }
-      }, 50);
-
-      return () => {
-        clearTimeout(timer);
-        document.body.style.overflow = '';
-      };
-    }
-  }, [isMobileZoomOpen, selectedImageIndex]);
-
-  /* When switching image inside zoom overlay, re-center */
-  const handleZoomImageSwitch = useCallback((index: number) => {
-    setSelectedImageIndex(index);
-    setTimeout(() => {
+  /* Helper: scroll to center of zoomed image */
+  const scrollToCenter = useCallback(() => {
+    requestAnimationFrame(() => {
       const el = mobileScrollRef.current;
       if (el) {
         el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
         el.scrollTop = (el.scrollHeight - el.clientHeight) / 2;
       }
-    }, 50);
+    });
+  }, []);
+
+  /* Lock body scroll + scroll to center when mobile zoom opens */
+  useEffect(() => {
+    if (isMobileZoomOpen) {
+      document.body.style.overflow = 'hidden';
+      const timer = setTimeout(scrollToCenter, 80);
+      return () => {
+        clearTimeout(timer);
+        document.body.style.overflow = '';
+      };
+    }
+  }, [isMobileZoomOpen, scrollToCenter]);
+
+  /* Re-center when zoom level or image changes */
+  useEffect(() => {
+    if (isMobileZoomOpen) {
+      scrollToCenter();
+    }
+  }, [mobileZoomLevel, selectedImageIndex, isMobileZoomOpen, scrollToCenter]);
+
+  /* Zoom controls */
+  const handleZoomIn = useCallback(() => {
+    setMobileZoomLevel((prev) => Math.min(MOBILE_ZOOM_MAX, prev + MOBILE_ZOOM_STEP));
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    setMobileZoomLevel((prev) => Math.max(MOBILE_ZOOM_MIN, prev - MOBILE_ZOOM_STEP));
+  }, []);
+
+  /* Double-tap to toggle zoom on mobile */
+  const handleDoubleTap = useCallback(() => {
+    const now = Date.now();
+    if (now - lastTapRef.current < 300) {
+      // Double tap detected — toggle between min and max
+      setMobileZoomLevel((prev) =>
+        prev <= MOBILE_ZOOM_DEFAULT ? MOBILE_ZOOM_MAX : MOBILE_ZOOM_DEFAULT
+      );
+    }
+    lastTapRef.current = now;
+  }, []);
+
+  /* Switch image inside zoom overlay */
+  const handleZoomImageSwitch = useCallback((index: number) => {
+    setSelectedImageIndex(index);
   }, []);
 
   return (
@@ -145,6 +189,7 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
           >
             {selectedImage && (
               <>
+                {/* Normal view: hero image (1200px) */}
                 <Image
                   src={selectedImage.imageUrl}
                   alt={selectedImage.altText || productName}
@@ -157,13 +202,38 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
                       ? { transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`, transform: `scale(${DESKTOP_ZOOM})` }
                       : {}
                   }
-                  sizes="(max-width: 768px) 100vw, 50vw"
+                  sizes={isZoomed ? '200vw' : '(max-width: 768px) 100vw, 50vw'}
                 />
 
+                {/* Desktop: load zoom variant (2400px) on hover for crisp quality */}
+                {isZoomed && (
+                  <Image
+                    src={zoomImageUrl}
+                    alt={selectedImage.altText || productName}
+                    fill
+                    unoptimized
+                    className="object-cover"
+                    style={{
+                      transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`,
+                      transform: `scale(${DESKTOP_ZOOM})`,
+                    }}
+                    sizes="200vw"
+                  />
+                )}
+
+                {/* Zoom % indicator — desktop */}
+                {isZoomed && (
+                  <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs font-medium font-sans z-10 hidden md:block" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    {Math.round(DESKTOP_ZOOM * 100)}%
+                  </div>
+                )}
+
                 {/* Zoom hint — desktop only (hover reveal) */}
-                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm text-neutral-500 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-sm hidden md:flex">
-                  <ZoomIn size={16} />
-                </div>
+                {!isZoomed && (
+                  <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm text-neutral-500 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-sm hidden md:flex">
+                    <ZoomIn size={16} />
+                  </div>
+                )}
 
                 {/* Zoom hint — mobile only (always visible) */}
                 <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm text-neutral-500 px-2.5 py-1.5 rounded-full shadow-sm flex md:hidden items-center gap-1.5">
@@ -173,7 +243,7 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
               </>
             )}
 
-            {/* Navigation Arrows — desktop only (hidden on mobile to avoid sticky hover) */}
+            {/* Navigation Arrows — desktop only */}
             {images.length > 1 && (
               <>
                 <button
@@ -207,19 +277,21 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
       </div>
 
       {/* ════════════════════════════════════════════════════════════════════
-          MOBILE FULL-SCREEN ZOOM — Native scroll panning
+          MOBILE FULL-SCREEN ZOOM — Native scroll panning + zoom controls
           
-          Instead of transformOrigin tricks, we render the image at 3x size
-          inside a scrollable container. The browser's native touch scroll
-          handles all panning with momentum, inertia, and edge bounce.
+          Renders the zoom variant (2400px) at Nx viewport size in a 
+          scrollable container. User drags to pan, uses +/- or double-tap
+          to change zoom level. Zoom % indicator always visible.
           ════════════════════════════════════════════════════════════════════ */}
       {isMobileZoomOpen && selectedImage && (
         <div className="fixed inset-0 z-[9999] bg-black flex flex-col md:hidden">
           {/* ─── Top bar ─── */}
           <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 pt-3 pb-8 bg-gradient-to-b from-black/70 to-transparent">
-            <span className="text-white/80 text-xs font-medium font-sans">
-              {selectedImageIndex + 1} / {images.length}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-white/80 text-xs font-medium font-sans">
+                {selectedImageIndex + 1} / {images.length}
+              </span>
+            </div>
             <button
               onClick={closeMobileZoom}
               className="w-10 h-10 flex items-center justify-center bg-white/15 backdrop-blur-sm rounded-full active:bg-white/25"
@@ -229,41 +301,60 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
             </button>
           </div>
 
-          {/* ─── Drag hint ─── */}
-          <div className="absolute top-14 left-0 right-0 z-20 text-center pointer-events-none">
-            <p className="text-white/40 text-[10px] tracking-[0.2em] uppercase font-medium font-sans">
-              Drag to explore
-            </p>
-          </div>
-
-          {/* ─── Scrollable zoom area (the magic) ─── */}
+          {/* ─── Scrollable zoom area ─── */}
           <div
             ref={mobileScrollRef}
             className="flex-1 overflow-auto overscroll-contain"
             style={{ WebkitOverflowScrolling: 'touch' }}
+            onClick={handleDoubleTap}
           >
-            {/* 
-              Inner container is MOBILE_ZOOM_SCALE × the viewport.
-              The <img> fills this oversized box, so you get a zoomed image
-              that you pan by scrolling naturally with your finger.
-            */}
             <div
               style={{
-                width: `${MOBILE_ZOOM_SCALE * 100}vw`,
-                height: `${MOBILE_ZOOM_SCALE * 100}vh`,
+                width: `${mobileZoomLevel * 100}vw`,
+                height: `${mobileZoomLevel * 100}vh`,
                 position: 'relative',
               }}
             >
+              {/* Use zoom variant (2400px) for crisp quality */}
               <Image
-                src={selectedImage.imageUrl}
+                src={zoomImageUrl}
                 alt={selectedImage.altText || productName}
                 fill
                 priority
-                unoptimized={isSupabaseImage(selectedImage.imageUrl)}
+                unoptimized
                 className="object-cover"
-                sizes={`${MOBILE_ZOOM_SCALE * 100}vw`}
+                sizes={`${Math.round(mobileZoomLevel * 100)}vw`}
               />
             </div>
+          </div>
+
+          {/* ─── Zoom controls — right side ─── */}
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-1">
+            <button
+              onClick={handleZoomIn}
+              disabled={mobileZoomLevel >= MOBILE_ZOOM_MAX}
+              className="w-10 h-10 flex items-center justify-center bg-white/20 backdrop-blur-sm rounded-full active:bg-white/30 disabled:opacity-30 transition-opacity"
+              aria-label="Zoom in"
+            >
+              <Plus size={18} className="text-white" />
+            </button>
+
+            {/* Zoom percentage pill */}
+            <div
+              className="bg-white/20 backdrop-blur-sm text-white px-2.5 py-1.5 rounded-full text-[11px] font-semibold font-sans min-w-[52px] text-center"
+              style={{ fontVariantNumeric: 'tabular-nums' }}
+            >
+              {Math.round(mobileZoomLevel * 100)}%
+            </div>
+
+            <button
+              onClick={handleZoomOut}
+              disabled={mobileZoomLevel <= MOBILE_ZOOM_MIN}
+              className="w-10 h-10 flex items-center justify-center bg-white/20 backdrop-blur-sm rounded-full active:bg-white/30 disabled:opacity-30 transition-opacity"
+              aria-label="Zoom out"
+            >
+              <Minus size={18} className="text-white" />
+            </button>
           </div>
 
           {/* ─── Bottom thumbnail strip ─── */}
