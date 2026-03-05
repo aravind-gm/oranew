@@ -245,12 +245,12 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Menu Bar - Pink Luxury (hidden on admin v2 pages) */}
+      {/* Menu Bar - Pink Luxury (hidden on admin v2 pages, desktop only) */}
       {!isAdminPage && (
-      <nav className="bg-oraLight border-b border-oraPink/30">
+      <nav className="bg-oraLight border-b border-oraPink/30 hidden md:block">
         <div className="max-w-7xl mx-auto px-4 lg:px-6">
           {/* Desktop Menu */}
-          <div className="hidden md:flex items-center h-12 space-x-8">
+          <div className="flex items-center h-12 space-x-8">
             {menuItems.map((item) => {
               const isActive = pathname === item.href;
               return (
@@ -268,94 +268,138 @@ export default function Header() {
               </Link>
             );})}
           </div>
-
-          {/* Mobile Menu - Horizontal Scroll */}
-          <div className="md:hidden">
-            <div className="flex overflow-x-auto py-3 space-x-6 scrollbar-hide">
-              {menuItems.map((item) => {
-                const isActive = pathname === item.href;
-                return (
-                <Link
-                  key={`${item.label}-${item.href}`}
-                  href={item.href}
-                  className={`text-sm font-medium whitespace-nowrap transition-colors ${
-                    isActive ? 'text-oraAccent font-semibold' : 'text-neutral-900 hover:text-oraAccent'
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );})}
-            </div>
-          </div>
         </div>
       </nav>
       )}
 
-      {/* Accent line — pink/coral gradient */}
+      {/* Accent line — pink/coral gradient (desktop only) */}
       {!isAdminPage && (
-        <div className="h-[3px] w-full bg-gradient-to-r from-pink-400 via-rose-400 to-orange-300" />
+        <div className="h-[3px] w-full bg-gradient-to-r from-pink-400 via-rose-400 to-orange-300 hidden md:block" />
       )}
 
-      {/* Mobile Menu Overlay */}
+      {/* Mobile Menu Overlay - Full-screen slide-down */}
       {isMobileMenuOpen && (
-        <div className="md:hidden absolute inset-0 top-full left-0 right-0 bg-white shadow-lg max-h-screen overflow-y-auto">
-          <div className="p-4 space-y-1">
-            {menuItems.map((item) => (
-              <Link
-                key={`${item.label}-${item.href}`}
-                href={item.href}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="block px-4 py-3 text-neutral-900 hover:bg-neutral-100 rounded-lg text-sm font-medium"
-              >
-                {item.label}
+        <>
+          {/* Backdrop */}
+          <div 
+            className="md:hidden fixed inset-0 bg-black/30 z-[998]"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+          <div className="md:hidden fixed top-0 left-0 right-0 bg-white z-[999] max-h-[85vh] overflow-y-auto shadow-2xl" style={{ animation: 'slideDown 0.25s ease-out' }}>
+            {/* Header with close button */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
+              <Link href="/" onClick={() => setIsMobileMenuOpen(false)}>
+                <Image
+                  src="/oralogo.png"
+                  alt="ORA"
+                  width={819}
+                  height={345}
+                  className="block object-contain"
+                  style={{ width: '100px', height: 'auto' }}
+                />
               </Link>
-            ))}
-          </div>
-
-          <div className="border-t border-neutral-200 p-4 space-y-3">
-            {/* Mobile Search */}
-            <form onSubmit={handleSearch} className="relative">
-              <input
-                type="search"
-                placeholder="Search jewellery, tumblers & more..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-10 pl-4 pr-10 border border-neutral-200 rounded-lg bg-white text-neutral-900 placeholder-gray-500 text-sm"
-              />
               <button
-                type="submit"
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-neutral-100 transition-colors"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
-            </form>
+            </div>
 
-            {/* Mobile Auth Actions */}
-            {isLoggedIn ? (
-              <div className="space-y-3 pt-2">
-                <Link href="/account" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-2 text-neutral-900 hover:bg-neutral-100 rounded-lg text-sm font-medium">My Account</Link>
-                <Link href="/account/orders" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-2 text-neutral-900 hover:bg-neutral-100 rounded-lg text-sm font-medium">Orders</Link>
-                {isAdmin && <Link href="/admin" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-2 text-neutral-700 hover:bg-neutral-100 rounded-lg text-sm font-medium">Admin</Link>}
-                <button 
-                  onClick={() => {
-                    handleLogout();
-                    setIsMobileMenuOpen(false);
-                  }} 
-                  className="w-full text-left px-4 py-2 text-red-600 hover:bg-neutral-100 rounded-lg text-sm font-medium"
-                >
-                  Sign Out
+            {/* Search */}
+            <div className="px-5 py-3 border-b border-neutral-50">
+              <form onSubmit={(e) => { handleSearch(e); setIsMobileMenuOpen(false); }} className="relative">
+                <input
+                  type="search"
+                  placeholder="Search jewellery, tumblers & more..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full h-11 pl-4 pr-10 border border-neutral-200 rounded-full bg-neutral-50 text-neutral-900 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-pink-200"
+                />
+                <button type="submit" className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
                 </button>
-              </div>
-            ) : (
-              <div className="space-y-3 pt-2">
-                <Link href="/auth/login" onClick={() => setIsMobileMenuOpen(false)} className="block text-center py-3 px-4 bg-neutral-900 text-white rounded-lg text-sm font-bold hover:bg-opacity-90 transition-all">Login / Sign Up</Link>
-              </div>
-            )}
+              </form>
+            </div>
+
+            {/* Navigation Links */}
+            <div className="px-3 py-2">
+              {menuItems.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={`${item.label}-${item.href}`}
+                    href={item.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`flex items-center px-4 py-3.5 rounded-xl text-[15px] font-medium transition-colors ${
+                      isActive 
+                        ? 'bg-oraLight text-oraAccent' 
+                        : 'text-neutral-800 active:bg-neutral-50'
+                    }`}
+                  >
+                    {item.label}
+                    {isActive && (
+                      <span className="ml-auto w-1.5 h-1.5 rounded-full bg-oraAccent" />
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+
+            {/* Divider */}
+            <div className="mx-5 border-t border-neutral-100" />
+
+            {/* Auth Section */}
+            <div className="px-3 py-3 pb-6">
+              {isLoggedIn ? (
+                <>
+                  <Link href="/account" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-[15px] font-medium text-neutral-800 active:bg-neutral-50 transition-colors">
+                    <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                    My Account
+                  </Link>
+                  <Link href="/account/orders" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-[15px] font-medium text-neutral-800 active:bg-neutral-50 transition-colors">
+                    <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+                    Orders
+                  </Link>
+                  {isAdmin && (
+                    <Link href="/admin/v2" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-[15px] font-medium text-neutral-600 active:bg-neutral-50 transition-colors">
+                      <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                      Admin Panel
+                    </Link>
+                  )}
+                  <button 
+                    onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }} 
+                    className="flex items-center gap-3 w-full px-4 py-3.5 rounded-xl text-[15px] font-medium text-red-500 active:bg-red-50 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <Link 
+                  href="/auth/login" 
+                  onClick={() => setIsMobileMenuOpen(false)} 
+                  className="flex items-center justify-center gap-2 mx-2 py-3.5 bg-oraAccent text-white rounded-xl text-[15px] font-semibold active:opacity-90 transition-all"
+                >
+                  Login / Sign Up
+                </Link>
+              )}
+            </div>
           </div>
-        </div>
+        </>
       )}
+
+      {/* Slide-down animation */}
+      <style jsx>{`
+        @keyframes slideDown {
+          from { transform: translateY(-100%); }
+          to { transform: translateY(0); }
+        }
+      `}</style>
     </header>
   );
 }

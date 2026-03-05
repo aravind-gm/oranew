@@ -363,42 +363,9 @@ function ProductCard({
             </motion.div>
           </motion.button>
 
-          {/* QUICK ADD BUTTON - Always visible on mobile, hover-reveal on desktop */}
+          {/* QUICK ADD BUTTON - Desktop hover-reveal only (mobile button is below image) */}
           {showQuickAdd && (
             <>
-              {/* Mobile: Always visible button */}
-              <div className="sm:hidden absolute bottom-0 left-0 right-0 p-2 z-10">
-                <button
-                  onClick={handleAddToCart}
-                  disabled={isAddingToCart}
-                  type="button"
-                  aria-label={`Add ${product.name} to bag`}
-                  className={`w-full py-3 text-[10px] tracking-[0.1em] uppercase font-semibold rounded-full transition-all duration-300 flex items-center justify-center gap-1.5 ${
-                    addedToCart
-                      ? 'bg-success text-white'
-                      : 'bg-text-primary/95 backdrop-blur-sm text-background-white active:scale-[0.98]'
-                  }`}
-                >
-                  {addedToCart ? (
-                    <>
-                      <Check size={12} strokeWidth={3} />
-                      <span>Added</span>
-                    </>
-                  ) : isAddingToCart ? (
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                      className="w-3.5 h-3.5 border-2 border-background-white/30 border-t-background-white rounded-full"
-                    />
-                  ) : (
-                    <>
-                      <ShoppingBag size={12} />
-                      <span>Add to Bag</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
               {/* Desktop: Hover-reveal button */}
               <AnimatePresence>
                 {isHovered && (
@@ -447,60 +414,87 @@ function ProductCard({
         </div>
 
         {/* ====================================================================
+            MOBILE ADD TO BAG — Below image, not overlaying
+            ==================================================================== */}
+        {showQuickAdd && (
+          <div className="sm:hidden mt-2">
+            <button
+              onClick={handleAddToCart}
+              disabled={isAddingToCart}
+              type="button"
+              aria-label={`Add ${product.name} to bag`}
+              className={`w-full py-2.5 text-[11px] tracking-[0.08em] uppercase font-semibold rounded-lg border transition-all duration-300 flex items-center justify-center gap-1.5 ${
+                addedToCart
+                  ? 'bg-emerald-500 text-white border-emerald-500'
+                  : 'bg-white text-neutral-800 border-neutral-200 active:scale-[0.98] active:bg-neutral-50'
+              }`}
+            >
+              {addedToCart ? (
+                <><Check size={13} strokeWidth={3} /><span>Added</span></>
+              ) : isAddingToCart ? (
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  className="w-3.5 h-3.5 border-2 border-neutral-300 border-t-neutral-800 rounded-full"
+                />
+              ) : (
+                <><ShoppingBag size={13} /><span>Add to Cart</span></>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* ====================================================================
             PRODUCT INFO SECTION - Mobile Optimized
             ==================================================================== */}
-        <div className="pt-3 sm:pt-4 space-y-1.5 sm:space-y-2">
-          {/* MATERIAL SWATCH (optional) - Hidden on very small mobile */}
-          {product.material && materialColors[product.material] && (
-            <div className="hidden sm:flex items-center gap-1.5 mb-1">
-              <span
-                className="w-3 h-3 rounded-full border border-border"
-                style={{ backgroundColor: materialColors[product.material] }}
-                title={product.material.replace('-', ' ')}
-                aria-label={`Material: ${product.material.replace('-', ' ')}`}
-              />
-              <span className="text-[10px] text-text-muted uppercase tracking-wider font-medium">
-                {product.material.replace('-', ' ')}
-              </span>
-            </div>
-          )}
-
-          {/* PRODUCT NAME - Better mobile readability */}
-          <h3 className="font-serif text-sm sm:text-base font-medium text-text-primary leading-snug line-clamp-2 group-hover:text-accent transition-colors duration-300">
+        <div className="pt-2.5 sm:pt-4 space-y-1 sm:space-y-2">
+          {/* PRODUCT NAME */}
+          <h3 className="text-[13px] sm:text-sm font-medium text-neutral-900 leading-snug line-clamp-2 group-hover:text-accent transition-colors duration-300">
             {product.name}
           </h3>
 
-          {/* STAR RATING (only if has reviews) - Compact on mobile */}
+          {/* MATERIAL (subtitle) */}
+          {product.material && (
+            <p className="text-[11px] sm:text-xs text-neutral-400 leading-tight line-clamp-1">
+              {product.material.replace('-', ' ').replace(/\b\w/g, c => c.toUpperCase())}
+            </p>
+          )}
+
+          {/* STAR RATING */}
           {product.averageRating !== undefined && product.averageRating > 0 && (
-            <div className="flex items-center gap-1 sm:gap-1.5 pt-0.5 sm:pt-1">
-              <div className="flex items-center gap-0.5">
-                <span className="text-accent text-xs sm:text-sm" aria-hidden="true">★</span>
-                <span className="text-[10px] sm:text-xs text-text-secondary font-medium">
+            <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5 bg-amber-50 px-1.5 py-0.5 rounded">
+                <span className="text-[11px] font-semibold text-neutral-800">
                   {product.averageRating.toFixed(1)}
                 </span>
+                <span className="text-amber-500 text-[10px]">★</span>
               </div>
               {product.reviewCount && product.reviewCount > 0 && (
-                <span className="text-[10px] sm:text-xs text-text-muted">
-                  ({product.reviewCount})
+                <span className="text-[10px] text-neutral-400">
+                  | {product.reviewCount}
                 </span>
               )}
             </div>
           )}
 
-          {/* PRICING SECTION - Clear mobile hierarchy */}
-          <div className="flex flex-wrap items-baseline gap-1.5 sm:gap-2 pt-1 sm:pt-2">
-            {/* Current Price */}
-            <span className="text-base sm:text-lg font-serif font-semibold text-text-primary">
+          {/* PRICING SECTION */}
+          <div className="flex flex-wrap items-baseline gap-1.5 sm:gap-2 pt-0.5">
+            <span className="text-[15px] sm:text-base font-bold text-neutral-900">
               {formatPrice(product.finalPrice)}
             </span>
-
-            {/* Original Price (if discount exists) */}
             {hasDiscount && (
-              <span className="text-xs sm:text-sm text-text-muted line-through">
+              <span className="text-[11px] sm:text-xs text-neutral-400 line-through">
                 {formatPrice(product.price)}
               </span>
             )}
           </div>
+
+          {/* SAVINGS TEXT */}
+          {hasDiscount && savingsAmount > 0 && (
+            <p className="text-[11px] font-semibold text-emerald-600">
+              Save {formatPrice(savingsAmount)}
+            </p>
+          )}
         </div>
       </motion.article>
     </Link>
