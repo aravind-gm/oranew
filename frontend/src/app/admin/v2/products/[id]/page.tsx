@@ -152,13 +152,18 @@ interface ImageUploaderProps {
 function ImageUploader({ images, onChange }: ImageUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
 
+  const MAX_IMAGES = 10;
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     
-    const files = Array.from(e.dataTransfer.files).filter(file => 
-      file.type.startsWith('image/')
-    );
+    const remaining = MAX_IMAGES - images.length;
+    if (remaining <= 0) return;
+
+    const files = Array.from(e.dataTransfer.files)
+      .filter(file => file.type.startsWith('image/'))
+      .slice(0, remaining);
     
     const newImages: ProductImage[] = files.map((file, index) => ({
       id: `new-${Date.now()}-${index}`,
@@ -171,7 +176,10 @@ function ImageUploader({ images, onChange }: ImageUploaderProps) {
   }, [images, onChange]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
+    const remaining = MAX_IMAGES - images.length;
+    if (remaining <= 0) return;
+
+    const files = Array.from(e.target.files || []).slice(0, remaining);
     
     const newImages: ProductImage[] = files.map((file, index) => ({
       id: `new-${Date.now()}-${index}`,
@@ -227,10 +235,12 @@ function ImageUploader({ images, onChange }: ImageUploaderProps) {
             <Upload size={24} className="text-[#9ca3af]" />
           </div>
           <p className="text-sm font-medium text-[#111827] mb-1">
-            Drop images here or click to upload
+            {images.length >= MAX_IMAGES
+              ? 'Maximum 10 images reached'
+              : 'Drop images here or click to upload'}
           </p>
           <p className="text-xs text-[#9ca3af]">
-            PNG, JPG, WEBP up to 5MB each
+            PNG, JPG, WEBP up to 5MB each · {images.length}/{MAX_IMAGES} images
           </p>
         </label>
       </div>
