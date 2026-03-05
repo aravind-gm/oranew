@@ -183,7 +183,7 @@ export default function ProductCard({ product, showQuickAdd = true }: ProductCar
             </motion.div>
           </motion.button>
 
-          {/* Quick Add Button - Appears on Hover */}
+          {/* Quick Add Button - Desktop hover reveal only */}
           {showQuickAdd && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -192,7 +192,7 @@ export default function ProductCard({ product, showQuickAdd = true }: ProductCar
                 y: isHovered ? 0 : 20 
               }}
               transition={{ duration: 0.3 }}
-              className="absolute bottom-0 left-0 right-0 p-4 z-10"
+              className="hidden sm:block absolute bottom-0 left-0 right-0 p-4 z-10"
             >
               <button
                 onClick={handleAddToCart}
@@ -205,6 +205,20 @@ export default function ProductCard({ product, showQuickAdd = true }: ProductCar
             </motion.div>
           )}
         </div>
+
+        {/* Mobile Add to Cart — Below image */}
+        {showQuickAdd && (
+          <div className="sm:hidden mt-2">
+            <button
+              onClick={handleAddToCart}
+              disabled={isAddingToCart}
+              className="w-full py-2.5 text-[11px] tracking-[0.08em] uppercase font-semibold rounded-lg border border-neutral-200 bg-white text-neutral-800 transition-all duration-300 flex items-center justify-center gap-1.5 active:scale-[0.98] active:bg-neutral-50 disabled:opacity-70"
+            >
+              <ShoppingBag size={13} />
+              <span>{isAddingToCart ? 'Adding...' : 'Add to Cart'}</span>
+            </button>
+          </div>
+        )}
 
         {/* Product Info */}
         <div className="pt-4 space-y-2">

@@ -235,40 +235,8 @@ function LuxuryProductCard({
             </motion.div>
           </motion.button>
 
-          {/* Quick Add — appears on hover (desktop), always visible on mobile */}
+          {/* Quick Add — desktop hover-reveal only (mobile button is below image) */}
           <>
-            {/* Mobile: always visible */}
-            <div className="sm:hidden absolute bottom-0 left-0 right-0 p-2 z-10">
-              <button
-                onClick={handleAddToCart}
-                disabled={isAddingToCart}
-                type="button"
-                className={`w-full py-3 text-[10px] tracking-[0.1em] uppercase font-semibold rounded-full flex items-center justify-center gap-1.5 transition-all duration-300 ${
-                  addedToCart
-                    ? 'bg-emerald-500 text-white'
-                    : 'bg-[#1A1A1A]/95 text-white active:scale-[0.98]'
-                }`}
-              >
-                {addedToCart ? (
-                  <>
-                    <Check size={12} strokeWidth={3} />
-                    <span>Added</span>
-                  </>
-                ) : isAddingToCart ? (
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                    className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full"
-                  />
-                ) : (
-                  <>
-                    <ShoppingBag size={12} />
-                    <span>Add to Bag</span>
-                  </>
-                )}
-              </button>
-            </div>
-
             {/* Desktop: hover reveal */}
             <AnimatePresence>
               {isHovered && (
@@ -311,6 +279,32 @@ function LuxuryProductCard({
               )}
             </AnimatePresence>
           </>
+        </div>
+
+        {/* ============ MOBILE ADD TO CART — Below image ============ */}
+        <div className="sm:hidden mt-2">
+          <button
+            onClick={handleAddToCart}
+            disabled={isAddingToCart}
+            type="button"
+            className={`w-full py-2.5 text-[11px] tracking-[0.08em] uppercase font-semibold rounded-lg border transition-all duration-300 flex items-center justify-center gap-1.5 ${
+              addedToCart
+                ? 'bg-emerald-500 text-white border-emerald-500'
+                : 'bg-white text-neutral-800 border-neutral-200 active:scale-[0.98] active:bg-neutral-50'
+            }`}
+          >
+            {addedToCart ? (
+              <><Check size={13} strokeWidth={3} /><span>Added</span></>
+            ) : isAddingToCart ? (
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                className="w-3.5 h-3.5 border-2 border-neutral-300 border-t-neutral-800 rounded-full"
+              />
+            ) : (
+              <><ShoppingBag size={13} /><span>Add to Cart</span></>
+            )}
+          </button>
         </div>
 
         {/* ============ PRODUCT INFO ============ */}
