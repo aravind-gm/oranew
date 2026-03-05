@@ -232,7 +232,7 @@ function EmptyCart() {
             </motion.div>
           </div>
 
-          <h1 className="font-serif text-3xl lg:text-4xl text-gray-900 mb-4">
+          <h1 className="font-sans text-2xl lg:text-3xl font-semibold text-gray-900 mb-4">
             Your Cart is Empty
           </h1>
           <p className="text-gray-600 mb-8 max-w-md mx-auto">
@@ -385,14 +385,14 @@ export default function CartPage() {
           className="mb-6 lg:mb-10"
         >
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
-            <Link href="/" className="hover:text-pink-600 transition-colors">Home</Link>
-            <span>/</span>
-            <span className="text-gray-900 font-medium">Shopping Cart</span>
+          <div className="flex items-center gap-1.5 text-xs font-sans text-neutral-400 mb-3">
+            <Link href="/" className="hover:text-neutral-700 transition-colors">Home</Link>
+            <span className="text-neutral-300">/</span>
+            <span className="text-neutral-600 font-medium">Shopping Cart</span>
           </div>
           
           <div className="flex items-center justify-between">
-            <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-gray-900">
+            <h1 className="font-sans text-xl sm:text-2xl lg:text-3xl font-semibold text-gray-900">
               Shopping Cart
             </h1>
             <span className="text-gray-500 text-sm sm:text-base">
@@ -566,7 +566,7 @@ export default function CartPage() {
           viewport={{ once: true }}
           className="bg-gradient-to-r from-pink-50/80 via-white to-rose-50/80 border border-pink-100 rounded-2xl p-6 sm:p-8"
         >
-          <h3 className="font-serif text-lg sm:text-xl text-center text-gray-900 mb-6">Why Shop With ORA</h3>
+          <h3 className="font-sans text-base sm:text-lg font-semibold text-center text-gray-900 mb-6">Why Shop With ORA</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
             <div className="text-center">
               <div className="w-12 h-12 mx-auto mb-3 bg-emerald-50 rounded-full flex items-center justify-center">

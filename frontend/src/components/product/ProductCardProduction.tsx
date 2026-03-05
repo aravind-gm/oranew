@@ -479,7 +479,7 @@ function ProductCard({
 
           {/* PRICING SECTION */}
           <div className="flex flex-wrap items-baseline gap-1.5 sm:gap-2 pt-0.5">
-            <span className="text-[15px] sm:text-base font-bold text-neutral-900">
+            <span className="font-sans text-[15px] sm:text-base font-bold text-neutral-900" style={{ fontVariantNumeric: 'tabular-nums' }}>
               {formatPrice(product.finalPrice)}
             </span>
             {hasDiscount && (

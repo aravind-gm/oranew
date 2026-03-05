@@ -42,7 +42,6 @@ import { useProductStore } from '@/store/productStore';
 import { useWishlistStore } from '@/store/wishlistStore';
 import {
   Check,
-  ChevronRight,
   Heart,
   Lock,
   Minus,
@@ -264,7 +263,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-serif text-neutral-900 mb-4">Product not found</h1>
+          <h1 className="text-2xl font-sans font-semibold text-neutral-900 mb-4">Product not found</h1>
           <Link href="/products" className="text-neutral-600 hover:text-neutral-900 underline text-sm">
             Back to products
           </Link>
@@ -368,19 +367,19 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
       {/* ═══ Breadcrumb ═══ */}
       <nav className="border-b border-neutral-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <div className="flex items-center gap-1.5 text-xs text-neutral-400 overflow-x-auto">
+          <div className="flex items-center gap-1.5 text-xs font-sans text-neutral-400 overflow-x-auto scrollbar-hide">
             <Link href="/" className="hover:text-neutral-700 whitespace-nowrap transition-colors">Home</Link>
-            <ChevronRight size={11} className="text-neutral-300 flex-shrink-0" />
+            <span className="text-neutral-300 flex-shrink-0">/</span>
             <Link href="/products" className="hover:text-neutral-700 whitespace-nowrap transition-colors">Shop</Link>
-            <ChevronRight size={11} className="text-neutral-300 flex-shrink-0" />
+            <span className="text-neutral-300 flex-shrink-0">/</span>
             <Link
               href={`/products?category=${product.category.slug}`}
               className="hover:text-neutral-700 whitespace-nowrap transition-colors"
             >
               {product.category.name}
             </Link>
-            <ChevronRight size={11} className="text-neutral-300 flex-shrink-0 hidden sm:block" />
-            <span className="text-neutral-600 truncate hidden sm:block max-w-[220px]">{product.name}</span>
+            <span className="text-neutral-300 flex-shrink-0">/</span>
+            <span className="text-neutral-600 truncate max-w-[160px] sm:max-w-[220px]">{product.name}</span>
           </div>
         </div>
       </nav>
@@ -423,11 +422,11 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
             {/* Price block — hero */}
             <div>
               <div className="flex items-baseline gap-3 flex-wrap">
-                <span className="text-3xl sm:text-[2.5rem] font-serif font-medium text-neutral-900 leading-none">
+                <span className="text-2xl sm:text-3xl font-sans font-bold text-neutral-900 leading-none" style={{ fontVariantNumeric: 'tabular-nums' }}>
                   ₹{Number(product.finalPrice).toLocaleString()}
                 </span>
                 {hasDiscount && (
-                  <span className="text-base text-neutral-400 line-through">
+                  <span className="text-sm sm:text-base font-sans text-neutral-400 line-through" style={{ fontVariantNumeric: 'tabular-nums' }}>
                     ₹{Number(product.price).toLocaleString()}
                   </span>
                 )}

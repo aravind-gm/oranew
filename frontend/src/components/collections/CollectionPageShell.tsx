@@ -464,7 +464,7 @@ function LoadingSkeleton() {
 function EmptyState({ message }: { message?: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center">
-      <p className="text-xl font-serif text-neutral-900 mb-2">
+      <p className="text-lg font-sans font-medium text-neutral-900 mb-2">
         No products available right now.
       </p>
       <p className="text-sm text-neutral-500 max-w-xs mb-8 leading-relaxed">
@@ -656,7 +656,7 @@ export default function CollectionPageShell({ config }: { config: CollectionPage
         <div className="w-full px-6 sm:px-8 lg:px-10 py-8 lg:py-10">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
-              <h1 className="font-serif text-2xl sm:text-3xl lg:text-[2.5rem] font-light text-neutral-900 tracking-tight leading-tight">
+              <h1 className="font-sans text-xl sm:text-2xl lg:text-3xl font-semibold text-neutral-900 tracking-tight leading-tight">
                 {config.title}
               </h1>
               <p className="mt-1.5 text-sm text-neutral-500 tracking-wide">

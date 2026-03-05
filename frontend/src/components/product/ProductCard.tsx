@@ -245,13 +245,13 @@ export default function ProductCard({ product, showQuickAdd = true }: ProductCar
           )}
 
           {/* Product Name */}
-          <h3 className="font-serif text-base font-medium text-text-primary line-clamp-2 leading-snug group-hover:text-accent transition-colors duration-300">
+          <h3 className="font-sans text-sm sm:text-base font-medium text-text-primary line-clamp-2 leading-snug group-hover:text-accent transition-colors duration-300">
             {product.name}
           </h3>
 
           {/* Pricing */}
           <div className="flex items-baseline gap-2">
-            <span className="text-lg font-serif font-semibold text-text-primary">
+            <span className="text-base sm:text-lg font-sans font-bold text-text-primary" style={{ fontVariantNumeric: 'tabular-nums' }}>
               {formatPrice(product.finalPrice)}
             </span>
             {hasDiscount && (

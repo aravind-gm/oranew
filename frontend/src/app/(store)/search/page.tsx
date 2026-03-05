@@ -74,7 +74,7 @@ function SearchContent() {
       {/* Hero Search Section */}
       <div className="bg-gradient-to-b from-primary/20 to-background py-16">
         <div className="container-luxury text-center">
-          <h1 className="text-3xl md:text-4xl font-serif font-light text-text-primary mb-4">
+          <h1 className="text-2xl md:text-3xl font-sans font-semibold text-text-primary mb-4">
             Search Collection
           </h1>
           <p className="text-text-muted mb-8">Find your perfect piece of jewellery</p>
@@ -124,7 +124,7 @@ function SearchContent() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h2 className="text-2xl font-serif text-text-primary mb-2">No Results Found</h2>
+            <h2 className="text-xl font-sans font-semibold text-text-primary mb-2">No Results Found</h2>
             <p className="text-text-muted mb-6">We couldn&apos;t find any products matching &quot;{searchTerm}&quot;</p>
             <div className="space-y-4">
               <p className="text-sm text-text-muted">Try:</p>
@@ -157,7 +157,7 @@ function SearchContent() {
         {/* Recently Viewed Section */}
         {!searched && recentlyViewed.length > 0 && (
           <div className="mt-16">
-            <h2 className="text-2xl font-serif font-semibold text-text-primary mb-6">Recently Viewed</h2>
+            <h2 className="text-xl font-sans font-semibold text-text-primary mb-6">Recently Viewed</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
               {recentlyViewed.slice(0, 5).map((item) => (
                 <Link 
@@ -179,7 +179,7 @@ function SearchContent() {
                     <h3 className="text-sm font-medium text-text-primary line-clamp-1 group-hover:text-accent transition">
                       {item.name}
                     </h3>
-                    <p className="text-sm font-serif font-bold text-accent mt-1">
+                    <p className="text-sm font-sans font-bold text-accent mt-1" style={{ fontVariantNumeric: 'tabular-nums' }}>
                       ₹{item.price.toLocaleString()}
                     </p>
                   </div>

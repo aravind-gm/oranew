@@ -323,7 +323,7 @@ function LuxuryProductCard({
 
           {/* Price Block */}
           <div className="flex flex-wrap items-baseline gap-2 pt-1">
-            <span className="text-base sm:text-lg font-semibold text-[#1A1A1A]">
+            <span className="font-sans text-base sm:text-lg font-bold text-[#1A1A1A]" style={{ fontVariantNumeric: 'tabular-nums' }}>
               {formatPrice(product.finalPrice)}
             </span>
             {hasDiscount && (

@@ -353,8 +353,7 @@ function LuxuryProductCard({ product, priority = false, index = 0 }: LuxuryProdu
             <div className="pt-3.5 sm:pt-4 space-y-1.5">
               {/* Product Name */}
               <h3 
-                className="text-[13px] sm:text-sm font-medium text-[#1A1A1A] leading-snug line-clamp-2 group-hover:text-[#9B2C46] transition-colors duration-300"
-                style={{ fontFamily: 'Inter, sans-serif' }}
+                className="font-sans text-[13px] sm:text-sm font-medium text-[#1A1A1A] leading-snug line-clamp-2 group-hover:text-[#9B2C46] transition-colors duration-300"
               >
                 {product.name}
               </h3>
@@ -379,8 +378,8 @@ function LuxuryProductCard({ product, priority = false, index = 0 }: LuxuryProdu
               {/* Price Block */}
               <div className="flex flex-wrap items-baseline gap-1.5 sm:gap-2 pt-0.5">
                 <span 
-                  className="text-[15px] sm:text-base font-bold text-[#1A1A1A]"
-                  style={{ fontFamily: 'Inter, sans-serif' }}
+                  className="font-sans text-[15px] sm:text-base font-bold text-[#1A1A1A]"
+                  style={{ fontVariantNumeric: 'tabular-nums' }}
                 >
                   {formatPrice(product.finalPrice)}
                 </span>
