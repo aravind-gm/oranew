@@ -153,7 +153,7 @@ export default function GuestCheckoutPage() {
         key: data.razorpayKeyId,
         amount: data.razorpayOrder.amount,
         currency: data.razorpayOrder.currency,
-        name: 'ORA Jewellery',
+        name: 'Ora Global — ORA Jewellery',
         description: `Order ${data.order.orderNumber}`,
         order_id: data.razorpayOrder.id,
         handler: async (response: Record<string, string>) => {
@@ -485,12 +485,18 @@ export default function GuestCheckoutPage() {
                 </div>
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>GST</span>
-                  <span className="text-gray-400">Included</span>
+                  <span className="text-gray-400">Included in price</span>
                 </div>
                 <div className="flex justify-between text-base font-semibold text-gray-900 pt-2 border-t">
                   <span>Total</span>
                   <span className="text-[#d4af37]">{formatPrice(getTotal())}</span>
                 </div>
+                <p className="text-[10px] text-gray-400 mt-1">All prices are inclusive of GST</p>
+              </div>
+
+              <div className="mt-2 text-[10px] text-gray-400">
+                <p>Sold by: <span className="text-gray-600 font-medium">Ora Global</span></p>
+                <p>GSTIN: 33AAJFO89031ZA</p>
               </div>
 
               {/* COD Badge */}

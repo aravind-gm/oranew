@@ -41,6 +41,7 @@ export const createProduct = async (
       price,
       discountPercent,
       categoryId,
+      sku,
       material,
       careInstructions,
       weight,
@@ -145,7 +146,7 @@ export const createProduct = async (
           price: parseFloat(price),
           discountPercent: parseFloat(discountPercent || 0),
           finalPrice,
-          sku: `ORA-${Date.now()}`,
+          sku: sku && String(sku).trim() ? String(sku).trim() : `ORA-${Date.now()}`,
           categoryId,
           material,
           careInstructions,
@@ -605,6 +606,7 @@ export const updateProduct = async (
       offerExpiry,
       showCountdown,
       lowStockThreshold,
+      sku,
     } = req.body;
 
     const product = await prisma.product.findUnique({ where: { id } });
@@ -685,6 +687,7 @@ export const updateProduct = async (
     if (offerValue !== undefined) updateData.offerValue = parseFloat(offerValue);
     if (offerExpiry !== undefined) updateData.offerExpiry = new Date(offerExpiry);
     if (showCountdown !== undefined) updateData.showCountdown = Boolean(showCountdown);
+    if (sku !== undefined && String(sku).trim()) updateData.sku = String(sku).trim();
     // Sync images: delete old, create new in a transaction
     if (images !== undefined && Array.isArray(images) && images.length > 0) {
       const updated = await prisma.$transaction(async (tx) => {

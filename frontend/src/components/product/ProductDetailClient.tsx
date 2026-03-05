@@ -71,6 +71,7 @@ interface ProductData {
   id: string;
   name: string;
   slug: string;
+  sku: string;
   description: string;
   shortDescription: string;
   price: number;
@@ -669,11 +670,16 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
             <div className="border-t border-neutral-100 pt-4">
               <div className="text-xs text-neutral-400 space-y-1">
                 <p>
-                  <span className="text-neutral-300">SKU:</span> {`ORA-${product.id.slice(0, 8).toUpperCase()}`}
+                  <span className="text-neutral-300">SKU:</span> {product.sku || `ORA-${product.id.slice(0, 8).toUpperCase()}`}
                 </p>
                 <p>
                   <span className="text-neutral-300">Category:</span> {product.category.name}
                 </p>
+              </div>
+              <div className="mt-3 pt-3 border-t border-neutral-50 text-[10px] text-neutral-300 space-y-0.5">
+                <p>Sold by <span className="text-neutral-400">Ora Global</span></p>
+                <p>GSTIN: 33AAJFO89031ZA</p>
+                <p>All prices are inclusive of GST</p>
               </div>
             </div>
           </div>

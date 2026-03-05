@@ -68,9 +68,16 @@ export default function Footer() {
       {/* Bottom Bar */}
       <div className="border-t border-white/10">
         <div className="max-w-7xl mx-auto px-5 lg:px-8 py-4 sm:py-6">
+          {/* Sold by / Legal info */}
+          <div className="text-center mb-4 pb-3 border-b border-white/5">
+            <p className="text-[11px] text-white/30">
+              Sold by <span className="text-white/50 font-medium">Ora Global</span> &nbsp;|&nbsp; GSTIN: 33AAJFO89031ZA
+            </p>
+            <p className="text-[10px] text-white/20 mt-1">All prices are inclusive of GST</p>
+          </div>
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-center sm:text-left">
             <p className="text-xs text-white/30 order-3 sm:order-1">
-              © 2026 ORA Jewellery. All rights reserved.
+              © 2026 Ora Global. All rights reserved.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 order-1 sm:order-2">
               <Link href="/privacy" className="text-xs text-white/30 hover:text-white/60 transition-colors py-1">Privacy Policy</Link>

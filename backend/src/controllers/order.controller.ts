@@ -339,6 +339,8 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
   }
 
   // ====== GST CALCULATION (per-item configurable GST) ======
+  // GST is INCLUSIVE in displayed prices (Indian B2C e-commerce standard).
+  // We calculate it here for invoice/tax filing purposes only — NOT added to total.
   let gstAmount = 0;
   const itemGstRates: number[] = [];
   for (const item of cartItems) {
@@ -361,8 +363,9 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
   // ====== SHIPPING (server-side source of truth — always FREE) ======
   const shippingFee = calculateShipping();
 
-  // ====== TOTAL CALCULATION WITH NEGATIVE PREVENTION ======
-  const computedTotal = subtotal - discountAmount + gstAmount + shippingFee;
+  // ====== TOTAL CALCULATION ======
+  // GST is inclusive in finalPrice — so total = subtotal - discount + shipping only
+  const computedTotal = subtotal - discountAmount + shippingFee;
   if (computedTotal < 0) {
     throw new AppError('Invalid order amount: total cannot be negative', 400);
   }

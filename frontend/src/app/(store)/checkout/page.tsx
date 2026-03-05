@@ -224,8 +224,8 @@ function OrderSummary({ items, totalPrice }: { items: Array<{ productId: string;
           <span className="text-emerald-600 font-medium">FREE</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-gray-600">Tax</span>
-          <span className="text-gray-500 text-xs">Included</span>
+          <span className="text-gray-600">GST</span>
+          <span className="text-gray-500 text-xs">Included in price</span>
         </div>
       </div>
 
@@ -235,6 +235,13 @@ function OrderSummary({ items, totalPrice }: { items: Array<{ productId: string;
           <span className="font-semibold text-gray-900">Total</span>
           <span className="text-2xl font-bold text-gray-900">₹{displayTotal.toLocaleString()}</span>
         </div>
+        <p className="text-[10px] text-gray-400 mt-1">All prices are inclusive of GST</p>
+      </div>
+
+      {/* Sold by */}
+      <div className="mt-4 pt-3 border-t border-gray-100">
+        <p className="text-[11px] text-gray-400">Sold by: <span className="text-gray-600 font-medium">Ora Global</span></p>
+        <p className="text-[10px] text-gray-400">GSTIN: 33AAJFO89031ZA</p>
       </div>
 
       {/* COD Badge */}
@@ -531,7 +538,7 @@ export default function CheckoutPage() {
         amount,
         currency: currency || 'INR',
         order_id: razorpayOrderId,
-        name: 'ORA Jewellery',
+        name: 'Ora Global — ORA Jewellery',
         description: `Order #${createdOrder.id}`,
         handler: async (rzpResponse: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => {
           try {
