@@ -5,7 +5,7 @@ import { withRetry } from '../utils/retry';
 import { AuthRequest } from '../middleware/auth';
 import { sendOrderPlacedEmail } from '../services/email.service';
 import { enqueueJob } from '../services/jobQueue.service';
-import { sendWhatsAppOrderConfirmation } from '../services/whatsapp.service';
+import { sendWhatsAppOrderConfirmation, notifyPartnersNewOrder } from '../services/whatsapp.service';
 import { AppError, asyncHandler, generateOrderNumber } from '../utils/helpers';
 import { lockInventory, releaseInventoryLocks, restockInventory } from '../utils/inventory';
 // Shipping — single source of truth: always FREE
@@ -593,6 +593,31 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
   } catch (emailError) {
     console.error('Email error (non-blocking):', emailError);
   }
+
+  // 🔔 Notify partners via WhatsApp about the new order (non-blocking)
+  try {
+    notifyPartnersNewOrder({
+      orderNumber: (order as any).orderNumber,
+      customerName: (order as any).user.fullName || 'Customer',
+      customerPhone: (shippingAddr as any)?.phone || '',
+      customerEmail: (order as any).user.email || '',
+      totalAmount: Number((order as any).totalAmount),
+      paymentMethod: isCOD ? 'COD' : 'RAZORPAY',
+      items: (order as any).items.map((item: any) => ({
+        productName: item.productName,
+        quantity: item.quantity,
+        unitPrice: Number(item.unitPrice),
+      })),
+      shippingAddress: {
+        fullName: (order as any).shippingAddress.fullName,
+        addressLine1: (order as any).shippingAddress.addressLine1,
+        addressLine2: (order as any).shippingAddress.addressLine2 || undefined,
+        city: (order as any).shippingAddress.city,
+        state: (order as any).shippingAddress.state,
+        pincode: (order as any).shippingAddress.pincode,
+      },
+    }).catch(err => console.error('[WhatsApp] Partner notification failed:', err));
+  } catch { /* non-critical */ }
 
   // ====== COD: Create payment record & confirm immediately ======
   if (isCOD) {

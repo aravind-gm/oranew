@@ -420,8 +420,12 @@ export default function OrderDetailsPage() {
               >
                 Back
               </Button>
-              <Button variant="secondary" leftIcon={<Printer size={18} />}>
-                Print
+              <Button 
+                variant="secondary" 
+                leftIcon={<Printer size={18} />}
+                onClick={() => window.open(`/admin/v2/orders/${orderId}/packing-slip`, '_blank')}
+              >
+                Packing Slip
               </Button>
               <Button variant="secondary" leftIcon={<Download size={18} />}>
                 Invoice

@@ -1,17 +1,37 @@
 import nodemailer from 'nodemailer';
 
 // Email configuration — supports both EMAIL_* and SMTP_* env vars for compatibility
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.EMAIL_PORT || process.env.SMTP_PORT || '587'),
-  secure: (process.env.EMAIL_SECURE || 'false') === 'true',
-  auth: {
-    user: process.env.EMAIL_USER || process.env.SMTP_USER,
-    pass: process.env.EMAIL_PASS || process.env.SMTP_PASS,
-  },
-});
+const emailUser = process.env.EMAIL_USER || process.env.SMTP_USER;
+const emailPass = process.env.EMAIL_PASS || process.env.SMTP_PASS;
+const emailHost = process.env.EMAIL_HOST || process.env.SMTP_HOST || 'smtp.gmail.com';
+const emailPort = parseInt(process.env.EMAIL_PORT || process.env.SMTP_PORT || '587');
+const emailSecure = (process.env.EMAIL_SECURE === 'true') || emailPort === 465;
 
-const EMAIL_FROM = process.env.EMAIL_FROM || `"ORA Jewellery" <${process.env.EMAIL_USER || process.env.SMTP_USER}>`;
+const transporter = nodemailer.createTransport({
+  host: emailHost,
+  port: emailPort,
+  secure: emailSecure,
+  auth: emailUser && emailPass ? { user: emailUser, pass: emailPass } : undefined,
+  connectionTimeout: 15000,
+  greetingTimeout: 10000,
+  socketTimeout: 15000,
+  // Gmail-specific: needed for App Passwords
+  ...(emailHost.includes('gmail') && { service: 'gmail' }),
+} as nodemailer.TransportOptions);
+
+// Verify SMTP on startup (non-blocking)
+if (emailUser && emailPass) {
+  transporter.verify()
+    .then(() => console.log('✅ [EmailService] SMTP connection verified'))
+    .catch((err) => {
+      console.error('❌ [EmailService] SMTP verification failed:', err.message);
+      console.error('   → For Gmail: use an App Password → https://myaccount.google.com/apppasswords');
+    });
+} else {
+  console.warn('⚠️ [EmailService] EMAIL_USER/EMAIL_PASS not set — order emails will be skipped');
+}
+
+const EMAIL_FROM = process.env.EMAIL_FROM || `"ORA Jewellery" <${emailUser || 'noreply@orashop.in'}>`;
 const SUPPORT_EMAIL = 'admin@orashop.in';
 const BRAND_PHONE = '+91 98765 43210';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://orashop.vercel.app';

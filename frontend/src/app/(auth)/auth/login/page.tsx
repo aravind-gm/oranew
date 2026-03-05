@@ -21,8 +21,8 @@ export default function LoginPage() {
   // Mode: Login or Signup
   const [authMode, setAuthMode] = useState<AuthMode>('login');
   
-  // Login method: Password or OTP
-  const [loginMethod, setLoginMethod] = useState<LoginMethod>('password');
+  // Login method: Password or OTP (OTP is default/priority)
+  const [loginMethod, setLoginMethod] = useState<LoginMethod>('otp');
   
   // Step tracking (for OTP flow)
   const [step, setStep] = useState<LoginStep>('form');
@@ -466,19 +466,8 @@ export default function LoginPage() {
             ════════════════════════════════════ */}
             {authMode === 'login' && step === 'form' && (
               <>
-                {/* Method toggle pills */}
+                {/* Method toggle pills — Email Code first (priority) */}
                 <div className="flex p-1 mb-7 rounded-full gap-0.5" style={{ background: 'rgba(0,0,0,0.04)' }}>
-                  <button
-                    type="button"
-                    onClick={() => setLoginMethod('password')}
-                    className={`flex-1 py-2.5 text-[10px] font-bold uppercase tracking-wider rounded-full transition-all duration-200 ${
-                      loginMethod === 'password'
-                        ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30'
-                        : 'text-neutral-500 hover:text-slate-700'
-                    }`}
-                  >
-                    Password
-                  </button>
                   <button
                     type="button"
                     onClick={() => setLoginMethod('otp')}
@@ -490,7 +479,62 @@ export default function LoginPage() {
                   >
                     Email Code
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setLoginMethod('password')}
+                    className={`flex-1 py-2.5 text-[10px] font-bold uppercase tracking-wider rounded-full transition-all duration-200 ${
+                      loginMethod === 'password'
+                        ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30'
+                        : 'text-neutral-500 hover:text-slate-700'
+                    }`}
+                  >
+                    Password
+                  </button>
                 </div>
+
+                {/* ── OTP Request Form (Priority) ── */}
+                {loginMethod === 'otp' && (
+                  <form onSubmit={handleSendOtp} className="space-y-4 text-left">
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-neutral-400 pl-1">
+                        Email
+                      </label>
+                      <div className="relative">
+                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="email@example.com"
+                          className={`${ic} pl-11 pr-4`}
+                          style={inputStyle}
+                          onFocus={onInputFocus}
+                          onBlur={onInputBlur}
+                          disabled={loading}
+                          autoComplete="email"
+                        />
+                      </div>
+                    </div>
+
+                    <PrimaryBtn disabled={loading || !email.trim()} className="mt-2">
+                      {loading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Sending…
+                        </>
+                      ) : (
+                        <>
+                          <Mail className="w-4 h-4" />
+                          Send Login Code
+                        </>
+                      )}
+                    </PrimaryBtn>
+
+                    <p className="text-center text-[11px] text-neutral-400 pt-1">
+                      We&apos;ll email you a secure 8-digit code — no password needed
+                    </p>
+                  </form>
+                )}
 
                 {/* ── Password Login Form ── */}
                 {loginMethod === 'password' && (
@@ -564,50 +608,6 @@ export default function LoginPage() {
                         'Login to Account'
                       )}
                     </PrimaryBtn>
-                  </form>
-                )}
-
-                {/* ── OTP Request Form ── */}
-                {loginMethod === 'otp' && (
-                  <form onSubmit={handleSendOtp} className="space-y-4 text-left">
-                    <div className="space-y-1.5">
-                      <label className="block text-[10px] font-bold uppercase tracking-widest text-neutral-400 pl-1">
-                        Email
-                      </label>
-                      <div className="relative">
-                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
-                        <input
-                          type="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          placeholder="email@example.com"
-                          className={`${ic} pl-11 pr-4`}
-                          style={inputStyle}
-                          onFocus={onInputFocus}
-                          onBlur={onInputBlur}
-                          disabled={loading}
-                          autoComplete="email"
-                        />
-                      </div>
-                    </div>
-
-                    <PrimaryBtn disabled={loading || !email.trim()} className="mt-2">
-                      {loading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Sending…
-                        </>
-                      ) : (
-                        <>
-                          <Mail className="w-4 h-4" />
-                          Send Login Code
-                        </>
-                      )}
-                    </PrimaryBtn>
-
-                    <p className="text-center text-[11px] text-neutral-400 pt-1">
-                      We&apos;ll email you a secure 8-digit code
-                    </p>
                   </form>
                 )}
               </>

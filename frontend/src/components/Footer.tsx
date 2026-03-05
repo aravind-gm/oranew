@@ -6,8 +6,8 @@ export default function Footer() {
   return (
     <footer className="bg-[#1A1A1A] text-white">
       {/* Main Footer */}
-      <div className="max-w-7xl mx-auto px-5 lg:px-8 py-12 sm:py-16">
-        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-8 py-8 sm:py-12 lg:py-16">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-8 lg:gap-12">
           {/* Brand */}
           <div className="col-span-2 sm:col-span-1 lg:col-span-1">
             <Link href="/" className="inline-block mb-3 sm:mb-4">
@@ -67,7 +67,7 @@ export default function Footer() {
 
       {/* Bottom Bar */}
       <div className="border-t border-white/10">
-        <div className="max-w-7xl mx-auto px-5 lg:px-8 py-4 sm:py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-8 py-4 sm:py-6">
           {/* Sold by / Legal info */}
           <div className="text-center mb-4 pb-3 border-b border-white/5">
             <p className="text-[11px] text-white/30">

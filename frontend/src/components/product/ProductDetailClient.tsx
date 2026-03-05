@@ -464,7 +464,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
               ) : isLowStock ? (
                 <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 px-3 py-1.5 rounded-full border border-amber-200/60">
                   <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
-                  Only {product.stockQuantity} left in stock
+                  Selling Fast — Order Soon!
                 </span>
               ) : null}
 
@@ -475,6 +475,27 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                 </span>
               )}
             </div>
+
+            {/* ═══ Free Premium Gift Box (for Necklaces) ═══ */}
+            {product.category?.name?.toLowerCase().includes('necklace') && (
+              <div className="bg-gradient-to-r from-amber-50/80 to-orange-50/60 border border-amber-200/60 rounded-xl px-4 py-3.5 flex items-center gap-3.5">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-xl border border-amber-200/40 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  {/* Placeholder — replace with actual gift box image */}
+                  <div className="w-full h-full bg-gradient-to-br from-amber-100 to-amber-50 flex items-center justify-center" data-gift-box-placeholder>
+                    <span className="text-2xl">🎁</span>
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-amber-900 flex items-center gap-1.5">
+                    <span>Free Premium Gift Box</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-200/60 text-amber-800 px-1.5 py-0.5 rounded">Included</span>
+                  </p>
+                  <p className="text-xs text-amber-700/80 mt-0.5 leading-relaxed">
+                    Every necklace comes in a high-quality, beautifully designed ORA gift box — perfect for gifting or keeping.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* ═══ Delivery Estimate ═══ */}
             {!isOutOfStock && (
@@ -644,8 +665,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
               )}
             </div>
 
-            {/* Free Shipping Threshold */}
-            <FreeShippingThreshold />
+            {/* Free Gift Box section removed — gift campaign disabled */}
 
             {/* ═══ Delivery & Returns Box ═══ */}
             <div className="rounded-xl border border-neutral-100 p-4 space-y-2.5">
@@ -825,7 +845,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
         {isLowStock && (
           <div className="flex items-center gap-1.5 text-[11px] text-amber-700 bg-amber-50 px-4 py-1.5 border-b border-amber-100">
             <span className="w-1.5 h-1.5 bg-amber-500 rounded-full flex-shrink-0 animate-pulse" />
-            Only {product.stockQuantity} left — order soon!
+            Selling Fast — Order Soon!
           </div>
         )}
 

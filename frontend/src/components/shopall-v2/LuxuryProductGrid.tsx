@@ -33,6 +33,21 @@ import {
   PRICE_RANGES,
 } from './LuxuryFilterSidebar';
 
+// Shuffle array with a seed (changes every few hours so returning customers see fresh layouts)
+function seededShuffle<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  // Seed changes every 4 hours
+  const seed = Math.floor(Date.now() / (1000 * 60 * 60 * 4));
+  let m = shuffled.length;
+  let s = seed;
+  while (m) {
+    s = (s * 1103515245 + 12345) & 0x7fffffff;
+    const i = s % m--;
+    [shuffled[m], shuffled[i]] = [shuffled[i], shuffled[m]];
+  }
+  return shuffled;
+}
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -132,7 +147,7 @@ function ProductSkeleton() {
 
 function GridSkeleton({ count = 8 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
+    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-2 gap-y-5 sm:gap-x-5 sm:gap-y-8 lg:gap-x-7 lg:gap-y-10">
       {Array.from({ length: count }).map((_, i) => (
         <ProductSkeleton key={i} />
       ))}
@@ -282,7 +297,11 @@ export default function LuxuryProductGrid({
         const newPagination = response.data.pagination || { page: 1, limit: productsPerPage, total: 0, pages: 0 };
 
         if (append) setProducts((prev) => [...prev, ...newProducts]);
-        else setProducts(newProducts);
+        else {
+          // Shuffle products when using popularity sort so customers see fresh layouts
+          const displayProducts = filters.sort === 'popularity' ? seededShuffle(newProducts) : newProducts;
+          setProducts(displayProducts);
+        }
         setPagination(newPagination);
       } catch {
         if (!append) setProducts([]);
@@ -383,7 +402,7 @@ export default function LuxuryProductGrid({
           STICKY HEADER BAR — Count + Sort + Mobile Filter
           ================================================================ */}
       <div className="w-full border-b border-neutral-100 bg-white/95 backdrop-blur-md sticky top-0 z-30">
-        <div className="w-full px-6">
+        <div className="w-full px-3 sm:px-6">
           <div className="flex items-center justify-between h-14">
             {/* Left: Filter toggle (mobile) + Product count */}
             <div className="flex items-center gap-4">
@@ -436,13 +455,13 @@ export default function LuxuryProductGrid({
       {/* ================================================================
           MAIN LAYOUT (Filter Sidebar + Product Grid) — FULL WIDTH OPTIMIZED
           ================================================================ */}
-      <div className="w-full px-6">
-        <div className="flex gap-8 pt-8 lg:pt-10">
+      <div className="w-full px-3 sm:px-6">
+        <div className="flex gap-4 sm:gap-8 pt-6 sm:pt-8 lg:pt-10">
           {/* Desktop Sidebar */}
           <DesktopFilterSidebar {...filterSidebarProps} />
 
           {/* Product Grid Area */}
-          <main className="flex-1 min-w-0 pb-16 lg:pb-24 pr-6" ref={gridRef}>
+          <main className="flex-1 min-w-0 pb-16 lg:pb-24 pr-0 sm:pr-6" ref={gridRef}>
             {/* Active filter pills */}
             <ActiveFiltersBar
               filters={filters}
@@ -458,7 +477,7 @@ export default function LuxuryProductGrid({
               <EmptyState />
             ) : (
               <>
-                <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
+                <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-2 gap-y-5 sm:gap-x-5 sm:gap-y-8 lg:gap-x-7 lg:gap-y-10">
                   {gridItems.map((item, index) =>
                     item.type === 'product' ? (
                       <LuxuryProductCard
@@ -490,9 +509,6 @@ export default function LuxuryProductGrid({
                         ) : (
                           <>
                             Load More Pieces
-                            <span className="text-neutral-300 group-hover:text-[#D4AF37]/50 transition-colors">
-                              ({(pagination.total - products.length).toLocaleString('en-IN')} remaining)
-                            </span>
                           </>
                         )}
                       </button>

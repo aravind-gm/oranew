@@ -61,7 +61,7 @@ export default function NewArrivals() {
 
   return (
     <section className="py-14 md:py-20 lg:py-24 bg-white">
-      <div className="max-w-7xl mx-auto px-5 lg:px-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
         {/* Section Header */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -80,7 +80,7 @@ export default function NewArrivals() {
 
         {/* Product Grid — 4 items max */}
         {loading ? (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-2 gap-y-5 sm:gap-x-4 md:gap-6 lg:gap-8">
             {[...Array(4)].map((_, i) => (
               <div key={i} className="space-y-3">
                 <div className="aspect-[4/5] bg-neutral-100 rounded-xl animate-pulse" />
@@ -97,7 +97,7 @@ export default function NewArrivals() {
             variants={{
               visible: { transition: { staggerChildren: 0.08 } },
             }}
-            className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8"
+            className="grid grid-cols-2 lg:grid-cols-4 gap-x-2 gap-y-5 sm:gap-x-4 md:gap-6 lg:gap-8"
           >
             {products.slice(0, 4).map((product) => (
               <motion.div

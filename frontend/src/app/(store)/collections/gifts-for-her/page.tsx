@@ -81,7 +81,7 @@ export default function GiftsForHerPage() {
         name: p.name,
         price: p.finalPrice || p.price,
         originalPrice: p.price,
-        images: p.images?.map((img: any) => img.url || img.image_url) || [],
+        images: p.images?.map((img: any) => img.imageUrl || img.url || img.image_url).filter(Boolean) || [],
         rating: p.averageRating || 4.5,
         reviewCount: p.reviewCount || 0,
         inStock: p.inStock !== false,
@@ -178,7 +178,7 @@ export default function GiftsForHerPage() {
 
           {/* Product Grid */}
           {!loading && !error && products.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-2 gap-y-5 sm:gap-x-4 md:gap-6">
               {products.map((product) => (
                 <GiftProductCard 
                   key={product.id} 

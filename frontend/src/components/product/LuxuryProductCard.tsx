@@ -354,12 +354,7 @@ function LuxuryProductCard({
             </div>
           )}
 
-          {/* Limited stock urgency */}
-          {limitedStock !== null && limitedStock > 0 && limitedStock <= 10 && (
-            <p className="text-[11px] font-medium text-primary-500 pt-0.5">
-              Only {limitedStock} left
-            </p>
-          )}
+          {/* Limited stock urgency - Hidden: Never show exact stock quantities */}
         </div>
 
       </motion.article>

@@ -116,14 +116,7 @@ export default function GiftProductCard({
           />
         </button>
 
-        {/* Low Stock Warning */}
-        {product.stockCount && product.stockCount <= 8 && (
-          <div className="absolute bottom-3 left-3 right-3 z-10">
-            <div className="px-3 py-1.5 bg-[#111111]/90 text-white text-xs font-medium rounded-full text-center">
-              ⚡ Only {product.stockCount} left in stock
-            </div>
-          </div>
-        )}
+        {/* Low Stock Warning - Hidden: Never show exact stock quantities */}
 
         {/* Trending Tag */}
         {product.trendingTag && (

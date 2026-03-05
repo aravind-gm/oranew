@@ -5,17 +5,23 @@ import { rateLimit } from 'express-rate-limit';
 const router = Router();
 
 // Reuse the same transporter config as the email service
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.EMAIL_PORT || process.env.SMTP_PORT || '587'),
-  secure: (process.env.EMAIL_SECURE || 'false') === 'true',
-  auth: {
-    user: process.env.EMAIL_USER || process.env.SMTP_USER,
-    pass: process.env.EMAIL_PASS || process.env.SMTP_PASS,
-  },
-});
+const emailUser = process.env.EMAIL_USER || process.env.SMTP_USER;
+const emailPass = process.env.EMAIL_PASS || process.env.SMTP_PASS;
+const emailHost = process.env.EMAIL_HOST || process.env.SMTP_HOST || 'smtp.gmail.com';
+const emailPort = parseInt(process.env.EMAIL_PORT || process.env.SMTP_PORT || '587');
 
-const EMAIL_FROM = process.env.EMAIL_FROM || `"ORA Jewellery" <${process.env.EMAIL_USER || process.env.SMTP_USER}>`;
+const transporter = nodemailer.createTransport({
+  host: emailHost,
+  port: emailPort,
+  secure: (process.env.EMAIL_SECURE === 'true') || emailPort === 465,
+  auth: emailUser && emailPass ? { user: emailUser, pass: emailPass } : undefined,
+  connectionTimeout: 15000,
+  greetingTimeout: 10000,
+  socketTimeout: 15000,
+  ...(emailHost.includes('gmail') && { service: 'gmail' }),
+} as nodemailer.TransportOptions);
+
+const EMAIL_FROM = process.env.EMAIL_FROM || `"ORA Jewellery" <${emailUser || 'noreply@orashop.in'}>`;
 
 // Rate limit: max 3 contact form submissions per IP per 15 minutes
 const contactLimiter = rateLimit({

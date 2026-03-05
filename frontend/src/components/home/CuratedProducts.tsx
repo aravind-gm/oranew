@@ -105,7 +105,7 @@ export default function CuratedProducts({
 
   return (
     <section className="py-12 md:py-20 lg:py-24 bg-white">
-      <div className="max-w-7xl mx-auto px-5 lg:px-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -124,7 +124,7 @@ export default function CuratedProducts({
 
         {/* Products Grid */}
         {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-2 gap-y-5 sm:gap-x-4 md:gap-6 lg:gap-8">
             {[...Array(limit)].map((_, i) => (
               <div
                 key={i}
@@ -139,7 +139,7 @@ export default function CuratedProducts({
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8 }}
-              className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8"
+              className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-2 gap-y-5 sm:gap-x-4 md:gap-6 lg:gap-8"
             >
               {products.map((product, index) => (
                 <motion.div

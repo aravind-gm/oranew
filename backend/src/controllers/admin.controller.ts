@@ -9,6 +9,7 @@ import {
     sendOrderDeliveredEmail,
     sendOrderShippedEmail
 } from '../services/email.service';
+import { notifyPartnersStatusUpdate } from '../services/whatsapp.service';
 import { cleanupExpiredLocks, restoreInventory } from '../utils/inventory';
 import { normalizeSupabaseUrl } from '../utils/supabaseUrlHelper';
 import { logAdminAction } from '../utils/auditLog';
@@ -343,6 +344,16 @@ export const updateOrderStatus = async (
       console.error('Email notification error:', emailError);
       // Don't fail the request if email fails
     }
+
+    // 🔔 Notify partners via WhatsApp about status change (non-blocking)
+    try {
+      notifyPartnersStatusUpdate({
+        orderNumber: order.orderNumber,
+        status,
+        trackingNumber: trackingNumber || order.trackingNumber || undefined,
+        courierName: courierName || undefined,
+      }).catch(err => console.error('[WhatsApp] Partner status update failed:', err));
+    } catch { /* non-critical */ }
 
     console.log('[Admin] Order status updated successfully:', { orderId: id, newStatus: status });
 

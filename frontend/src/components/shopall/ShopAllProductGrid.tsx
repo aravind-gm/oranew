@@ -21,6 +21,20 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// Shuffle array with a seed (changes every few hours so returning customers see fresh layouts)
+function seededShuffle<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  const seed = Math.floor(Date.now() / (1000 * 60 * 60 * 4));
+  let m = shuffled.length;
+  let s = seed;
+  while (m) {
+    s = (s * 1103515245 + 12345) & 0x7fffffff;
+    const i = s % m--;
+    [shuffled[m], shuffled[i]] = [shuffled[i], shuffled[m]];
+  }
+  return shuffled;
+}
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -266,7 +280,7 @@ function ProductSkeleton() {
 
 function GridSkeleton({ count = 8 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8 sm:gap-x-5 sm:gap-y-10">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-2 gap-y-5 sm:gap-x-5 sm:gap-y-8">
       {Array.from({ length: count }).map((_, i) => (
         <ProductSkeleton key={i} />
       ))}
@@ -387,7 +401,9 @@ export default function ShopAllProductGrid({
         if (append) {
           setProducts((prev) => [...prev, ...newProducts]);
         } else {
-          setProducts(newProducts);
+          // Shuffle products when using popularity sort so customers see fresh layouts
+          const displayProducts = filters.sort === 'popularity' ? seededShuffle(newProducts) : newProducts;
+          setProducts(displayProducts);
         }
         setPagination(newPagination);
       } catch {
@@ -485,7 +501,7 @@ export default function ShopAllProductGrid({
           HEADER BAR — Count + Sort + Mobile Filter Button
           ================================================================ */}
       <div className="w-full border-b border-neutral-200 bg-white sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-5 lg:px-8">
+        <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
           <div className="flex items-center justify-between h-14">
             {/* Left: Filter button (mobile) + Count */}
             <div className="flex items-center gap-4">
@@ -532,8 +548,8 @@ export default function ShopAllProductGrid({
       {/* ================================================================
           MAIN LAYOUT (Filter Rail + Grid)
           ================================================================ */}
-      <div className="max-w-7xl mx-auto px-5 lg:px-8">
-        <div className="flex gap-8 lg:gap-12 pt-8 lg:pt-10">
+      <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
+        <div className="flex gap-4 sm:gap-8 lg:gap-12 pt-6 sm:pt-8 lg:pt-10">
           {/* ===== DESKTOP FILTER RAIL ===== */}
           <aside className="hidden lg:block w-[220px] flex-shrink-0">
             <div className="sticky top-20 pb-16 max-h-[calc(100vh-5rem)] overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
@@ -647,7 +663,7 @@ export default function ShopAllProductGrid({
               <EmptyState />
             ) : (
               <>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8 sm:gap-x-5 sm:gap-y-10">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-2 gap-y-5 sm:gap-x-5 sm:gap-y-8">
                   {gridItems.map((item, index) =>
                     item.type === 'product' ? (
                       <ProductCardProduction
@@ -680,9 +696,6 @@ export default function ShopAllProductGrid({
                         ) : (
                           <>
                             Load More Products
-                            <span className="text-neutral-400">
-                              ({pagination.total - products.length} remaining)
-                            </span>
                           </>
                         )}
                       </button>

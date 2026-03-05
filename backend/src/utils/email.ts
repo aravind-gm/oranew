@@ -2,20 +2,51 @@ import * as nodemailer from 'nodemailer';
 
 // Create transporter with environment config (lazy initialization)
 let transporter: nodemailer.Transporter | null = null;
+let transporterVerified = false;
 
 function getTransporter() {
   if (!transporter) {
+    const host = process.env.EMAIL_HOST || process.env.SMTP_HOST || 'smtp.gmail.com';
+    const port = parseInt(process.env.EMAIL_PORT || process.env.SMTP_PORT || '587');
+    const secure = (process.env.EMAIL_SECURE === 'true') || port === 465;
+    const user = process.env.EMAIL_USER || process.env.SMTP_USER;
+    const pass = process.env.EMAIL_PASS || process.env.SMTP_PASS;
+
+    if (!user || !pass) {
+      console.warn('⚠️ [Email] No EMAIL_USER/EMAIL_PASS configured. Emails will be skipped.');
+    } else {
+      console.log(`📧 [Email] Transporter init: ${host}:${port} (user: ${user.substring(0, 3)}***)`);
+    }
+
     transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || 'smtp.godaddy.com',
-      port: parseInt(process.env.EMAIL_PORT || '587'),
-      secure: process.env.EMAIL_SECURE === 'true' ? true : false,
-      auth: {
-        user: process.env.EMAIL_USER || 'admin@orashop.in',
-        pass: process.env.EMAIL_PASS || 'ORAglobal',
-      },
-      connectionTimeout: 10000,
-      socketTimeout: 10000,
+      host,
+      port,
+      secure,
+      auth: user && pass ? { user, pass } : undefined,
+      connectionTimeout: 15000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
+      // Gmail-specific: needed for App Passwords
+      ...(host.includes('gmail') && {
+        service: 'gmail',
+        // Remove host/port when using 'service' — nodemailer handles it
+      }),
     } as nodemailer.TransportOptions);
+
+    // Verify connection on first use (non-blocking)
+    if (user && pass && !transporterVerified) {
+      transporter.verify()
+        .then(() => {
+          transporterVerified = true;
+          console.log('✅ [Email] SMTP connection verified successfully');
+        })
+        .catch((err) => {
+          console.error('❌ [Email] SMTP verification failed:', err.message);
+          console.error('   → Check EMAIL_HOST, EMAIL_USER, EMAIL_PASS in your .env');
+          console.error('   → For Gmail: use an App Password (not your regular password)');
+          console.error('   → Generate at: https://myaccount.google.com/apppasswords');
+        });
+    }
   }
   return transporter;
 }
@@ -28,24 +59,40 @@ export interface EmailOptions {
 
 export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
   try {
-    if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      console.warn('⚠️ Email not configured. Skipping email to:', options.to);
-      console.log('📧 OTP would have been sent:', options.subject);
+    const user = process.env.EMAIL_USER || process.env.SMTP_USER;
+    const pass = process.env.EMAIL_PASS || process.env.SMTP_PASS;
+
+    if (!user || !pass) {
+      console.warn('⚠️ [Email] Not configured (EMAIL_USER/EMAIL_PASS missing). Skipping email to:', options.to);
+      console.log(`📧 [Email] Would have sent: "${options.subject}" to ${options.to}`);
       return false;
     }
 
     const mailOptions = {
-      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+      from: process.env.EMAIL_FROM || `"ORA Jewellery" <${user}>`,
       to: options.to,
       subject: options.subject,
       html: options.html,
     };
 
     const info = await getTransporter().sendMail(mailOptions);
-    console.log(`✅ Email sent to ${options.to}. Message ID: ${info.messageId}`);
+    console.log(`✅ [Email] Sent to ${options.to}. Subject: "${options.subject}". MessageID: ${info.messageId}`);
     return true;
-  } catch (error) {
-    console.error('❌ Email error:', error);
+  } catch (error: any) {
+    console.error(`❌ [Email] Failed to send to ${options.to}:`, error.message);
+    
+    // Provide actionable error messages
+    if (error.code === 'EAUTH') {
+      console.error('   → Authentication failed. For Gmail, use an App Password:');
+      console.error('   → https://myaccount.google.com/apppasswords');
+    } else if (error.code === 'ECONNREFUSED') {
+      console.error('   → Connection refused. Check EMAIL_HOST and EMAIL_PORT.');
+    } else if (error.code === 'ETIMEDOUT' || error.code === 'ESOCKET') {
+      console.error('   → Connection timed out. SMTP server may be unreachable from this host.');
+    } else if (error.responseCode === 535) {
+      console.error('   → Bad credentials. Check EMAIL_USER and EMAIL_PASS.');
+    }
+    
     return false;
   }
 };

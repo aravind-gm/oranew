@@ -149,12 +149,10 @@ function CartItemCard({ item, onQuantityUpdate, onRemove, index }: CartItemCardP
               
               {/* Stock Status */}
               {item.stockQuantity !== undefined && (
-                <p className={`text-xs mt-1 ${item.stockQuantity > 5 ? 'text-emerald-600' : item.stockQuantity > 0 ? 'text-amber-600' : 'text-red-600'}`}>
-                  {item.stockQuantity > 5 
+                <p className={`text-xs mt-1 ${item.stockQuantity > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                  {item.stockQuantity > 0 
                     ? '✓ In Stock' 
-                    : item.stockQuantity > 0 
-                      ? `Only ${item.stockQuantity} left!`
-                      : '✕ Out of Stock'}
+                    : '✕ Out of Stock'}
                 </p>
               )}
             </div>
