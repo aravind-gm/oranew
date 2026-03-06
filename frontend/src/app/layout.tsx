@@ -2,9 +2,11 @@ import AddToCartPopup from '@/components/AddToCartPopup';
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
 import MetaPixel from '@/components/analytics/MetaPixel';
 import AuthStateSync from '@/components/AuthStateSync';
+import FloatingPetals from '@/components/FloatingPetals';
 import PromotionalAds from '@/components/PromotionalAds';
 import Footer from '@/components/Footer';
 import Header from '@/components/Header';
+import WomensDayBar from '@/components/WomensDayBar';
 import type { Metadata, Viewport } from 'next';
 import { Cormorant_Garamond, Inter } from 'next/font/google';
 import './globals.css';
@@ -143,6 +145,8 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} ${cormorant.variable} font-sans antialiased bg-background text-foreground`}>
         <AuthStateSync />
+        <FloatingPetals />
+        <WomensDayBar />
         <Header />
         <main className="min-h-screen">
           {children}

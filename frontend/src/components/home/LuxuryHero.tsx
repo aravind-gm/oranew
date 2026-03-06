@@ -31,6 +31,15 @@ interface HeroSlide {
 const SLIDES: HeroSlide[] = [
   {
     id: 1,
+    desktopImage: 'https://cdn.orashop.in/banners/home/hero-1.webp',
+    mobileImage: 'https://cdn.orashop.in/banners/home/mobile-1.webp',
+    headline: 'Own. Radiate.',
+    headlineAccent: 'Adorn.',
+    subtitle: 'Premium necklaces, rings & bracelets crafted for the modern woman.',
+    cta: { label: 'Shop Bestsellers', href: '/collections' },
+  },
+  {
+    id: 2,
     desktopImage: 'https://cdn.orashop.in/banners/home/hero-2.webp',
     mobileImage: 'https://cdn.orashop.in/banners/home/mobile-2.webp',
     headline: 'Necklaces That',
@@ -38,15 +47,6 @@ const SLIDES: HeroSlide[] = [
     subtitle: 'Layered, minimal, or statement — find the piece that defines your style.',
     cta: { label: 'Shop Necklaces', href: '/collections?category=necklaces' },
     ctaSecondary: { label: 'View All', href: '/collections' },
-  },
-  {
-    id: 2,
-    desktopImage: 'https://cdn.orashop.in/banners/home/hero-1.webp',
-    mobileImage: 'https://cdn.orashop.in/banners/home/mobile-1.webp',
-    headline: 'Own. Radiate.',
-    headlineAccent: 'Adorn.',
-    subtitle: 'Premium necklaces, rings & bracelets crafted for the modern woman.',
-    cta: { label: 'Shop Bestsellers', href: '/collections' },
   },
   {
     id: 3,
