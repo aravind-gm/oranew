@@ -1,7 +1,7 @@
 /**
  * Axios Interceptors for Production-Ready Error Handling
  *
- * 503 handler: retry up to 3× with 2 s delay (Render cold-start recovery)
+ * 503 handler: retry up to 3× with 2 s delay (server recovery)
  * 401 handler: attempt one silent token refresh, then retry original request.
  *              If refresh fails, redirect to login.
  *
@@ -65,7 +65,7 @@ export function setupErrorInterceptor(api: AxiosInstance) {
       const { response, config } = error;
       const reqConfig = config as RetryableRequestConfig | undefined;
 
-      // ── 503: Render cold-start recovery ──────────────────
+      // ── 503: Server recovery (retry with backoff) ──────────────────
       if (response?.status === 503 && reqConfig) {
         const endpointKey = `${reqConfig.method}:${reqConfig.url}`;
         const retryCount = retryMap.get(endpointKey) || 0;

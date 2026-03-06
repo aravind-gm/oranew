@@ -69,7 +69,7 @@ export default function AccountDashboard({ user }: AccountDashboardProps) {
   const fetchOrderStats = async () => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/orders`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'https://api.orashop.in/api'}/orders`,
         {
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },

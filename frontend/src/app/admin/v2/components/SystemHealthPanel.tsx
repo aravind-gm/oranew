@@ -87,7 +87,7 @@ export default function SystemHealthPanel({ className = '' }: Props) {
   const fetchHealth = useCallback(async () => {
     try {
       const token = localStorage.getItem('ora_token') || localStorage.getItem('token');
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.orashop.in/api';
       const res = await fetch(`${baseUrl}/admin/system/health`, {
         headers: {
           Authorization: `Bearer ${token}`,

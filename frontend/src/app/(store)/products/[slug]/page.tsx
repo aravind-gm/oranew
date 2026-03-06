@@ -2,7 +2,7 @@ import ProductDetailClient from '@/components/product/ProductDetailClient';
 import type { Metadata } from 'next';
 
 const SITE_URL = 'https://orashop.in';
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://oranew.onrender.com/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.orashop.in/api';
 
 interface ProductImage {
   id: string;

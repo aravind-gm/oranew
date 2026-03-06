@@ -14,10 +14,9 @@ import { prisma } from '../config/database';
  * Set HttpOnly cookies for access and refresh tokens
  * SECURITY: HttpOnly prevents XSS attacks, Secure ensures HTTPS only
  * 
- * NOTE: sameSite must be 'none' because frontend (orashop.in) and backend
- * (oranew.onrender.com) are on different domains. With 'strict' or 'lax',
- * cookies would never be sent cross-origin, breaking authentication.
- * secure: true is required when sameSite is 'none'.
+ * Architecture: Frontend (orashop.in) and backend (api.orashop.in) share
+ * the same root domain, so we use sameSite 'lax' + domain '.orashop.in'
+ * to allow cookies across subdomains securely.
  */
 export const setAuthCookies = (
   res: Response,
@@ -30,7 +29,8 @@ export const setAuthCookies = (
   res.cookie('access_token', accessToken, {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
+    sameSite: 'lax',
+    domain: isProduction ? '.orashop.in' : undefined,
     path: '/',
     maxAge: 30 * 60 * 1000, // 30 minutes
   });
@@ -39,7 +39,8 @@ export const setAuthCookies = (
   res.cookie('refresh_token', refreshToken, {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
+    sameSite: 'lax',
+    domain: isProduction ? '.orashop.in' : undefined,
     path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
@@ -54,14 +55,16 @@ export const clearAuthCookies = (res: Response) => {
   res.clearCookie('access_token', {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
+    sameSite: 'lax',
+    domain: isProduction ? '.orashop.in' : undefined,
     path: '/',
   });
 
   res.clearCookie('refresh_token', {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
+    sameSite: 'lax',
+    domain: isProduction ? '.orashop.in' : undefined,
     path: '/',
   });
 };

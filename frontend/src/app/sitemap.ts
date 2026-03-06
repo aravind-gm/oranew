@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next';
 
 const SITE_URL = 'https://orashop.in';
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://oranew.onrender.com/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.orashop.in/api';
 
 interface ProductSlug {
   slug: string;

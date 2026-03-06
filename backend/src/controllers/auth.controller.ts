@@ -280,7 +280,8 @@ export const verifyOtp = async (
     res.cookie('access_token', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      sameSite: 'lax',
+      domain: process.env.NODE_ENV === 'production' ? '.orashop.in' : undefined,
       path: '/',
       maxAge: 30 * 60 * 1000, // 30 minutes
     });
@@ -288,7 +289,8 @@ export const verifyOtp = async (
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      sameSite: 'lax',
+      domain: process.env.NODE_ENV === 'production' ? '.orashop.in' : undefined,
       path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
@@ -388,7 +390,8 @@ export const login = async (
       res.cookie('access_token', accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        sameSite: 'lax',
+      domain: process.env.NODE_ENV === 'production' ? '.orashop.in' : undefined,
         path: '/',
         maxAge: 30 * 60 * 1000, // 30 minutes
       });
@@ -396,7 +399,8 @@ export const login = async (
       res.cookie('refresh_token', refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        sameSite: 'lax',
+      domain: process.env.NODE_ENV === 'production' ? '.orashop.in' : undefined,
         path: '/',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
@@ -579,7 +583,8 @@ export const register = async (
       res.cookie('access_token', accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        sameSite: 'lax',
+      domain: process.env.NODE_ENV === 'production' ? '.orashop.in' : undefined,
         path: '/',
         maxAge: 30 * 60 * 1000, // 30 minutes
       });
@@ -587,7 +592,8 @@ export const register = async (
       res.cookie('refresh_token', refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        sameSite: 'lax',
+      domain: process.env.NODE_ENV === 'production' ? '.orashop.in' : undefined,
         path: '/',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
@@ -740,7 +746,8 @@ export const passwordLogin = async (
     res.cookie('access_token', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      sameSite: 'lax',
+      domain: process.env.NODE_ENV === 'production' ? '.orashop.in' : undefined,
       path: '/',
       maxAge: 30 * 60 * 1000, // 30 minutes
     });
@@ -748,7 +755,8 @@ export const passwordLogin = async (
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      sameSite: 'lax',
+      domain: process.env.NODE_ENV === 'production' ? '.orashop.in' : undefined,
       path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
@@ -894,14 +902,16 @@ export const logout = async (
     res.clearCookie('access_token', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      sameSite: 'lax',
+      domain: process.env.NODE_ENV === 'production' ? '.orashop.in' : undefined,
       path: '/',
     });
 
     res.clearCookie('refresh_token', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      sameSite: 'lax',
+      domain: process.env.NODE_ENV === 'production' ? '.orashop.in' : undefined,
       path: '/',
     });
 

@@ -56,7 +56,7 @@ export default function SettingsPage() {
     setSuccess('');
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/user/profile`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.orashop.in/api'}/user/profile`, {
         method: 'PUT',
         credentials: 'include',
         headers: {

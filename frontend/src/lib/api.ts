@@ -2,8 +2,8 @@
  * ORA Jewellery — Backend API Client
  * 
  * Features:
- * - Communicates with Render backend via cookie-based auth
- * - Automatic retry on 503 (backend cold start)
+ * - Communicates with VPS backend (api.orashop.in) via cookie-based auth
+ * - Automatic retry on 503 (server recovery)
  * - HttpOnly cookies for secure authentication
  * - Graceful error handling
  */
@@ -17,8 +17,9 @@ const getApiUrl = () => {
     return process.env.NEXT_PUBLIC_API_URL;
   }
   
-  if (typeof window !== 'undefined' && window.location.hostname === 'orashop.in') {
-    return 'https://oranew.onrender.com/api';
+  // Production: VPS backend behind nginx
+  if (typeof window !== 'undefined' && (window.location.hostname === 'orashop.in' || window.location.hostname === 'www.orashop.in')) {
+    return 'https://api.orashop.in/api';
   }
   
   return 'http://localhost:8000/api';

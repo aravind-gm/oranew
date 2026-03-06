@@ -135,6 +135,7 @@ app.use(compression({
 const allowedOrigins: string[] = [
   'https://orashop.in',
   'https://www.orashop.in',
+  'https://api.orashop.in',
   'https://oranew.vercel.app',
   'https://orashop.vercel.app',
 ];

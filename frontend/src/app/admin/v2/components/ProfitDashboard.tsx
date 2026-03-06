@@ -44,7 +44,7 @@ interface ProfitDashboardProps {
   loading?: boolean;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ora-backend.onrender.com/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.orashop.in/api';
 
 export default function ProfitDashboard({ stats, loading }: ProfitDashboardProps) {
   const [adSpend, setAdSpend] = useState<string>(() => {
