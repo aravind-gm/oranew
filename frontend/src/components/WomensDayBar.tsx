@@ -42,25 +42,26 @@ export default function WomensDayBar() {
           className="relative overflow-hidden z-[60]"
         >
           <div className="bg-gradient-to-r from-[#D4637A] via-[#E8889A] to-[#D4637A] text-white">
-            <div className="max-w-7xl mx-auto px-3 py-1 flex items-center justify-center gap-2 relative">
+            <div className="max-w-7xl mx-auto px-4 py-1 flex items-center justify-center gap-2 relative">
               {/* Flower left */}
-              <span className="text-xs hidden sm:inline">🌸</span>
+              <span className="text-sm hidden sm:inline">🌸</span>
 
               {/* Main text */}
-              <p className="text-[10px] sm:text-[11px] font-medium tracking-wide text-center">
-                <span className="font-bold">Happy Women&apos;s Day</span>
-                <span className="mx-1 text-white/50">·</span>
-                <span className="italic opacity-90">Bold, beautiful, unstoppable</span>
-                <span className="ml-1">✨</span>
+              <p className="text-[11px] sm:text-xs font-medium tracking-wide text-center">
+                <span className="hidden sm:inline">Celebrating </span>
+                <span className="font-bold">International Women&apos;s Day</span>
+                <span className="mx-1.5 text-white/50">·</span>
+                <span className="italic opacity-90">Here&apos;s to her — bold, beautiful, unstoppable</span>
+                <span className="ml-1">🌺</span>
               </p>
 
               {/* Flower right */}
-              <span className="text-xs hidden sm:inline">🌺</span>
+              <span className="text-sm hidden sm:inline">✨</span>
 
               {/* Close button */}
               <button
                 onClick={dismiss}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-white/20 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/20 transition-colors"
                 aria-label="Dismiss"
               >
                 <X className="w-3 h-3 text-white/70" />
