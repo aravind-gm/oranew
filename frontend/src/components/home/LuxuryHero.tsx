@@ -31,8 +31,8 @@ interface HeroSlide {
 const SLIDES: HeroSlide[] = [
   {
     id: 1,
-    desktopImage: 'https://cdn.orashop.in/banners/home/hero-1.webp',
-    mobileImage: 'https://cdn.orashop.in/banners/home/mobile-1.webp',
+    desktopImage: 'https://cdn.orashop.in/banners/home/hero-2.webp',
+    mobileImage: 'https://cdn.orashop.in/banners/home/mobile-2.webp',
     headline: 'Own. Radiate.',
     headlineAccent: 'Adorn.',
     subtitle: 'Premium necklaces, rings & bracelets crafted for the modern woman.',
