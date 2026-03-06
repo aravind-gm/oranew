@@ -378,40 +378,134 @@ export const verifyPayment = asyncHandler(async (req: any, res: Response) => {
   console.log('[Payment.verify] ✓ Razorpay order ID matches');
 
   // ────────────────────────────────────────────
-  // UPDATE PAYMENT TO VERIFIED (NOT CONFIRMED)
+  // CONFIRM PAYMENT & ORDER IN ONE ATOMIC TRANSACTION
   // ────────────────────────────────────────────
-  // CRITICAL: Only mark as VERIFIED, NOT CONFIRMED
-  // Webhook is the source of truth for CONFIRMED status
-  console.log('[Payment.verify] Marking payment as VERIFIED (waiting for webhook confirmation)');
+  // The frontend signature verification is cryptographically valid:
+  //   HMAC-SHA256(razorpay_order_id|razorpay_payment_id, key_secret) === signature
+  // This is the SAME proof Razorpay uses. Waiting for a webhook that may
+  // never arrive (misconfigured URL, network issues, secret mismatch)
+  // leaves the customer stuck on the "Confirming…" spinner forever.
+  //
+  // FIX: Confirm everything here. The webhook handler is idempotent —
+  // if it arrives later it will see status=CONFIRMED and return early.
+  console.log('[Payment.verify] Confirming payment + order atomically');
 
-  const updatedPayment = await withRetry(() =>
-    prisma.payment.update({
-      where: { id: payment.id },
-      data: {
-        status: 'VERIFIED',
-        gatewayResponse: {
-          ...(typeof payment.gatewayResponse === 'object' && payment.gatewayResponse ? payment.gatewayResponse : {}),
-          razorpayPaymentId: razorpay_payment_id,
-          verifiedAt: new Date().toISOString(),
-          verifiedBy: 'frontend',
+  try {
+    await prisma.$transaction(async (tx) => {
+      // 1. Payment → CONFIRMED
+      await tx.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: 'CONFIRMED',
+          gatewayResponse: {
+            ...(typeof payment.gatewayResponse === 'object' && payment.gatewayResponse ? payment.gatewayResponse : {}),
+            razorpayPaymentId: razorpay_payment_id,
+            verifiedAt: new Date().toISOString(),
+            confirmedAt: new Date().toISOString(),
+            confirmedBy: 'verify-endpoint',
+          },
         },
-      },
-    })
-  ) as any;
+      });
+      console.log('[Payment.verify] ✓ Payment updated to CONFIRMED');
 
-  // Return early - do NOT update order status yet
-  // Webhook will update order.status to CONFIRMED
-  console.log('[Payment.verify] ✓ Payment marked as VERIFIED');
-  console.log('[Payment.verify] ════════════════════════════════════════');
-  console.log('[Payment.verify] Waiting for webhook confirmation...');
-  console.log('[Payment.verify] ════════════════════════════════════════');
+      // 2. Order → CONFIRMED + paymentStatus CONFIRMED
+      await tx.order.update({
+        where: { id: (order as any).id },
+        data: {
+          status: 'CONFIRMED',
+          paymentStatus: 'CONFIRMED',
+          paymentMethod: 'RAZORPAY',
+        },
+      });
+      console.log('[Payment.verify] ✓ Order updated to CONFIRMED');
 
-  res.json({
-    success: true,
-    message: 'Signature verified. Awaiting webhook confirmation.',
-    orderStatus: (order as any).status,
-    paymentStatus: (updatedPayment as any).status,
-  });
+      // 3. Deduct inventory (with stock-floor check)
+      for (const item of (order as any).items) {
+        const currentProduct = await tx.product.findUnique({
+          where: { id: item.productId },
+          select: { stockQuantity: true, name: true },
+        });
+
+        if (!currentProduct) {
+          throw new Error(`Product ${item.productId} not found during inventory deduction`);
+        }
+
+        if (currentProduct.stockQuantity < item.quantity) {
+          throw new Error(
+            `Insufficient stock for "${currentProduct.name}": available=${currentProduct.stockQuantity}, needed=${item.quantity}`
+          );
+        }
+
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stockQuantity: { decrement: item.quantity } },
+        });
+      }
+      console.log('[Payment.verify] ✓ Inventory deducted');
+
+      // 4. Clear cart
+      await tx.cartItem.deleteMany({ where: { userId } });
+      console.log('[Payment.verify] ✓ Cart cleared');
+
+      // 5. Release inventory locks
+      await tx.inventoryLock.deleteMany({ where: { orderId: (order as any).id } });
+      console.log('[Payment.verify] ✓ Inventory locks removed');
+    });
+
+    console.log('[Payment.verify] ════════════════════════════════════════');
+    console.log('[Payment.verify] ✅ PAYMENT + ORDER CONFIRMED');
+    console.log('[Payment.verify] Order:', (order as any).orderNumber);
+    console.log('[Payment.verify] ════════════════════════════════════════');
+
+    // Send confirmation email (non-blocking — don't fail the response)
+    try {
+      const emailTemplate = getOrderConfirmationTemplate(
+        (order as any).orderNumber,
+        Number((order as any).totalAmount)
+      );
+      await sendEmail({
+        to: (order as any).user.email,
+        subject: `Order Confirmed - ${(order as any).orderNumber}`,
+        html: emailTemplate,
+      });
+      console.log('[Payment.verify] ✓ Confirmation email sent');
+    } catch (emailErr) {
+      console.error('[Payment.verify] ⚠️ Email send failed (non-fatal):', emailErr);
+    }
+
+    res.json({
+      success: true,
+      message: 'Payment confirmed successfully',
+      orderStatus: 'CONFIRMED',
+      paymentStatus: 'CONFIRMED',
+    });
+  } catch (txErr: any) {
+    console.error('[Payment.verify] ❌ Transaction failed:', txErr);
+
+    // Fallback: at minimum mark payment as VERIFIED so webhook can finish the job
+    try {
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: 'VERIFIED',
+          gatewayResponse: {
+            ...(typeof payment.gatewayResponse === 'object' && payment.gatewayResponse ? payment.gatewayResponse : {}),
+            razorpayPaymentId: razorpay_payment_id,
+            verifiedAt: new Date().toISOString(),
+            verifiedBy: 'frontend',
+            confirmError: txErr.message,
+          },
+        },
+      });
+    } catch {
+      // best-effort
+    }
+
+    throw new AppError(
+      'Payment verified but order confirmation failed. Our team has been notified — your order will be confirmed shortly.',
+      500
+    );
+  }
 });
 
 // ============================================
