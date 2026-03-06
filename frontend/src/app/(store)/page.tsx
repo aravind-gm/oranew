@@ -33,8 +33,8 @@ export default function HomePage() {
     <main className="bg-white min-h-screen">
       {/* 1. HERO — Brand identity, not promotions */}
       <HomeHero
-        heroImage="/banners.png"
-        heroImageMobile="/banners.png"
+        heroImage="https://cdn.orashop.in/banners/home/hero-1.webp"
+        heroImageMobile="https://cdn.orashop.in/banners/home/mobile-1.webp"
         title="Own. Radiate. Adorn."
         subtitle="Contemporary jewellery crafted for the modern woman."
         primaryCTA={{ label: 'Explore Collection', href: '/collections' }}

@@ -30,14 +30,14 @@ interface VideoReelStripProps {
 }
 
 const DEFAULT_REELS: ReelItem[] = [
-  { id: 1, type: 'image', src: '/chain.jpeg', overlayText: 'Layer It Your Way' },
-  { id: 2, type: 'image', src: '/ring.jpeg', overlayText: 'Styled Every Day' },
-  { id: 3, type: 'image', src: '/bracelets.jpeg', overlayText: 'Made for Her' },
-  { id: 4, type: 'image', src: '/banners.png', overlayText: 'Everyday Luxury' },
-  { id: 5, type: 'image', src: '/chain.jpeg', overlayText: 'Radiate Confidence' },
-  { id: 6, type: 'image', src: '/ring.jpeg', overlayText: 'Own Your Glow' },
-  { id: 7, type: 'image', src: '/bracelets.jpeg', overlayText: 'Gift Her Something Special' },
-  { id: 8, type: 'image', src: '/banners.png', overlayText: 'The ORA Feeling' },
+  { id: 1, type: 'image', src: 'https://cdn.orashop.in/banners/reels/reel-1.webp', overlayText: 'Layer It Your Way' },
+  { id: 2, type: 'image', src: 'https://cdn.orashop.in/banners/reels/reel-2.webp', overlayText: 'Styled Every Day' },
+  { id: 3, type: 'image', src: 'https://cdn.orashop.in/banners/reels/reel-3.webp', overlayText: 'Made for Her' },
+  { id: 4, type: 'image', src: 'https://cdn.orashop.in/banners/reels/reel-4.webp', overlayText: 'Everyday Luxury' },
+  { id: 5, type: 'image', src: 'https://cdn.orashop.in/banners/reels/reel-5.webp', overlayText: 'Radiate Confidence' },
+  { id: 6, type: 'image', src: 'https://cdn.orashop.in/banners/reels/reel-6.webp', overlayText: 'Own Your Glow' },
+  { id: 7, type: 'image', src: 'https://cdn.orashop.in/banners/reels/reel-7.webp', overlayText: 'Gift Her Something Special' },
+  { id: 8, type: 'image', src: 'https://cdn.orashop.in/banners/reels/reel-8.webp', overlayText: 'The ORA Feeling' },
 ];
 
 export default function VideoReelStrip({
@@ -130,6 +130,7 @@ export default function VideoReelStrip({
                   fill
                   className="object-cover"
                   sizes="280px"
+                  unoptimized
                 />
               )}
 

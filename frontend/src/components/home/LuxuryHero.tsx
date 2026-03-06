@@ -19,7 +19,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface HeroSlide {
   id: number;
-  image: string;
+  desktopImage: string;
+  mobileImage: string;
   headline: string;
   headlineAccent?: string;
   subtitle: string;
@@ -30,7 +31,8 @@ interface HeroSlide {
 const SLIDES: HeroSlide[] = [
   {
     id: 1,
-    image: '/banners.png',
+    desktopImage: 'https://cdn.orashop.in/banners/home/hero-1.webp',
+    mobileImage: 'https://cdn.orashop.in/banners/home/mobile-1.webp',
     headline: 'Own. Radiate.',
     headlineAccent: 'Adorn.',
     subtitle: 'Premium necklaces, rings & bracelets crafted for the modern woman.',
@@ -39,7 +41,8 @@ const SLIDES: HeroSlide[] = [
   },
   {
     id: 2,
-    image: '/chain.jpeg',
+    desktopImage: 'https://cdn.orashop.in/banners/home/hero-2.webp',
+    mobileImage: 'https://cdn.orashop.in/banners/home/mobile-2.webp',
     headline: 'Necklaces That',
     headlineAccent: 'Move With You',
     subtitle: 'Layered, minimal, or statement — find the piece that defines your style.',
@@ -47,7 +50,8 @@ const SLIDES: HeroSlide[] = [
   },
   {
     id: 3,
-    image: '/ring.jpeg',
+    desktopImage: 'https://cdn.orashop.in/banners/home/hero-3.webp',
+    mobileImage: 'https://cdn.orashop.in/banners/home/mobile-3.webp',
     headline: 'Rings For',
     headlineAccent: 'Every Moment',
     subtitle: 'Stackable bands, bold solitaires, and everyday classics.',
@@ -55,19 +59,38 @@ const SLIDES: HeroSlide[] = [
   },
   {
     id: 4,
-    image: '/bracelets.jpeg',
+    desktopImage: 'https://cdn.orashop.in/banners/home/hero-4.webp',
+    mobileImage: 'https://cdn.orashop.in/banners/home/mobile-4.webp',
     headline: 'Bracelets',
     headlineAccent: 'Wrapped in Grace',
     subtitle: 'Delicate cuffs & charm bracelets for effortless elegance.',
     cta: { label: 'Shop Bracelets', href: '/collections?category=bracelets' },
+  },
+  {
+    id: 5,
+    desktopImage: 'https://cdn.orashop.in/banners/home/hero-5.webp',
+    mobileImage: 'https://cdn.orashop.in/banners/home/mobile-5.webp',
+    headline: 'Elegance',
+    headlineAccent: 'Redefined',
+    subtitle: 'Discover jewellery that speaks your language of style.',
+    cta: { label: 'Explore Now', href: '/collections' },
   },
 ];
 
 export default function LuxuryHero() {
   const [current, setCurrent] = useState(0);
   const [direction, setDirection] = useState(1);
+  const [isMobile, setIsMobile] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const touchStartX = useRef(0);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   const startTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -138,13 +161,14 @@ export default function LuxuryHero() {
           className="absolute inset-0"
         >
           <Image
-            src={slide.image}
+            src={isMobile ? slide.mobileImage : slide.desktopImage}
             alt={`${slide.headline} ${slide.headlineAccent || ''}`}
             fill
             className="object-cover object-center"
             priority={slide.id === 1}
             quality={85}
             sizes="100vw"
+            unoptimized
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/30 to-black/55" />
         </motion.div>

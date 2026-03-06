@@ -34,21 +34,21 @@ const DEFAULT_CATEGORIES: CategoryItem[] = [
     id: 1,
     title: 'Necklaces',
     subtitle: 'Layered, minimal, or statement',
-    image: '/chain.jpeg',
+    image: 'https://cdn.orashop.in/banners/categories/necklaces.webp',
     href: '/collections?category=necklaces',
   },
   {
     id: 2,
     title: 'Rings',
     subtitle: 'Contemporary rings for every occasion',
-    image: '/ring.jpeg',
+    image: 'https://cdn.orashop.in/banners/categories/rings.webp',
     href: '/collections?category=rings',
   },
   {
     id: 3,
     title: 'Bracelets',
     subtitle: 'Delicate accents for the wrist',
-    image: '/bracelets.jpeg',
+    image: 'https://cdn.orashop.in/banners/categories/bracelets.webp',
     href: '/collections?category=bracelets',
   },
 ];
@@ -114,6 +114,7 @@ function CategoryCard({
           fill
           className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
           sizes={variant === 'large' ? '(max-width: 768px) 100vw, 50vw' : '(max-width: 768px) 100vw, 33vw'}
+          unoptimized
         />
 
         {/* Overlay */}

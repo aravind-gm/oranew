@@ -1,0 +1,62 @@
+{
+  "heroDesktop": [
+    "https://cdn.orashop.in/banners/home/hero-1.webp",
+    "https://cdn.orashop.in/banners/home/hero-2.webp",
+    "https://cdn.orashop.in/banners/home/hero-3.webp",
+    "https://cdn.orashop.in/banners/home/hero-4.webp",
+    "https://cdn.orashop.in/banners/home/hero-5.webp"
+  ],
+  "heroMobile": [
+    "https://cdn.orashop.in/banners/home/mobile-1.webp",
+    "https://cdn.orashop.in/banners/home/mobile-2.webp",
+    "https://cdn.orashop.in/banners/home/mobile-3.webp",
+    "https://cdn.orashop.in/banners/home/mobile-4.webp",
+    "https://cdn.orashop.in/banners/home/mobile-5.webp",
+    "https://cdn.orashop.in/banners/home/mobile-6.webp",
+    "https://cdn.orashop.in/banners/home/mobile-7.webp",
+    "https://cdn.orashop.in/banners/home/mobile-8.webp",
+    "https://cdn.orashop.in/banners/home/mobile-9.webp",
+    "https://cdn.orashop.in/banners/home/mobile-10.webp",
+    "https://cdn.orashop.in/banners/home/mobile-11.webp",
+    "https://cdn.orashop.in/banners/home/mobile-12.webp",
+    "https://cdn.orashop.in/banners/home/mobile-13.webp",
+    "https://cdn.orashop.in/banners/home/mobile-14.webp"
+  ],
+  "mood": [
+    "https://cdn.orashop.in/banners/mood/mood-1.webp",
+    "https://cdn.orashop.in/banners/mood/mood-2.webp",
+    "https://cdn.orashop.in/banners/mood/mood-3.webp",
+    "https://cdn.orashop.in/banners/mood/mood-4.webp",
+    "https://cdn.orashop.in/banners/mood/mood-5.webp",
+    "https://cdn.orashop.in/banners/mood/mood-6.webp",
+    "https://cdn.orashop.in/banners/mood/mood-7.webp",
+    "https://cdn.orashop.in/banners/mood/mood-8.webp",
+    "https://cdn.orashop.in/banners/mood/mood-9.webp",
+    "https://cdn.orashop.in/banners/mood/mood-10.webp",
+    "https://cdn.orashop.in/banners/mood/mood-11.webp"
+  ],
+  "reels": [
+    "https://cdn.orashop.in/banners/reels/reel-1.webp",
+    "https://cdn.orashop.in/banners/reels/reel-2.webp",
+    "https://cdn.orashop.in/banners/reels/reel-3.webp",
+    "https://cdn.orashop.in/banners/reels/reel-4.webp",
+    "https://cdn.orashop.in/banners/reels/reel-5.webp",
+    "https://cdn.orashop.in/banners/reels/reel-6.webp",
+    "https://cdn.orashop.in/banners/reels/reel-7.webp",
+    "https://cdn.orashop.in/banners/reels/reel-8.webp"
+  ],
+  "categories": [
+    {
+      "name": "necklaces",
+      "url": "https://cdn.orashop.in/banners/categories/necklaces.webp"
+    },
+    {
+      "name": "rings",
+      "url": "https://cdn.orashop.in/banners/categories/rings.webp"
+    },
+    {
+      "name": "bracelets",
+      "url": "https://cdn.orashop.in/banners/categories/bracelets.webp"
+    }
+  ]
+}

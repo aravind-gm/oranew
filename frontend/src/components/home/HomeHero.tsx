@@ -24,7 +24,7 @@ interface HomeHeroProps {
 }
 
 export default function HomeHero({
-  heroImage = '/banners.png',
+  heroImage = 'https://cdn.orashop.in/banners/home/hero-1.webp',
   heroImageMobile,
   heroVideo,
   title = 'Own. Radiate. Adorn.',
@@ -57,6 +57,7 @@ export default function HomeHero({
               priority
               quality={90}
               sizes="100vw"
+              unoptimized
             />
             {heroImageMobile && (
               <Image
@@ -67,6 +68,7 @@ export default function HomeHero({
                 priority
                 quality={85}
                 sizes="100vw"
+                unoptimized
               />
             )}
           </>

@@ -28,7 +28,7 @@ const CATEGORIES: CategoryItem[] = [
     title: 'Necklaces',
     subtitle: 'Most Loved',
     tagline: 'Layered, minimal, or statement — find the piece that speaks you.',
-    image: '/chain.jpeg',
+    image: 'https://cdn.orashop.in/banners/categories/necklaces.webp',
     href: '/collections?category=necklaces',
   },
   {
@@ -36,7 +36,7 @@ const CATEGORIES: CategoryItem[] = [
     title: 'Rings',
     subtitle: 'Timeless elegance',
     tagline: 'Stackable bands to bold solitaires.',
-    image: '/ring.jpeg',
+    image: 'https://cdn.orashop.in/banners/categories/rings.webp',
     href: '/collections?category=rings',
   },
   {
@@ -44,7 +44,7 @@ const CATEGORIES: CategoryItem[] = [
     title: 'Bracelets',
     subtitle: 'Wrapped in grace',
     tagline: 'Delicate cuffs & charm bracelets.',
-    image: '/bracelets.jpeg',
+    image: 'https://cdn.orashop.in/banners/categories/bracelets.webp',
     href: '/collections?category=bracelets',
   },
 ];
@@ -90,6 +90,7 @@ function CategoryCard({
           sizes={featured ? '100vw' : '(max-width: 640px) 50vw, 33vw'}
           onLoad={() => setImgLoaded(true)}
           priority={featured}
+          unoptimized
         />
 
         {/* Gradient overlay */}

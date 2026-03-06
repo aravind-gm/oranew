@@ -145,12 +145,13 @@ export default function ProductsPage() {
         {/* Background Image - Subtle */}
         <div className="absolute inset-0">
           <Image
-            src="/banners.png"
+            src="https://cdn.orashop.in/banners/home/hero-2.webp"
             alt="Fresh designs from ORA Atelier"
             fill
             className="object-cover object-center"
             priority
             quality={90}
+            unoptimized
           />
           {/* Elegant gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-r from-background/98 via-background/80 to-transparent" />
