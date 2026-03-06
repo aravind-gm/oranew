@@ -11,7 +11,7 @@
  */
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sparkles } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 export default function WomensDayBar() {
@@ -42,44 +42,28 @@ export default function WomensDayBar() {
           className="relative overflow-hidden z-[60]"
         >
           <div className="bg-gradient-to-r from-[#D4637A] via-[#E8889A] to-[#D4637A] text-white">
-            <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-center gap-3 relative">
-              {/* Animated flowers left */}
-              <motion.span
-                animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.1, 1] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                className="text-base sm:text-lg hidden sm:inline"
-              >
-                🌸
-              </motion.span>
+            <div className="max-w-7xl mx-auto px-3 py-1 flex items-center justify-center gap-2 relative">
+              {/* Flower left */}
+              <span className="text-xs hidden sm:inline">🌸</span>
 
               {/* Main text */}
-              <div className="flex items-center gap-2 text-center">
-                <Sparkles className="w-3.5 h-3.5 text-white/80 flex-shrink-0" />
-                <p className="text-[11px] sm:text-xs md:text-sm font-medium tracking-wide">
-                  <span className="hidden sm:inline">Celebrating </span>
-                  <span className="font-bold">International Women&apos;s Day</span>
-                  <span className="mx-1.5 text-white/50">·</span>
-                  <span className="italic opacity-90">Here&apos;s to her — bold, beautiful, unstoppable</span>
-                </p>
-                <Sparkles className="w-3.5 h-3.5 text-white/80 flex-shrink-0" />
-              </div>
+              <p className="text-[10px] sm:text-[11px] font-medium tracking-wide text-center">
+                <span className="font-bold">Happy Women&apos;s Day</span>
+                <span className="mx-1 text-white/50">·</span>
+                <span className="italic opacity-90">Bold, beautiful, unstoppable</span>
+                <span className="ml-1">✨</span>
+              </p>
 
-              {/* Animated flowers right */}
-              <motion.span
-                animate={{ rotate: [0, -10, 10, 0], scale: [1, 1.1, 1] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-                className="text-base sm:text-lg hidden sm:inline"
-              >
-                🌺
-              </motion.span>
+              {/* Flower right */}
+              <span className="text-xs hidden sm:inline">🌺</span>
 
               {/* Close button */}
               <button
                 onClick={dismiss}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/20 transition-colors"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-white/20 transition-colors"
                 aria-label="Dismiss"
               >
-                <X className="w-3.5 h-3.5 text-white/70" />
+                <X className="w-3 h-3 text-white/70" />
               </button>
             </div>
           </div>
