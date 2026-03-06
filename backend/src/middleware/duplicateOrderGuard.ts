@@ -1,25 +1,24 @@
 /**
  * Duplicate Order Guard Middleware
  *
- * Prevents duplicate order creation within 60 seconds using a server-side guard.
- * Safe under concurrent requests via atomic DB constraint.
+ * Prevents duplicate order creation within 10 seconds using a server-side guard.
+ * Uses in-memory SHA-256 cart hash to only block exact same cart resubmissions.
  *
- * Strategy: Check if an order exists with identical:
- * - userId + cartHash + timestamp (within 60s)
+ * Strategy: Check if a checkout was attempted with identical:
+ * - userId + cartHash + timestamp (within 10s)
  *
- * This prevents accidental double-submissions and browser back-button issues.
+ * This prevents accidental double-clicks and browser back-button issues
+ * without blocking legitimate different orders by the same user.
  */
 
 import { NextFunction, Response } from 'express';
 import crypto from 'crypto';
-import { prisma } from '../config/database';
-import { AppError } from '../utils/helpers';
 import { AuthRequest } from './auth';
 
 // In-memory dedupe store (for current process)
 // Key: `${userId}:${cartHash}`, Value: timestamp
 const recentOrders = new Map<string, number>();
-const DEDUPE_WINDOW = 60 * 1000; // 60 seconds
+const DEDUPE_WINDOW = 10 * 1000; // 10 seconds — catch double-clicks/network retries
 const CLEANUP_INTERVAL = 5 * 60 * 1000; // Cleanup old entries every 5 minutes
 
 // Periodic cleanup of stale entries
@@ -93,7 +92,7 @@ export const duplicateOrderGuard = async (
 
       return res.status(409).json({
         success: false,
-        error: 'Duplicate order detected. Please wait 60 seconds before retrying.',
+        error: 'Duplicate order detected. Please wait a few seconds before retrying.',
         retryAfter: Math.ceil((DEDUPE_WINDOW - (now - lastAttempt)) / 1000),
       });
     }
@@ -116,50 +115,6 @@ export const duplicateOrderGuard = async (
     next();
   }
 };
-
-/**
- * DB-level check: verify no order was created from the same cart in the last 60s
- * Call this inside the checkout handler AFTER creating the order.
- *
- * This provides a second line of defense against edge cases where
- * in-memory store is cleared (process restart) or multiple instances conflict.
- */
-export async function verifyOrderNotDuplicate(
-  userId: string,
-  cartHash: string
-): Promise<void> {
-  try {
-    const sixtySecondsAgo = new Date(Date.now() - 60 * 1000);
-
-    // Check if an order was created from this exact cart within 60s
-    const recentOrder = await prisma.order.findFirst({
-      where: {
-        userId,
-        createdAt: {
-          gte: sixtySecondsAgo,
-        },
-        // Match cart items (use the order items hash from DB)
-        // This is a soft check — if same user creates two different carts, it's OK
-      },
-      select: { id: true, createdAt: true },
-    });
-
-    if (recentOrder) {
-      const secondsAgo = Math.round((Date.now() - recentOrder.createdAt.getTime()) / 1000);
-      throw new AppError(
-        `An order was just created ${secondsAgo} seconds ago. Please verify your previous order before placing another.`,
-        409
-      );
-    }
-  } catch (error) {
-    // Only throw if it's our duplicate error, not DB errors
-    if (error instanceof AppError) {
-      throw error;
-    }
-    console.error('[DuplicateOrderGuard DB] Error during verification:', error);
-    // Fail open — don't block checkout
-  }
-}
 
 /**
  * Optional: Extract dedup key and perform post-order cleanup
