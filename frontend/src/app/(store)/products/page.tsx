@@ -148,10 +148,9 @@ export default function ProductsPage() {
             src="https://cdn.orashop.in/banners/home/hero-2.webp"
             alt="Fresh designs from ORA Atelier"
             fill
-            className="object-cover object-center"
+            className="object-cover object-[center_20%]"
             priority
             quality={90}
-            unoptimized
           />
           {/* Elegant gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-r from-background/98 via-background/80 to-transparent" />

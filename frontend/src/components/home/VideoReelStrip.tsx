@@ -130,7 +130,7 @@ export default function VideoReelStrip({
                   fill
                   className="object-cover"
                   sizes="280px"
-                  unoptimized
+                  loading="lazy"
                 />
               )}
 

@@ -90,7 +90,6 @@ function CategoryCard({
           sizes={featured ? '100vw' : '(max-width: 640px) 50vw, 33vw'}
           onLoad={() => setImgLoaded(true)}
           priority={featured}
-          unoptimized
         />
 
         {/* Gradient overlay */}

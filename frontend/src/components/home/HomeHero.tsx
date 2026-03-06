@@ -53,22 +53,20 @@ export default function HomeHero({
               src={heroImage}
               alt="ORA Jewellery — Contemporary Collection"
               fill
-              className={`object-cover object-center ${heroImageMobile ? 'hidden md:block' : ''}`}
+              className={`object-cover object-[center_20%] ${heroImageMobile ? 'hidden md:block' : ''}`}
               priority
               quality={90}
               sizes="100vw"
-              unoptimized
             />
             {heroImageMobile && (
               <Image
                 src={heroImageMobile}
                 alt="ORA Jewellery — Contemporary Collection"
                 fill
-                className="object-cover object-center md:hidden"
+                className="object-cover object-[center_20%] md:hidden"
                 priority
                 quality={85}
                 sizes="100vw"
-                unoptimized
               />
             )}
           </>

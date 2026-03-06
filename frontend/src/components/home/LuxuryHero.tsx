@@ -31,22 +31,22 @@ interface HeroSlide {
 const SLIDES: HeroSlide[] = [
   {
     id: 1,
-    desktopImage: 'https://cdn.orashop.in/banners/home/hero-1.webp',
-    mobileImage: 'https://cdn.orashop.in/banners/home/mobile-1.webp',
-    headline: 'Own. Radiate.',
-    headlineAccent: 'Adorn.',
-    subtitle: 'Premium necklaces, rings & bracelets crafted for the modern woman.',
-    cta: { label: 'Shop Bestsellers', href: '/collections' },
-    ctaSecondary: { label: 'View All', href: '/collections' },
-  },
-  {
-    id: 2,
     desktopImage: 'https://cdn.orashop.in/banners/home/hero-2.webp',
     mobileImage: 'https://cdn.orashop.in/banners/home/mobile-2.webp',
     headline: 'Necklaces That',
     headlineAccent: 'Move With You',
     subtitle: 'Layered, minimal, or statement — find the piece that defines your style.',
     cta: { label: 'Shop Necklaces', href: '/collections?category=necklaces' },
+    ctaSecondary: { label: 'View All', href: '/collections' },
+  },
+  {
+    id: 2,
+    desktopImage: 'https://cdn.orashop.in/banners/home/hero-1.webp',
+    mobileImage: 'https://cdn.orashop.in/banners/home/mobile-1.webp',
+    headline: 'Own. Radiate.',
+    headlineAccent: 'Adorn.',
+    subtitle: 'Premium necklaces, rings & bracelets crafted for the modern woman.',
+    cta: { label: 'Shop Bestsellers', href: '/collections' },
   },
   {
     id: 3,
@@ -164,11 +164,11 @@ export default function LuxuryHero() {
             src={isMobile ? slide.mobileImage : slide.desktopImage}
             alt={`${slide.headline} ${slide.headlineAccent || ''}`}
             fill
-            className="object-cover object-center"
-            priority={slide.id === 1}
+            className="object-cover object-[center_20%]"
+            priority={slide.id <= 2}
             quality={85}
             sizes="100vw"
-            unoptimized
+            loading={slide.id <= 2 ? 'eager' : 'lazy'}
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/30 to-black/55" />
         </motion.div>
