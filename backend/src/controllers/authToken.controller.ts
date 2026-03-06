@@ -13,18 +13,24 @@ import { prisma } from '../config/database';
 /**
  * Set HttpOnly cookies for access and refresh tokens
  * SECURITY: HttpOnly prevents XSS attacks, Secure ensures HTTPS only
+ * 
+ * NOTE: sameSite must be 'none' because frontend (orashop.in) and backend
+ * (oranew.onrender.com) are on different domains. With 'strict' or 'lax',
+ * cookies would never be sent cross-origin, breaking authentication.
+ * secure: true is required when sameSite is 'none'.
  */
 export const setAuthCookies = (
   res: Response,
   accessToken: string,
   refreshToken: string
 ) => {
+  const isProduction = process.env.NODE_ENV === 'production';
+
   // Access token cookie (30 minutes)
   res.cookie('access_token', accessToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     path: '/',
     maxAge: 30 * 60 * 1000, // 30 minutes
   });
@@ -32,9 +38,8 @@ export const setAuthCookies = (
   // Refresh token cookie (7 days)
   res.cookie('refresh_token', refreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
@@ -44,19 +49,19 @@ export const setAuthCookies = (
  * Clear authentication cookies
  */
 export const clearAuthCookies = (res: Response) => {
+  const isProduction = process.env.NODE_ENV === 'production';
+
   res.clearCookie('access_token', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     path: '/',
   });
 
   res.clearCookie('refresh_token', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     path: '/',
   });
 };

@@ -280,8 +280,7 @@ export const verifyOtp = async (
     res.cookie('access_token', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       path: '/',
       maxAge: 30 * 60 * 1000, // 30 minutes
     });
@@ -289,8 +288,7 @@ export const verifyOtp = async (
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
@@ -390,8 +388,7 @@ export const login = async (
       res.cookie('access_token', accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         path: '/',
         maxAge: 30 * 60 * 1000, // 30 minutes
       });
@@ -399,8 +396,7 @@ export const login = async (
       res.cookie('refresh_token', refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         path: '/',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
@@ -430,33 +426,32 @@ export const login = async (
       await storeOtp(emailLower, { hash: otpHash, expiresAt: expiresAt.toISOString(), attempts: 0 });
 
 
-      // Try to send email with enhanced error handling
-      try {
-        await sendEmail({
-          to: emailLower,
-          subject: 'ORA Jewellery - Your Login Code',
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 400px; margin: 0 auto;">
-              <h2>ORA Jewellery</h2>
-              <p>Your login code is:</p>
-              <h1 style="font-size: 32px; letter-spacing: 4px; color: #2563eb;">${otp}</h1>
-              <p>This code expires in 5 minutes.</p>
-              <p style="color: #666; font-size: 14px;">If you didn't request this code, please ignore this email.</p>
-            </div>
-          `,
-        });
+      // Send OTP email
+      const emailSent = await sendEmail({
+        to: emailLower,
+        subject: 'ORA Jewellery - Your Login Code',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 400px; margin: 0 auto;">
+            <h2>ORA Jewellery</h2>
+            <p>Your login code is:</p>
+            <h1 style="font-size: 32px; letter-spacing: 4px; color: #2563eb;">${otp}</h1>
+            <p>This code expires in 5 minutes.</p>
+            <p style="color: #666; font-size: 14px;">If you didn't request this code, please ignore this email.</p>
+          </div>
+        `,
+      });
 
+      if (emailSent) {
         console.log(`[Auth] ✅ OTP email sent to: ${email}`);
-      } catch (emailError) {
-        // SMTP FAILURE HANDLING - Don't crash, just log warning
-        console.warn(`[Auth] ⚠️ SMTP failed for ${email}:`, emailError);
-        // Don't return error - continue with success response
-        // This is the "temporary hybrid" solution for unreliable SMTP
+      } else {
+        console.error(`[Auth] ❌ OTP email FAILED for: ${email} — check EMAIL_HOST, EMAIL_USER, EMAIL_PASS env vars`);
       }
 
       return res.status(200).json({
-        success: true,
-        message: 'Login code sent to your email',
+        success: emailSent,
+        message: emailSent
+          ? 'Login code sent to your email. Please check your inbox.'
+          : 'Unable to send OTP email. Please try again or contact support.',
         requiresOTP: true,
       });
     }
@@ -584,8 +579,7 @@ export const register = async (
       res.cookie('access_token', accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         path: '/',
         maxAge: 30 * 60 * 1000, // 30 minutes
       });
@@ -593,8 +587,7 @@ export const register = async (
       res.cookie('refresh_token', refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         path: '/',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
@@ -639,32 +632,32 @@ export const register = async (
       await storeOtp(emailLower, { hash: otpHash, expiresAt: expiresAt.toISOString(), attempts: 0 });
 
 
-      // Try to send welcome email with OTP
-      try {
-        await sendEmail({
-          to: emailLower,
-          subject: 'Welcome to ORA Jewellery - Verify Your Account',
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 400px; margin: 0 auto;">
-              <h2>Welcome to ORA Jewellery! ✨</h2>
-              <p>Thank you for signing up. Your verification code is:</p>
-              <h1 style="font-size: 32px; letter-spacing: 4px; color: #2563eb;">${otp}</h1>
-              <p>This code expires in 5 minutes.</p>
-              <p style="color: #666; font-size: 14px;">If you didn't create this account, please ignore this email.</p>
-            </div>
-          `,
-        });
+      // Send welcome email with OTP
+      const emailSent = await sendEmail({
+        to: emailLower,
+        subject: 'Welcome to ORA Jewellery - Verify Your Account',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 400px; margin: 0 auto;">
+            <h2>Welcome to ORA Jewellery! ✨</h2>
+            <p>Thank you for signing up. Your verification code is:</p>
+            <h1 style="font-size: 32px; letter-spacing: 4px; color: #2563eb;">${otp}</h1>
+            <p>This code expires in 5 minutes.</p>
+            <p style="color: #666; font-size: 14px;">If you didn't create this account, please ignore this email.</p>
+          </div>
+        `,
+      });
 
+      if (emailSent) {
         console.log(`[Auth] ✅ Welcome email sent to: ${email}`);
-      } catch (emailError) {
-        // SMTP FAILURE HANDLING - Don't crash, just log warning
-        console.warn(`[Auth] ⚠️ SMTP failed for registration ${email}:`, emailError);
-        // Don't return error - user is created, they can still verify later
+      } else {
+        console.error(`[Auth] ❌ Welcome email FAILED for: ${email} — check EMAIL_HOST, EMAIL_USER, EMAIL_PASS env vars`);
       }
 
       return res.status(201).json({
         success: true,
-        message: 'Registration successful. Check your email for verification code.',
+        message: emailSent
+          ? 'Registration successful. Check your email for verification code.'
+          : 'Registration successful but email delivery failed. Please try requesting a new OTP.',
         requiresOTP: true,
         user: {
           id: user.id,
@@ -747,8 +740,7 @@ export const passwordLogin = async (
     res.cookie('access_token', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       path: '/',
       maxAge: 30 * 60 * 1000, // 30 minutes
     });
@@ -756,8 +748,7 @@ export const passwordLogin = async (
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
@@ -903,16 +894,14 @@ export const logout = async (
     res.clearCookie('access_token', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       path: '/',
     });
 
     res.clearCookie('refresh_token', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       path: '/',
     });
 

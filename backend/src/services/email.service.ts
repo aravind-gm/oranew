@@ -7,17 +7,29 @@ const emailHost = process.env.EMAIL_HOST || process.env.SMTP_HOST || 'smtp.gmail
 const emailPort = parseInt(process.env.EMAIL_PORT || process.env.SMTP_PORT || '587');
 const emailSecure = (process.env.EMAIL_SECURE === 'true') || emailPort === 465;
 
-const transporter = nodemailer.createTransport({
-  host: emailHost,
-  port: emailPort,
-  secure: emailSecure,
-  auth: emailUser && emailPass ? { user: emailUser, pass: emailPass } : undefined,
-  connectionTimeout: 15000,
-  greetingTimeout: 10000,
-  socketTimeout: 15000,
-  // Gmail-specific: needed for App Passwords
-  ...(emailHost.includes('gmail') && { service: 'gmail' }),
-} as nodemailer.TransportOptions);
+// Gmail uses 'service' which auto-configures host/port.
+// For all other providers (GoDaddy, etc.), use explicit host/port.
+const isGmail = emailHost.includes('gmail');
+
+const transportConfig = isGmail
+  ? {
+      service: 'gmail',
+      auth: emailUser && emailPass ? { user: emailUser, pass: emailPass } : undefined,
+      connectionTimeout: 15000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
+    }
+  : {
+      host: emailHost,
+      port: emailPort,
+      secure: emailSecure,
+      auth: emailUser && emailPass ? { user: emailUser, pass: emailPass } : undefined,
+      connectionTimeout: 15000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
+    };
+
+const transporter = nodemailer.createTransport(transportConfig as nodemailer.TransportOptions);
 
 // Verify SMTP on startup (non-blocking)
 if (emailUser && emailPass) {

@@ -14,16 +14,15 @@
  *   - Active mood filter integration
  */
 
-import { PromoBannersConfig, MoodItem } from '@/store/shopAllCmsStore';
+import { MoodItem } from '@/store/shopAllCmsStore';
 import api from '@/lib/api';
-import { ChevronDown, Loader2, SlidersHorizontal, ArrowUpDown } from 'lucide-react';
+import { ChevronDown, SlidersHorizontal, ArrowUpDown } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 import LuxuryProductCard from './LuxuryProductCard';
-import LuxuryPromoBanner from './LuxuryPromoBanner';
 import {
   DesktopFilterSidebar,
   MobileFilterDrawer,
@@ -191,8 +190,6 @@ function EmptyState() {
 interface LuxuryProductGridProps {
   defaultSort?: string;
   productsPerPage?: number;
-  loadMoreStyle?: 'button' | 'infinite';
-  promoBanners?: PromoBannersConfig;
   activeMood?: MoodItem | null;
   onClearMood?: () => void;
 }
@@ -200,8 +197,6 @@ interface LuxuryProductGridProps {
 export default function LuxuryProductGrid({
   defaultSort = 'popularity',
   productsPerPage = 24,
-  loadMoreStyle = 'button',
-  promoBanners,
   activeMood,
   onClearMood,
 }: LuxuryProductGridProps) {
@@ -213,12 +208,9 @@ export default function LuxuryProductGrid({
   const [products, setProducts] = useState<CollectionProduct[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo>({ page: 1, limit: productsPerPage, total: 0, pages: 0 });
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   const gridRef = useRef<HTMLDivElement>(null);
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const activeFilterCount = [filters.category, filters.priceRange, filters.material, filters.availability, filters.mood].filter(Boolean).length;
 
@@ -261,10 +253,9 @@ export default function LuxuryProductGrid({
 
   // Fetch products
   const fetchProducts = useCallback(
-    async (page: number = 1, append: boolean = false) => {
+    async (page: number = 1) => {
       try {
-        if (append) setLoadingMore(true);
-        else setLoading(true);
+        setLoading(true);
 
         let sortBy = 'createdAt';
         if (filters.sort === 'newest') sortBy = 'createdAt';
@@ -296,18 +287,14 @@ export default function LuxuryProductGrid({
         const newProducts = response.data.data || [];
         const newPagination = response.data.pagination || { page: 1, limit: productsPerPage, total: 0, pages: 0 };
 
-        if (append) setProducts((prev) => [...prev, ...newProducts]);
-        else {
-          // Shuffle products when using popularity sort so customers see fresh layouts
-          const displayProducts = filters.sort === 'popularity' ? seededShuffle(newProducts) : newProducts;
-          setProducts(displayProducts);
-        }
+        // Shuffle products when using popularity sort so customers see fresh layouts
+        const displayProducts = filters.sort === 'popularity' ? seededShuffle(newProducts) : newProducts;
+        setProducts(displayProducts);
         setPagination(newPagination);
       } catch {
-        if (!append) setProducts([]);
+        setProducts([]);
       } finally {
         setLoading(false);
-        setLoadingMore(false);
       }
     },
     [filters, productsPerPage]
@@ -315,7 +302,7 @@ export default function LuxuryProductGrid({
 
   // Fetch on filter change
   useEffect(() => {
-    fetchProducts(1, false);
+    fetchProducts(1);
     const newUrl = `/collections${filtersToUrl(filters)}`;
     router.replace(newUrl, { scroll: false });
   }, [fetchProducts, filters, router]);
@@ -331,25 +318,6 @@ export default function LuxuryProductGrid({
     });
   }, [searchParams, defaultSort]);
 
-  // Infinite scroll
-  useEffect(() => {
-    if (loadMoreStyle !== 'infinite') return;
-
-    if (observerRef.current) observerRef.current.disconnect();
-
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !loadingMore && pagination.page < pagination.pages) {
-          fetchProducts(pagination.page + 1, true);
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (loadMoreRef.current) observerRef.current.observe(loadMoreRef.current);
-    return () => observerRef.current?.disconnect();
-  }, [loadMoreStyle, loadingMore, pagination, fetchProducts]);
-
   const handleFilterChange = (key: keyof FilterState, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
@@ -359,33 +327,31 @@ export default function LuxuryProductGrid({
     onClearMood?.();
   };
 
-  const handleLoadMore = () => {
-    if (pagination.page < pagination.pages) {
-      fetchProducts(pagination.page + 1, true);
+  // Page navigation handler
+  const handlePageChange = (page: number) => {
+    if (page < 1 || page > pagination.pages || page === pagination.page) return;
+    fetchProducts(page);
+    // Scroll to top of product grid
+    const el = document.getElementById('products-section');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  // Generate page number array with ellipsis
+  const getPageNumbers = (current: number, total: number): (number | string)[] => {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages: (number | string)[] = [];
+    if (current <= 3) {
+      pages.push(1, 2, 3, 4, '...', total);
+    } else if (current >= total - 2) {
+      pages.push(1, '...', total - 3, total - 2, total - 1, total);
+    } else {
+      pages.push(1, '...', current - 1, current, current + 1, '...', total);
     }
+    return pages;
   };
 
-  // Build grid items with promo banner injection
-  const buildGridItems = () => {
-    if (!products.length) return [];
-
-    const items: Array<{ type: 'product'; product: CollectionProduct } | { type: 'promo'; banner: any }> = [];
-    const activeBanners = promoBanners?.enabled ? promoBanners.banners.filter((b) => b.enabled) : [];
-    const insertEvery = promoBanners?.insertAfterEvery || 8;
-    let bannerIndex = 0;
-
-    products.forEach((product, i) => {
-      items.push({ type: 'product', product });
-      if (activeBanners.length > 0 && (i + 1) % insertEvery === 0 && bannerIndex < activeBanners.length) {
-        items.push({ type: 'promo', banner: activeBanners[bannerIndex] });
-        bannerIndex++;
-      }
-    });
-
-    return items;
-  };
-
-  const gridItems = buildGridItems();
+  // Build grid items — clean product grid, no promo banners
+  const gridItems = products.map((product) => ({ type: 'product' as const, product }));
 
   const filterSidebarProps = {
     filters,
@@ -418,14 +384,6 @@ export default function LuxuryProductGrid({
                   </span>
                 )}
               </button>
-              <span className="text-[13px] text-neutral-400 tabular-nums whitespace-nowrap font-medium">
-                {loading ? '—' : (
-                  <>
-                    <span className="text-neutral-700">{pagination.total.toLocaleString('en-IN')}</span>
-                    {' '}Product{pagination.total !== 1 ? 's' : ''}
-                  </>
-                )}
-              </span>
             </div>
 
             {/* Right: Sort dropdown */}
@@ -478,58 +436,57 @@ export default function LuxuryProductGrid({
             ) : (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-2 gap-y-5 sm:gap-x-5 sm:gap-y-8 lg:gap-x-7 lg:gap-y-10">
-                  {gridItems.map((item, index) =>
-                    item.type === 'product' ? (
+                  {gridItems.map((item, index) => (
                       <LuxuryProductCard
                         key={item.product.id}
                         product={item.product}
                         index={index}
                         priority={index < 4}
                       />
-                    ) : (
-                      <LuxuryPromoBanner key={`promo-${item.banner.id}`} banner={item.banner} />
-                    )
-                  )}
+                  ))}
                 </div>
 
-                {/* Load More / Infinite Scroll */}
-                {pagination.page < pagination.pages && (
-                  <div ref={loadMoreRef} className="mt-14 flex justify-center">
-                    {loadMoreStyle === 'button' ? (
-                      <button
-                        onClick={handleLoadMore}
-                        disabled={loadingMore}
-                        className="group inline-flex items-center gap-2.5 px-12 py-4 text-[11px] tracking-[0.2em] uppercase font-semibold border border-neutral-200 text-neutral-600 hover:border-[#D4AF37] hover:text-[#D4AF37] rounded-full transition-all duration-500 disabled:opacity-50 min-h-[52px] hover:shadow-lg"
-                      >
-                        {loadingMore ? (
-                          <>
-                            <Loader2 size={14} className="animate-spin" />
-                            Loading...
-                          </>
-                        ) : (
-                          <>
-                            Load More Pieces
-                          </>
-                        )}
-                      </button>
-                    ) : (
-                      loadingMore && (
-                        <div className="flex items-center gap-2 text-neutral-400">
-                          <Loader2 size={16} className="animate-spin text-[#D4AF37]" />
-                          <span className="text-sm">Discovering more pieces...</span>
-                        </div>
+                {/* Pagination */}
+                {pagination.pages > 1 && (
+                  <div className="mt-14 flex items-center justify-center gap-2">
+                    {/* Previous */}
+                    <button
+                      onClick={() => handlePageChange(pagination.page - 1)}
+                      disabled={pagination.page <= 1}
+                      className="flex items-center justify-center w-10 h-10 rounded-full border border-neutral-200 text-neutral-500 hover:border-[#D4AF37] hover:text-[#D4AF37] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                      aria-label="Previous page"
+                    >
+                      <ChevronDown size={16} className="rotate-90" />
+                    </button>
+
+                    {/* Page Numbers */}
+                    {getPageNumbers(pagination.page, pagination.pages).map((pageNum, idx) =>
+                      pageNum === '...' ? (
+                        <span key={`ellipsis-${idx}`} className="px-1 text-neutral-300 text-sm">…</span>
+                      ) : (
+                        <button
+                          key={pageNum}
+                          onClick={() => handlePageChange(pageNum as number)}
+                          className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-medium transition-all ${
+                            pagination.page === pageNum
+                              ? 'bg-[#1A1A1A] text-white shadow-md'
+                              : 'border border-neutral-200 text-neutral-600 hover:border-[#D4AF37] hover:text-[#D4AF37]'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
                       )
                     )}
-                  </div>
-                )}
 
-                {/* All loaded */}
-                {pagination.page >= pagination.pages && products.length > 0 && (
-                  <div className="mt-14 text-center">
-                    <div className="w-12 h-[1px] bg-[#D4AF37]/30 mx-auto mb-4" />
-                    <p className="text-[13px] text-neutral-400 italic font-light">
-                      You&apos;ve explored all {pagination.total.toLocaleString('en-IN')} pieces ✨
-                    </p>
+                    {/* Next */}
+                    <button
+                      onClick={() => handlePageChange(pagination.page + 1)}
+                      disabled={pagination.page >= pagination.pages}
+                      className="flex items-center justify-center w-10 h-10 rounded-full border border-neutral-200 text-neutral-500 hover:border-[#D4AF37] hover:text-[#D4AF37] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                      aria-label="Next page"
+                    >
+                      <ChevronDown size={16} className="-rotate-90" />
+                    </button>
                   </div>
                 )}
               </>

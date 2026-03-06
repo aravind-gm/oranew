@@ -19,10 +19,10 @@ interface LuxuryHighlightedCollectionsProps {
 }
 
 const CATEGORY_THEMES = [
-  { gradient: 'from-[#FFF5F7] to-[#FFE8EF]', accent: '#C2185B' },
-  { gradient: 'from-[#FFF8F0] to-[#FFE8D6]', accent: '#BF8C2F' },
-  { gradient: 'from-[#F5F0FF] to-[#EDE4FF]', accent: '#6A1B9A' },
-  { gradient: 'from-[#F0F5F0] to-[#E4EFE4]', accent: '#2E7D32' },
+  { gradient: 'from-[#F5F0EB] to-[#E4D8CC]', accent: '#8B7355' },
+  { gradient: 'from-[#F0ECE8] to-[#DED4C8]', accent: '#9B8B75' },
+  { gradient: 'from-[#EEE9E4] to-[#DCD0C2]', accent: '#A08968' },
+  { gradient: 'from-[#F2EDE8] to-[#E0D6CA]', accent: '#8C7A60' },
 ];
 
 export default function LuxuryHighlightedCollections({ config }: LuxuryHighlightedCollectionsProps) {
@@ -79,12 +79,13 @@ export default function LuxuryHighlightedCollections({ config }: LuxuryHighlight
                       ) : (
                         <div className={`absolute inset-0 bg-gradient-to-br ${theme.gradient}`}>
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="text-7xl md:text-8xl opacity-10 font-serif" style={{ color: theme.accent }}>
+                            <div className="text-[100px] md:text-[120px] opacity-[0.06] font-serif font-light" style={{ color: theme.accent }}>
                               {item.title.charAt(0)}
                             </div>
                           </div>
-                          {/* Ambient glow */}
-                          <div className="absolute bottom-0 right-0 w-1/2 h-1/2 bg-white/20 rounded-full blur-3xl" />
+                          {/* Subtle corner accent */}
+                          <div className="absolute top-6 right-6 w-12 h-[1px] bg-black/8" />
+                          <div className="absolute top-6 right-6 w-[1px] h-12 bg-black/8" />
                         </div>
                       )}
 

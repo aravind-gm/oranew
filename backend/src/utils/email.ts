@@ -18,20 +18,31 @@ function getTransporter() {
       console.log(`📧 [Email] Transporter init: ${host}:${port} (user: ${user.substring(0, 3)}***)`);
     }
 
-    transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure,
-      auth: user && pass ? { user, pass } : undefined,
-      connectionTimeout: 15000,
-      greetingTimeout: 10000,
-      socketTimeout: 15000,
-      // Gmail-specific: needed for App Passwords
-      ...(host.includes('gmail') && {
-        service: 'gmail',
-        // Remove host/port when using 'service' — nodemailer handles it
-      }),
-    } as nodemailer.TransportOptions);
+    // Gmail uses 'service' which auto-configures host/port.
+    // For all other providers (GoDaddy, etc.), use explicit host/port.
+    const isGmail = host.includes('gmail');
+
+    const transportConfig = isGmail
+      ? {
+          service: 'gmail',
+          auth: user && pass ? { user, pass } : undefined,
+          connectionTimeout: 15000,
+          greetingTimeout: 10000,
+          socketTimeout: 15000,
+        }
+      : {
+          host,
+          port,
+          secure,
+          auth: user && pass ? { user, pass } : undefined,
+          connectionTimeout: 15000,
+          greetingTimeout: 10000,
+          socketTimeout: 15000,
+        };
+
+    console.log(`📧 [Email] Config: ${isGmail ? 'Gmail service' : `${host}:${port} (secure=${secure})`}`);
+
+    transporter = nodemailer.createTransport(transportConfig as nodemailer.TransportOptions);
 
     // Verify connection on first use (non-blocking)
     if (user && pass && !transporterVerified) {

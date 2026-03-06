@@ -149,16 +149,7 @@ export default function Header() {
           </div>
 
           {/* Right Side Icons */}
-          <div className="flex items-center gap-1 flex-shrink-0">
-            {/* Mobile Search */}
-            <Link
-              href="/search"
-              className="md:hidden text-neutral-900 hover:text-oraAccent transition-colors p-2"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </Link>
+          <div className="flex items-center gap-1 flex-shrink-0 ml-auto">
 
             {/* Wishlist */}
             <Link
@@ -231,7 +222,8 @@ export default function Header() {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden text-neutral-900 hover:text-oraAccent transition-colors p-2"
+              className="md:hidden text-neutral-900 hover:text-oraAccent transition-colors p-2 flex items-center justify-center"
+              aria-label="Open menu"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {isMobileMenuOpen ? (

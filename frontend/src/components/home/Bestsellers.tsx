@@ -3,10 +3,10 @@
 /**
  * Bestsellers — First Product Grid on Homepage
  *
- * Title: "Customer Favorites"
- * Subtext: "Our most gifted pieces."
+ * Title: "Trending Now"
+ * Subtext: "The pieces everyone's loving right now."
  * Grid: Desktop 4 col, Tablet 2 col, Mobile 2 col
- * Max 8 products.
+ * Max 8 products, shuffled every 1 hour using seeded shuffle.
  * Uses LuxuryProductCard.
  * Skeleton loading.
  */
@@ -16,7 +16,23 @@ import api from '@/lib/api';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
+
+// Shuffle array with a seed that changes every 1 hour
+// This ensures all users see the same shuffled order for each hour window
+function seededShuffle<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  // Seed changes every 1 hour (3600000 ms)
+  const seed = Math.floor(Date.now() / (1000 * 60 * 60));
+  let m = shuffled.length;
+  let s = seed;
+  while (m) {
+    s = (s * 1103515245 + 12345) & 0x7fffffff;
+    const i = s % m--;
+    [shuffled[m], shuffled[i]] = [shuffled[i], shuffled[m]];
+  }
+  return shuffled;
+}
 
 interface Product {
   id: string;
@@ -42,15 +58,18 @@ interface Product {
 export default function Bestsellers() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const rawProductsRef = useRef<Product[]>([]);
 
   const fetchBestsellers = useCallback(async () => {
     setLoading(true);
     try {
       const response = await api.get('/products', {
-        params: { limit: 8, sort: '-createdAt' },
+        params: { limit: 16, sort: '-createdAt' },
       });
       const data = response.data.data || response.data.products || [];
-      setProducts(data);
+      rawProductsRef.current = data;
+      // Shuffle with hourly seed so products rotate every hour
+      setProducts(seededShuffle(data as Product[]).slice(0, 8));
     } catch (error) {
       console.error('Bestsellers: fetch failed', error);
       setProducts([]);
@@ -62,6 +81,16 @@ export default function Bestsellers() {
   useEffect(() => {
     fetchBestsellers();
   }, [fetchBestsellers]);
+
+  // Re-shuffle every hour (check every 5 minutes if the hour changed)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (rawProductsRef.current.length > 0) {
+        setProducts(seededShuffle(rawProductsRef.current as Product[]).slice(0, 8));
+      }
+    }, 5 * 60 * 1000); // check every 5 minutes
+    return () => clearInterval(interval);
+  }, []);
 
   // Assign visual badges for psychology (first 3 get special badges)
   const getBadge = (index: number): 'bestseller' | 'most-gifted' | 'limited' | null => {

@@ -339,7 +339,7 @@ export default function TumblersPage() {
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
-      // Try fetching by category slug 'tumblers' or tag
+      // Try fetching by category slug 'tumblers' first
       const res = await api.get('/products', {
         params: {
           category: 'tumblers',
@@ -350,7 +350,21 @@ export default function TumblersPage() {
       });
 
       const data = res.data;
-      const items = data?.data || data?.products || [];
+      let items: TumblerProduct[] = data?.data || data?.products || [];
+      
+      // Client-side filter: only show products that actually belong to tumblers/mugs category
+      // This prevents jewelry products from appearing if the backend returns all products
+      items = items.filter((p) => {
+        const catName = p.category?.name?.toLowerCase() || '';
+        const catSlug = p.category?.slug?.toLowerCase() || '';
+        const productName = p.name?.toLowerCase() || '';
+        return (
+          catName.includes('tumbler') || catName.includes('mug') || catName.includes('drinkware') ||
+          catSlug.includes('tumbler') || catSlug.includes('mug') ||
+          productName.includes('tumbler') || productName.includes('mug')
+        );
+      });
+      
       setProducts(items);
     } catch (err) {
       console.error('Error fetching tumblers:', err);
@@ -365,7 +379,13 @@ export default function TumblersPage() {
           },
         });
         const data = res.data;
-        const items = data?.data || data?.products || [];
+        let items: TumblerProduct[] = data?.data || data?.products || [];
+        // Client-side filter for search results too
+        items = items.filter((p) => {
+          const name = p.name?.toLowerCase() || '';
+          const desc = p.description?.toLowerCase() || '';
+          return name.includes('tumbler') || name.includes('mug') || desc.includes('tumbler') || desc.includes('mug');
+        });
         setProducts(items);
       } catch {
         setError('Unable to load products. Please try again.');

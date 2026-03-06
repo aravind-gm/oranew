@@ -89,8 +89,6 @@ function ShopAllContent() {
       <LuxuryProductGrid
         defaultSort={cms.productGrid.defaultSort}
         productsPerPage={cms.productGrid.productsPerPage}
-        loadMoreStyle={cms.productGrid.loadMoreStyle}
-        promoBanners={cms.promoBanners}
         activeMood={activeMood}
         onClearMood={handleClearMood}
       />

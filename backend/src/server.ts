@@ -135,6 +135,8 @@ app.use(compression({
 const allowedOrigins: string[] = [
   'https://orashop.in',
   'https://www.orashop.in',
+  'https://oranew.vercel.app',
+  'https://orashop.vercel.app',
 ];
 
 // Dev origins (only in non-production)
@@ -144,13 +146,16 @@ if (process.env.NODE_ENV !== 'production') {
     'http://localhost:3001',
     'http://127.0.0.1:3000',
     'http://127.0.0.1:3001',
-    'https://oranew.vercel.app',
-    'https://orashop.vercel.app',
     'https://oranew-staging.vercel.app',
   );
   if (process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL)) {
     allowedOrigins.push(process.env.FRONTEND_URL);
   }
+}
+
+// Also add FRONTEND_URL in production if set (for custom deployments)
+if (process.env.NODE_ENV === 'production' && process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL)) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
 }
 
 console.log('[CORS] 🔐 Allowed Origins:', allowedOrigins);

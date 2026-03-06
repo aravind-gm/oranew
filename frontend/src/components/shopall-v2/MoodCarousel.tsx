@@ -23,13 +23,13 @@ interface MoodCarouselProps {
   activeMood?: string | null;
 }
 
-// Luxury gradient fallbacks
+// Premium neutral mood themes - elegant, not childish
 const MOOD_THEMES = [
-  { gradient: 'from-[#FFE8F0] via-[#FFD6E8] to-[#FECCD8]', accent: '#C2185B', emoji: '✨', label: 'Sparkle' },
-  { gradient: 'from-[#FFF0E6] via-[#FFE4D6] to-[#FFD8C8]', accent: '#E65100', emoji: '🌙', label: 'Glow' },
-  { gradient: 'from-[#F0F4FF] via-[#E8EEFF] to-[#DCE4FF]', accent: '#1565C0', emoji: '💎', label: 'Minimal' },
-  { gradient: 'from-[#F5E6F5] via-[#EEDCEE] to-[#E6D0E6]', accent: '#7B1FA2', emoji: '💫', label: 'Bold' },
-  { gradient: 'from-[#E8F5E9] via-[#DCF0DE] to-[#C8E6C9]', accent: '#2E7D32', emoji: '🌸', label: 'Fresh' },
+  { gradient: 'from-[#F5F0EB] via-[#EDE5DC] to-[#E4D8CC]', accent: '#8B7355', textColor: '#3D2E1F' },
+  { gradient: 'from-[#F0ECE8] via-[#E8E0D8] to-[#DED4C8]', accent: '#9B8B75', textColor: '#4A3828' },
+  { gradient: 'from-[#EEE9E4] via-[#E6DDD4] to-[#DCD0C2]', accent: '#A08968', textColor: '#3A2D1E' },
+  { gradient: 'from-[#F2EDE8] via-[#EAE2DA] to-[#E0D6CA]', accent: '#8C7A60', textColor: '#3E3020' },
+  { gradient: 'from-[#F0EBE6] via-[#E8DFD6] to-[#DED2C6]', accent: '#947E64', textColor: '#43321F' },
 ];
 
 export default function MoodCarousel({ config, onMoodSelect, activeMood }: MoodCarouselProps) {
@@ -147,16 +147,20 @@ export default function MoodCarousel({ config, onMoodSelect, activeMood }: MoodC
                     />
                   ) : (
                     <div className={`absolute inset-0 bg-gradient-to-br ${theme.gradient}`}>
-                      {/* Decorative elements */}
-                      <div className="absolute top-6 right-6 text-5xl opacity-20">{theme.emoji}</div>
-                      <div className="absolute bottom-20 left-8 text-3xl opacity-10">{theme.emoji}</div>
-                      {/* Ambient glow */}
-                      <div className="absolute bottom-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-2xl" />
+                      {/* Subtle decorative line */}
+                      <div className="absolute top-8 right-8 w-16 h-[1px] bg-black/10" />
+                      <div className="absolute top-8 right-8 w-[1px] h-16 bg-black/10" />
+                      {/* Subtle initial letter watermark */}
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                        <span className="text-[120px] font-serif font-light leading-none opacity-[0.06]" style={{ color: theme.textColor }}>
+                          {item.title.charAt(0)}
+                        </span>
+                      </div>
                     </div>
                   )}
 
                   {/* Gradient overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#1A1A1A]/70 via-[#1A1A1A]/20 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#1A1A1A]/60 via-transparent to-transparent" />
 
                   {/* Active indicator */}
                   {isActive && (
