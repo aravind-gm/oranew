@@ -51,6 +51,7 @@ interface TumblerProduct {
   averageRating: number;
   reviewCount: number;
   material?: string;
+  isTumbler?: boolean;
 }
 
 // ============================================================================
@@ -339,22 +340,50 @@ export default function TumblersPage() {
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
-      // Try fetching by category slug 'tumblers' first
-      const res = await api.get('/products', {
-        params: {
-          category: 'tumblers',
-          limit: 50,
-          page: 1,
-          isActive: true,
-        },
-      });
+      setError(null);
 
-      const data = res.data;
-      let items: TumblerProduct[] = data?.data || data?.products || [];
+      const commonParams = {
+        limit: 50,
+        page: 1,
+        isActive: true,
+      };
+
+      const collected = new Map<string, TumblerProduct>();
+
+      const mergeItems = (incoming: TumblerProduct[]) => {
+        incoming.forEach((item) => {
+          if (!collected.has(item.id)) {
+            collected.set(item.id, item);
+          }
+        });
+      };
+
+      const requests = [
+        { category: 'tumblers' },
+        { category: 'tumbler' },
+        { isTumbler: true },
+      ];
+
+      for (const params of requests) {
+        const res = await api.get('/products', {
+          params: {
+            ...commonParams,
+            ...params,
+          },
+        });
+
+        const data = res.data;
+        const items: TumblerProduct[] = data?.data || data?.products || [];
+        mergeItems(items);
+      }
+
+      let items = Array.from(collected.values());
       
       // Client-side filter: only show products that actually belong to tumblers/mugs category
       // This prevents jewelry products from appearing if the backend returns all products
       items = items.filter((p) => {
+        if (p.isTumbler) return true;
+
         const catName = p.category?.name?.toLowerCase() || '';
         const catSlug = p.category?.slug?.toLowerCase() || '';
         const productName = p.name?.toLowerCase() || '';
@@ -364,6 +393,23 @@ export default function TumblersPage() {
           productName.includes('tumbler') || productName.includes('mug')
         );
       });
+
+      if (items.length === 0) {
+        const res = await api.get('/products', {
+          params: {
+            ...commonParams,
+            search: 'tumbler mug',
+          },
+        });
+
+        const data = res.data;
+        const searchItems: TumblerProduct[] = data?.data || data?.products || [];
+        items = searchItems.filter((p) => {
+          const name = p.name?.toLowerCase() || '';
+          const desc = p.description?.toLowerCase() || '';
+          return p.isTumbler || name.includes('tumbler') || name.includes('mug') || desc.includes('tumbler') || desc.includes('mug');
+        });
+      }
       
       setProducts(items);
     } catch (err) {

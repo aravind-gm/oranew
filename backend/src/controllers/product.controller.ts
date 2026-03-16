@@ -10,6 +10,17 @@ import { logAdminAction } from '../utils/auditLog';
 import { transformImageUrlToCDN, transformProductImages } from '../utils/imageUrl';
 import { cacheGet, cacheSet } from '../config/redis';
 
+const CATEGORY_SLUG_ALIASES: Record<string, string[]> = {
+  tumbler: ['tumblers'],
+  tumblers: ['tumbler'],
+};
+
+function getCategorySlugCandidates(rawSlug: string): string[] {
+  const normalized = rawSlug.toLowerCase().trim();
+  const aliases = CATEGORY_SLUG_ALIASES[normalized] || [];
+  return [normalized, ...aliases];
+}
+
 // @desc    Create product (Admin)
 // @route   POST /api/admin/products
 // @access  Private/Admin
@@ -278,22 +289,26 @@ export const getProducts = async (
 
     // 🔑 Resolve category slug → categoryId
     if (category && typeof category === 'string') {
+      const categorySlugCandidates = getCategorySlugCandidates(category);
+
       const foundCategory = await prisma.category.findFirst({
         where: {
-          slug: category.toLowerCase(),
+          slug: { in: categorySlugCandidates },
         },
-        select: { id: true },
+        select: { id: true, slug: true },
       });
 
       if (foundCategory) {
         categoryId = foundCategory.id;
         console.log('[Product Controller] ✅ Category resolved', {
           slug: category,
+          matchedSlug: foundCategory.slug,
           id: categoryId,
         });
       } else {
         console.warn('[Product Controller] ⚠️ Category slug not found', {
           requestedSlug: category,
+          triedSlugs: categorySlugCandidates,
           fallback: 'showing all active products',
         });
       }
