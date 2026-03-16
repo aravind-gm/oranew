@@ -61,6 +61,20 @@ export default function ProductGallery({ images, productName, videoUrl }: Produc
   const wasSwipeRef = useRef(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
+  const forcePlayWithAudio = useCallback(() => {
+    const videoEl = videoRef.current;
+    if (!videoEl) return;
+
+    videoEl.muted = false;
+    videoEl.defaultMuted = false;
+    videoEl.volume = 1;
+
+    const playPromise = videoEl.play();
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(() => {});
+    }
+  }, []);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const unlocked = window.localStorage.getItem('ora_video_audio_unlocked') === '1';
@@ -71,6 +85,7 @@ export default function ProductGallery({ images, productName, videoUrl }: Produc
     const unlockAudio = () => {
       setHasAudioAutoplayUnlock(true);
       window.localStorage.setItem('ora_video_audio_unlocked', '1');
+      forcePlayWithAudio();
       window.removeEventListener('pointerdown', unlockAudio);
       window.removeEventListener('keydown', unlockAudio);
       window.removeEventListener('touchstart', unlockAudio);
@@ -85,7 +100,7 @@ export default function ProductGallery({ images, productName, videoUrl }: Produc
       window.removeEventListener('keydown', unlockAudio);
       window.removeEventListener('touchstart', unlockAudio);
     };
-  }, []);
+  }, [forcePlayWithAudio]);
 
   const imageItems: ProductMediaItem[] = images.map((image) => ({ type: 'image' as const, key: image.id, image }));
   const mediaItems: ProductMediaItem[] = (() => {
@@ -322,6 +337,16 @@ export default function ProductGallery({ images, productName, videoUrl }: Produc
                 playsInline
                 preload="metadata"
                 poster={images[0]?.imageUrl}
+                onTouchStart={() => {
+                  if (hasAudioAutoplayUnlock) {
+                    forcePlayWithAudio();
+                  }
+                }}
+                onClick={() => {
+                  if (hasAudioAutoplayUnlock) {
+                    forcePlayWithAudio();
+                  }
+                }}
               />
             ) : selectedImage ? (
               <>
