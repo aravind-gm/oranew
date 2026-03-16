@@ -56,11 +56,16 @@ export default function ProductGallery({ images, productName, videoUrl }: Produc
   const [mobileZoomLevel, setMobileZoomLevel] = useState(MOBILE_ZOOM_DEFAULT);
   const mobileScrollRef = useRef<HTMLDivElement>(null);
   const lastTapRef = useRef<number>(0);
+  const touchStartXRef = useRef<number | null>(null);
+  const wasSwipeRef = useRef(false);
 
-  const mediaItems: ProductMediaItem[] = [
-    ...images.map((image) => ({ type: 'image' as const, key: image.id, image })),
-    ...(videoUrl ? [{ type: 'video' as const, key: `video-${videoUrl}`, videoUrl }] : []),
-  ];
+  const imageItems: ProductMediaItem[] = images.map((image) => ({ type: 'image' as const, key: image.id, image }));
+  const mediaItems: ProductMediaItem[] = (() => {
+    if (!videoUrl) return imageItems;
+    const videoItem: ProductMediaItem = { type: 'video', key: `video-${videoUrl}`, videoUrl };
+    if (imageItems.length === 0) return [videoItem];
+    return [imageItems[0], videoItem, ...imageItems.slice(1)];
+  })();
 
   const selectedMedia = mediaItems[selectedImageIndex] || mediaItems[0];
   const selectedImage = selectedMedia?.type === 'image' ? selectedMedia.image : null;
@@ -85,12 +90,41 @@ export default function ProductGallery({ images, productName, videoUrl }: Produc
 
   /* ─── Mobile: tap opens full-screen scrollable zoom ─── */
   const handleImageTap = useCallback(() => {
+    if (wasSwipeRef.current) {
+      wasSwipeRef.current = false;
+      return;
+    }
     if (!selectedImage) return;
     if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
       setMobileZoomLevel(MOBILE_ZOOM_DEFAULT);
       setIsMobileZoomOpen(true);
     }
   }, [selectedImage]);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 1) return;
+    touchStartXRef.current = e.touches[0].clientX;
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartXRef.current == null || mediaItems.length <= 1) return;
+    const endX = e.changedTouches[0]?.clientX;
+    if (typeof endX !== 'number') return;
+
+    const deltaX = endX - touchStartXRef.current;
+    const SWIPE_THRESHOLD = 40;
+
+    if (Math.abs(deltaX) >= SWIPE_THRESHOLD) {
+      wasSwipeRef.current = true;
+      if (deltaX < 0) {
+        handleNext();
+      } else {
+        handlePrevious();
+      }
+    }
+
+    touchStartXRef.current = null;
+  }, [mediaItems.length, handleNext, handlePrevious]);
 
   const closeMobileZoom = useCallback(() => {
     setIsMobileZoomOpen(false);
@@ -213,6 +247,8 @@ export default function ProductGallery({ images, productName, videoUrl }: Produc
             onMouseEnter={() => selectedImage && setIsZoomed(true)}
             onMouseLeave={() => { setIsZoomed(false); setZoomPosition({ x: 50, y: 50 }); }}
             onClick={handleImageTap}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
           >
             {selectedMedia?.type === 'video' ? (
               <video
