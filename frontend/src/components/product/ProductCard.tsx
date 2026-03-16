@@ -22,6 +22,7 @@ interface Product {
   slug: string;
   finalPrice: number;
   price: number;
+  videoUrl?: string;
   discountPercent: number;
   averageRating?: number;
   reviewCount?: number;
@@ -45,6 +46,7 @@ export default function ProductCard({ product, showQuickAdd = true }: ProductCar
 
   const primaryImage = product.images?.find((img) => img.isPrimary) || product.images?.[0];
   const hoverImage = product.images?.find((img) => !img.isPrimary) || primaryImage;
+  const hasVideo = Boolean(product.videoUrl && product.videoUrl.trim());
   const isInWishlist = wishlist.some((item) => item.productId === product.id);
   const hasDiscount = product.discountPercent > 0;
 
@@ -113,7 +115,7 @@ export default function ProductCard({ product, showQuickAdd = true }: ProductCar
         {/* Image Container */}
         <div className="relative aspect-[3/4] overflow-hidden rounded-luxury bg-background">
           {/* Primary Image */}
-          {primaryImage && (
+          {!hasVideo && primaryImage && (
             <Image
               src={normalizeImageUrl(primaryImage.imageUrl) || '/oralogo.png'}
               alt={primaryImage.altText || product.name}
@@ -127,7 +129,7 @@ export default function ProductCard({ product, showQuickAdd = true }: ProductCar
           )}
           
           {/* Hover Image */}
-          {hoverImage && hoverImage !== primaryImage && (
+          {!hasVideo && hoverImage && hoverImage !== primaryImage && (
             <Image
               src={normalizeImageUrl(hoverImage.imageUrl) || '/oralogo.png'}
               alt={`${product.name} alternate view`}
@@ -137,6 +139,20 @@ export default function ProductCard({ product, showQuickAdd = true }: ProductCar
                 isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
               }`}
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            />
+          )}
+
+          {/* Product Video */}
+          {hasVideo && (
+            <video
+              src={product.videoUrl}
+              poster={primaryImage ? normalizeImageUrl(primaryImage.imageUrl) || '/oralogo.png' : '/oralogo.png'}
+              className="w-full h-full object-cover"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
             />
           )}
 

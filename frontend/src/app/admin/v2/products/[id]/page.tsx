@@ -96,6 +96,7 @@ interface ProductFormData {
   
   // Organization
   categoryId: string;
+  hsnCode: string;
   tags: string[];
   material: string;
   weight: string;
@@ -134,6 +135,7 @@ interface ProductFormData {
   
   // Images
   images: ProductImage[];
+  videoUrl: string;
   
   // Variants
   variants: ProductVariant[];
@@ -328,6 +330,7 @@ export default function ProductFormPage() {
     lowStockThreshold: 5,
     trackInventory: true,
     categoryId: '',
+    hsnCode: '',
     tags: [],
     material: '',
     weight: '',
@@ -352,6 +355,7 @@ export default function ProductFormPage() {
     metaTitle: '',
     metaDescription: '',
     images: [],
+    videoUrl: '',
     variants: [],
     hasVariants: false,
   });
@@ -400,6 +404,7 @@ export default function ProductFormPage() {
             lowStockThreshold: p.lowStockThreshold ?? 5,
             trackInventory: p.trackInventory ?? true,
             categoryId: p.categoryId || '',
+            hsnCode: p.hsnCode || '',
             tags: p.tags || [],
             material: p.material || '',
             weight: p.weight || '',
@@ -428,6 +433,7 @@ export default function ProductFormPage() {
               url: img.imageUrl || img.url || '',
               isPrimary: img.isPrimary ?? false,
             })),
+            videoUrl: p.videoUrl || '',
             variants: [],
             hasVariants: false,
           });
@@ -551,6 +557,7 @@ export default function ProductFormPage() {
         dimensions: formData.dimensions,
         stockQuantity: String(formData.stockQuantity),
         lowStockThreshold: String(formData.lowStockThreshold),
+        hsnCode: formData.hsnCode || undefined,
         isFeatured: formData.isFeatured,
         isActive: publish ? true : formData.isActive,
         metaTitle: formData.metaTitle,
@@ -573,6 +580,7 @@ export default function ProductFormPage() {
         offerExpiry: formData.offerExpiry || undefined,
         showCountdown: formData.showCountdown,
         images: finalImages,
+        videoUrl: formData.videoUrl || undefined,
       };
 
       // Step 4: Create or update
@@ -750,6 +758,16 @@ export default function ProductFormPage() {
                 images={formData.images}
                 onChange={(images) => updateField('images', images)}
               />
+
+              <div className="mt-4">
+                <Input
+                  label="Product Video URL"
+                  placeholder="https://cdn.orashop.in/products/demo.mp4"
+                  value={formData.videoUrl}
+                  onChange={(e) => updateField('videoUrl', e.target.value)}
+                  hint="Optional: MP4/WebM URL for product listing cards"
+                />
+              </div>
             </Card>
 
             {/* Pricing */}
@@ -798,6 +816,14 @@ export default function ProductFormPage() {
                     value={formData.sku}
                     onChange={(e) => updateField('sku', e.target.value)}
                     error={errors.sku}
+                  />
+
+                  <Input
+                    label="HSN Code"
+                    placeholder="e.g., 7113"
+                    value={formData.hsnCode}
+                    onChange={(e) => updateField('hsnCode', e.target.value)}
+                    hint="Optional GST HSN code"
                   />
                   
                   <Input

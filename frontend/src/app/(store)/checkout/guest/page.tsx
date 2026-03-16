@@ -496,7 +496,7 @@ export default function GuestCheckoutPage() {
 
               <div className="mt-2 text-[10px] text-gray-400">
                 <p>Sold by: <span className="text-gray-600 font-medium">Ora Global</span></p>
-                <p>GSTIN: 33AAJFO89031ZA</p>
+                <p>GSTIN: 33AAJFO8903F1ZA</p>
               </div>
 
               {/* COD Badge */}

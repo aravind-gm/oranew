@@ -698,7 +698,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
               </div>
               <div className="mt-3 pt-3 border-t border-neutral-50 text-[10px] text-neutral-300 space-y-0.5">
                 <p>Sold by <span className="text-neutral-400">Ora Global</span></p>
-                <p>GSTIN: 33AAJFO89031ZA</p>
+                <p>GSTIN: 33AAJFO8903F1ZA</p>
                 <p>All prices are inclusive of GST</p>
               </div>
             </div>

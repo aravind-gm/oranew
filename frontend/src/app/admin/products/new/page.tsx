@@ -36,6 +36,7 @@ export default function NewProductPage() {
     price: '',
     discountPercent: '0',
     categoryId: '',
+    hsnCode: '',
     material: '',
     careInstructions: '',
     weight: '',
@@ -46,6 +47,7 @@ export default function NewProductPage() {
     isActive: true,
     metaTitle: '',
     metaDescription: '',
+    videoUrl: '',
   });
 
   useEffect(() => {
@@ -206,6 +208,7 @@ export default function NewProductPage() {
         price: form.price,
         discountPercent: form.discountPercent || '0',
         categoryId: form.categoryId,
+        hsnCode: form.hsnCode,
         material: form.material,
         careInstructions: form.careInstructions,
         weight: form.weight,
@@ -215,6 +218,7 @@ export default function NewProductPage() {
         isActive: form.isActive,
         metaTitle: form.metaTitle,
         metaDescription: form.metaDescription,
+        videoUrl: form.videoUrl,
         images: images.map((img) => ({
           url: img.url,
           alt: img.alt || form.name,
@@ -375,6 +379,17 @@ export default function NewProductPage() {
               
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
+                  <label className="block text-sm font-medium mb-1">HSN Code</label>
+                  <input
+                    type="text"
+                    value={form.hsnCode}
+                    onChange={(e) => setForm({ ...form, hsnCode: e.target.value })}
+                    placeholder="e.g., 7113"
+                    className="w-full px-4 py-2 bg-gray-600 border border-gray-500 rounded text-white"
+                  />
+                </div>
+
+                <div>
                   <label className="block text-sm font-medium mb-1">Price (₹) *</label>
                   <input
                     type="number"
@@ -491,6 +506,18 @@ export default function NewProductPage() {
                   ))}
                 </div>
               )}
+
+              <div className="mt-4">
+                <label className="block text-sm font-medium mb-1">Product Video URL</label>
+                <input
+                  type="url"
+                  value={form.videoUrl}
+                  onChange={(e) => setForm({ ...form, videoUrl: e.target.value })}
+                  placeholder="https://cdn.orashop.in/products/your-video.mp4"
+                  className="w-full px-4 py-2 bg-gray-600 border border-gray-500 rounded text-white placeholder-gray-400"
+                />
+                <p className="text-xs text-gray-500 mt-1">Optional: MP4/WebM URL for product listing video</p>
+              </div>
             </div>
 
             {/* Additional Details */}

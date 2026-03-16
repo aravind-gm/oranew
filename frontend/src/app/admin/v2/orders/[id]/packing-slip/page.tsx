@@ -174,7 +174,7 @@ export default function PackingSlipPage() {
             <p className="text-[10px] text-gray-500 tracking-[2px] mt-1">own · radiate · adorn</p>
             <div className="mt-3 text-xs text-gray-600 space-y-0.5">
               <p>Ora Global</p>
-              <p>GSTIN: 33AAJFO89031ZA</p>
+              <p>GSTIN: 33AAJFO8903F1ZA</p>
               <p>admin@orashop.in | orashop.in</p>
             </div>
           </div>
@@ -324,7 +324,7 @@ export default function PackingSlipPage() {
           
           <div className="text-center text-xs text-gray-400 pt-3 border-t border-gray-200">
             <p>Thank you for shopping with ORA! 💕</p>
-            <p className="mt-1">Sold by Ora Global | GSTIN: 33AAJFO89031ZA | orashop.in</p>
+            <p className="mt-1">Sold by Ora Global | GSTIN: 33AAJFO8903F1ZA | orashop.in</p>
           </div>
         </div>
       </div>

@@ -65,6 +65,8 @@ export const createProduct = async (
       isTumbler,
       capacity,
       isBestseller,
+      hsnCode,
+      videoUrl,
       // Offer fields
       isOnOffer,
       offerType,
@@ -170,6 +172,8 @@ export const createProduct = async (
           isTumbler: isTumbler || false,
           capacity: capacity || null,
           isBestseller: isBestseller || false,
+          hsnCode: hsnCode && String(hsnCode).trim() ? String(hsnCode).trim() : null,
+          videoUrl: videoUrl && String(videoUrl).trim() ? String(videoUrl).trim() : null,
           // Offers
           isOnOffer: isOnOffer || false,
           offerType: offerType || null,
@@ -600,6 +604,8 @@ export const updateProduct = async (
       isTumbler,
       capacity,
       isBestseller,
+      hsnCode,
+      videoUrl,
       isOnOffer,
       offerType,
       offerValue,
@@ -682,6 +688,8 @@ export const updateProduct = async (
     if (isTumbler !== undefined) updateData.isTumbler = Boolean(isTumbler);
     if (capacity !== undefined) updateData.capacity = String(capacity);
     if (isBestseller !== undefined) updateData.isBestseller = Boolean(isBestseller);
+    if (hsnCode !== undefined) updateData.hsnCode = String(hsnCode).trim() || null;
+    if (videoUrl !== undefined) updateData.videoUrl = String(videoUrl).trim() || null;
     if (isOnOffer !== undefined) updateData.isOnOffer = Boolean(isOnOffer);
     if (offerType !== undefined) updateData.offerType = String(offerType);
     if (offerValue !== undefined) updateData.offerValue = parseFloat(offerValue);

@@ -241,7 +241,7 @@ function OrderSummary({ items, totalPrice }: { items: Array<{ productId: string;
       {/* Sold by */}
       <div className="mt-4 pt-3 border-t border-gray-100">
         <p className="text-[11px] text-gray-400">Sold by: <span className="text-gray-600 font-medium">Ora Global</span></p>
-        <p className="text-[10px] text-gray-400">GSTIN: 33AAJFO89031ZA</p>
+        <p className="text-[10px] text-gray-400">GSTIN: 33AAJFO8903F1ZA</p>
       </div>
 
       {/* COD Badge */}

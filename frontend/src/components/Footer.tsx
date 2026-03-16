@@ -71,7 +71,7 @@ export default function Footer() {
           {/* Sold by / Legal info */}
           <div className="text-center mb-4 pb-3 border-b border-white/5">
             <p className="text-[11px] text-white/30">
-              Sold by <span className="text-white/50 font-medium">Ora Global</span> &nbsp;|&nbsp; GSTIN: 33AAJFO89031ZA
+              Sold by <span className="text-white/50 font-medium">Ora Global</span> &nbsp;|&nbsp; GSTIN: 33AAJFO8903F1ZA
             </p>
             <p className="text-[10px] text-white/20 mt-1">All prices are inclusive of GST</p>
           </div>

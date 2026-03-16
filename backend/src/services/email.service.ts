@@ -94,7 +94,7 @@ const emailWrapper = (title: string, body: string) => `
                       &nbsp;•&nbsp;
                       <a href="${FRONTEND_URL}" style="color: #B76E79; text-decoration: none;">orashop.in</a>
                     </p>
-                    <p style="margin: 12px 0 0 0; font-size: 11px; color: #bbb;">Sold by Ora Global &nbsp;|&nbsp; GSTIN: 33AAJFO89031ZA</p>
+                    <p style="margin: 12px 0 0 0; font-size: 11px; color: #bbb;">Sold by Ora Global &nbsp;|&nbsp; GSTIN: 33AAJFO8903F1ZA</p>
                     <p style="margin: 8px 0 0 0; font-size: 11px; color: #ccc;">© ${new Date().getFullYear()} Ora Global. All rights reserved.</p>
                   </td>
                 </tr>

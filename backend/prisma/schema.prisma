@@ -140,6 +140,12 @@ model Product {
   // Per-product GST rate (percentage). Defaults to 3% for jewellery.
   gstRate           Decimal         @default(3) @map("gst_rate") @db.Decimal(5, 2)
 
+  // Tax / compliance fields
+  hsnCode           String?         @map("hsn_code") @db.VarChar(20)
+
+  // Product media
+  videoUrl          String?         @map("video_url")
+
   // Offer fields
   isOnOffer         Boolean         @default(false) @map("is_on_offer")
   offerType         String?         @map("offer_type") // "PERCENT" | "BOGO" | "FIXED"

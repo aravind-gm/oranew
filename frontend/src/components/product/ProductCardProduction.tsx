@@ -60,6 +60,7 @@ interface Product {
   slug: string;
   price: number;
   finalPrice: number;
+  videoUrl?: string;
   discountPercent?: number;
   averageRating?: number;
   reviewCount?: number;
@@ -137,6 +138,7 @@ function ProductCard({
   // ============================================================================
   const primaryImage = product.images?.find((img) => img.isPrimary) || product.images?.[0];
   const hoverImage = product.images?.find((img) => !img.isPrimary);
+  const hasVideo = Boolean(product.videoUrl && product.videoUrl.trim());
   const isInWishlist = wishlist.some((item) => item.productId === product.id);
   const hasDiscount = (product.discountPercent ?? 0) > 0;
   const discountPercent = product.discountPercent ?? 0;
@@ -277,7 +279,7 @@ function ProductCard({
           className={`relative ${aspectClass} overflow-hidden bg-neutral-50 will-change-transform`}
         >
           {/* PRIMARY IMAGE */}
-          {primaryImage && (
+          {!hasVideo && primaryImage && (
             <Image
               src={primaryImage.imageUrl}
               alt={primaryImage.altText || product.name}
@@ -291,7 +293,7 @@ function ProductCard({
           )}
 
           {/* HOVER IMAGE (optional alternate view) */}
-          {hoverImage && (
+          {!hasVideo && hoverImage && (
             <Image
               src={hoverImage.imageUrl}
               alt={`${product.name} - alternate view`}
@@ -300,6 +302,20 @@ function ProductCard({
                 isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-[1.02]'
               }`}
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            />
+          )}
+
+          {/* PRODUCT VIDEO */}
+          {hasVideo && (
+            <video
+              src={product.videoUrl}
+              poster={primaryImage?.imageUrl}
+              className="w-full h-full object-cover"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
             />
           )}
 
