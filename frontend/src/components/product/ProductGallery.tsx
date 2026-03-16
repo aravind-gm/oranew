@@ -252,11 +252,16 @@ export default function ProductGallery({ images, productName, videoUrl }: Produc
           >
             {selectedMedia?.type === 'video' ? (
               <video
+                key={selectedMedia.videoUrl}
                 src={selectedMedia.videoUrl}
                 className="w-full h-full object-cover"
                 controls
+                autoPlay
+                muted
+                loop
                 playsInline
                 preload="metadata"
+                poster={images[0]?.imageUrl}
               />
             ) : selectedImage ? (
               <>
