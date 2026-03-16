@@ -619,6 +619,7 @@ export default function ProductFormPage() {
         shortDescription: formData.shortDescription,
         price: String(formData.price),
         discountPercent: String(formData.discountPercent),
+        sku: formData.sku.trim() || undefined,
         categoryId: formData.categoryId,
         material: formData.material,
         careInstructions: formData.careInstructions,
