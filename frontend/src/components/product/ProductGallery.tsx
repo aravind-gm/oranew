@@ -46,6 +46,7 @@ function getZoomUrl(imageUrl: string): string {
 
 export default function ProductGallery({ images, productName, videoUrl }: ProductGalleryProps) {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [hasAudioAutoplayUnlock, setHasAudioAutoplayUnlock] = useState(false);
 
   /* Desktop zoom state */
   const [isZoomed, setIsZoomed] = useState(false);
@@ -59,6 +60,32 @@ export default function ProductGallery({ images, productName, videoUrl }: Produc
   const touchStartXRef = useRef<number | null>(null);
   const wasSwipeRef = useRef(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const unlocked = window.localStorage.getItem('ora_video_audio_unlocked') === '1';
+    if (unlocked) {
+      setHasAudioAutoplayUnlock(true);
+    }
+
+    const unlockAudio = () => {
+      setHasAudioAutoplayUnlock(true);
+      window.localStorage.setItem('ora_video_audio_unlocked', '1');
+      window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+    };
+
+    window.addEventListener('pointerdown', unlockAudio, { once: true });
+    window.addEventListener('keydown', unlockAudio, { once: true });
+    window.addEventListener('touchstart', unlockAudio, { once: true });
+
+    return () => {
+      window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+    };
+  }, []);
 
   const imageItems: ProductMediaItem[] = images.map((image) => ({ type: 'image' as const, key: image.id, image }));
   const mediaItems: ProductMediaItem[] = (() => {
@@ -191,15 +218,32 @@ export default function ProductGallery({ images, productName, videoUrl }: Produc
     if (selectedMedia?.type !== 'video' || !videoRef.current) return;
 
     const videoEl = videoRef.current;
+    videoEl.currentTime = 0;
+
+    if (hasAudioAutoplayUnlock) {
+      videoEl.muted = false;
+      videoEl.defaultMuted = false;
+      videoEl.volume = 1;
+      const withAudio = videoEl.play();
+      if (withAudio && typeof withAudio.catch === 'function') {
+        withAudio.catch(() => {
+          videoEl.muted = true;
+          videoEl.defaultMuted = true;
+          videoEl.volume = 0;
+          videoEl.play().catch(() => {});
+        });
+      }
+      return;
+    }
+
     videoEl.muted = true;
     videoEl.defaultMuted = true;
     videoEl.volume = 0;
-
-    const playPromise = videoEl.play();
-    if (playPromise && typeof playPromise.catch === 'function') {
-      playPromise.catch(() => {});
+    const mutedPlay = videoEl.play();
+    if (mutedPlay && typeof mutedPlay.catch === 'function') {
+      mutedPlay.catch(() => {});
     }
-  }, [selectedMedia]);
+  }, [selectedMedia, hasAudioAutoplayUnlock]);
 
   return (
     <>
@@ -273,7 +317,7 @@ export default function ProductGallery({ images, productName, videoUrl }: Produc
                 className="w-full h-full object-cover"
                 controls
                 autoPlay
-                muted
+                muted={!hasAudioAutoplayUnlock}
                 loop
                 playsInline
                 preload="metadata"
