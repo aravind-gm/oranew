@@ -92,6 +92,7 @@ interface ProductData {
     slug: string;
   };
   images: ProductImage[];
+  videoUrl?: string;
 }
 
 // ============================================================================
@@ -392,7 +393,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12 mb-12 sm:mb-16">
           {/* Gallery (sticky on desktop) */}
           <div className="lg:sticky lg:top-24 lg:self-start">
-            <ProductGallery images={product.images} productName={product.name} />
+            <ProductGallery images={product.images} productName={product.name} videoUrl={product.videoUrl} />
           </div>
 
           {/* ═══ Product Info Column ═══ */}

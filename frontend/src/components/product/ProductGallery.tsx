@@ -16,7 +16,12 @@ interface ProductImage {
 interface ProductGalleryProps {
   images: ProductImage[];
   productName: string;
+  videoUrl?: string;
 }
+
+type ProductMediaItem =
+  | { type: 'image'; key: string; image: ProductImage }
+  | { type: 'video'; key: string; videoUrl: string };
 
 /* ─── Zoom config ─── */
 const DESKTOP_ZOOM = 2.8;
@@ -39,7 +44,7 @@ function getZoomUrl(imageUrl: string): string {
   return imageUrl;
 }
 
-export default function ProductGallery({ images, productName }: ProductGalleryProps) {
+export default function ProductGallery({ images, productName, videoUrl }: ProductGalleryProps) {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   /* Desktop zoom state */
@@ -52,16 +57,22 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
   const mobileScrollRef = useRef<HTMLDivElement>(null);
   const lastTapRef = useRef<number>(0);
 
-  const selectedImage = images[selectedImageIndex] || images[0];
+  const mediaItems: ProductMediaItem[] = [
+    ...images.map((image) => ({ type: 'image' as const, key: image.id, image })),
+    ...(videoUrl ? [{ type: 'video' as const, key: `video-${videoUrl}`, videoUrl }] : []),
+  ];
+
+  const selectedMedia = mediaItems[selectedImageIndex] || mediaItems[0];
+  const selectedImage = selectedMedia?.type === 'image' ? selectedMedia.image : null;
   const zoomImageUrl = selectedImage ? getZoomUrl(selectedImage.imageUrl) : '';
 
   const handlePrevious = useCallback(() => {
-    setSelectedImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
-  }, [images.length]);
+    setSelectedImageIndex((prev) => (prev === 0 ? mediaItems.length - 1 : prev - 1));
+  }, [mediaItems.length]);
 
   const handleNext = useCallback(() => {
-    setSelectedImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
-  }, [images.length]);
+    setSelectedImageIndex((prev) => (prev === mediaItems.length - 1 ? 0 : prev + 1));
+  }, [mediaItems.length]);
 
   /* ─── Desktop: mouse-based zoom ─── */
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -74,11 +85,12 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
 
   /* ─── Mobile: tap opens full-screen scrollable zoom ─── */
   const handleImageTap = useCallback(() => {
+    if (!selectedImage) return;
     if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
       setMobileZoomLevel(MOBILE_ZOOM_DEFAULT);
       setIsMobileZoomOpen(true);
     }
-  }, []);
+  }, [selectedImage]);
 
   const closeMobileZoom = useCallback(() => {
     setIsMobileZoomOpen(false);
@@ -144,11 +156,11 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
     <>
       <div className="flex flex-col-reverse md:flex-row gap-3 md:gap-4">
         {/* ── Vertical Thumbnails (desktop left rail) / Horizontal (mobile bottom) ── */}
-        {images.length > 1 && (
+        {mediaItems.length > 1 && (
           <div className="flex md:flex-col gap-2.5 overflow-x-auto md:overflow-y-auto md:max-h-[600px] pb-1 md:pb-0 md:pr-1 scrollbar-hide">
-            {images.map((image, index) => (
+            {mediaItems.map((media, index) => (
               <button
-                key={image.id}
+                key={media.key}
                 onClick={() => setSelectedImageIndex(index)}
                 className={`relative flex-shrink-0 w-[68px] h-[68px] md:w-[72px] md:h-[72px] overflow-hidden rounded-lg border-2 transition-all duration-200 ${
                   selectedImageIndex === index
@@ -156,15 +168,30 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
                     : 'border-transparent hover:border-neutral-300'
                 }`}
               >
-                <Image
-                  src={image.imageUrl}
-                  alt={image.altText || `${productName} ${index + 1}`}
-                  fill
-                  unoptimized={isSupabaseImage(image.imageUrl)}
-                  className="object-cover"
-                  sizes="72px"
-                />
-                {image.altText?.toLowerCase().includes('video') && (
+                {media.type === 'image' ? (
+                  <Image
+                    src={media.image.imageUrl}
+                    alt={media.image.altText || `${productName} ${index + 1}`}
+                    fill
+                    unoptimized={isSupabaseImage(media.image.imageUrl)}
+                    className="object-cover"
+                    sizes="72px"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-neutral-900 flex items-center justify-center">
+                    {images[0]?.imageUrl && (
+                      <Image
+                        src={images[0].imageUrl}
+                        alt={`${productName} video thumbnail`}
+                        fill
+                        unoptimized={isSupabaseImage(images[0].imageUrl)}
+                        className="object-cover opacity-70"
+                        sizes="72px"
+                      />
+                    )}
+                  </div>
+                )}
+                {media.type === 'video' && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                     <div className="w-6 h-6 rounded-full bg-white/90 flex items-center justify-center">
                       <svg className="w-3 h-3 text-neutral-800 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
@@ -183,11 +210,19 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
           <div
             className="relative w-full aspect-[3/4] md:aspect-[4/5] overflow-hidden rounded-xl bg-neutral-50 group cursor-zoom-in"
             onMouseMove={handleMouseMove}
-            onMouseEnter={() => setIsZoomed(true)}
+            onMouseEnter={() => selectedImage && setIsZoomed(true)}
             onMouseLeave={() => { setIsZoomed(false); setZoomPosition({ x: 50, y: 50 }); }}
             onClick={handleImageTap}
           >
-            {selectedImage && (
+            {selectedMedia?.type === 'video' ? (
+              <video
+                src={selectedMedia.videoUrl}
+                className="w-full h-full object-cover"
+                controls
+                playsInline
+                preload="metadata"
+              />
+            ) : selectedImage ? (
               <>
                 {/* Normal view: hero image (1200px) */}
                 <Image
@@ -241,10 +276,10 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
                   <span className="text-[10px] font-medium tracking-wide uppercase">Tap to zoom</span>
                 </div>
               </>
-            )}
+            ) : null}
 
             {/* Navigation Arrows — desktop only */}
-            {images.length > 1 && (
+            {mediaItems.length > 1 && (
               <>
                 <button
                   onClick={(e) => { e.stopPropagation(); handlePrevious(); }}
@@ -264,12 +299,12 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
             )}
 
             {/* Image counter — bottom-left pill */}
-            {images.length > 1 && (
+            {mediaItems.length > 1 && (
               <div className="absolute bottom-4 left-4 flex items-center gap-1.5 bg-white/90 backdrop-blur-sm text-neutral-600 px-3 py-1.5 rounded-full text-xs font-medium shadow-sm">
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
                 </svg>
-                {selectedImageIndex + 1} / {images.length}
+                {selectedImageIndex + 1} / {mediaItems.length}
               </div>
             )}
           </div>
@@ -289,7 +324,7 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
           <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 pt-3 pb-8 bg-gradient-to-b from-black/70 to-transparent">
             <div className="flex items-center gap-2">
               <span className="text-white/80 text-xs font-medium font-sans">
-                {selectedImageIndex + 1} / {images.length}
+                {selectedImageIndex + 1} / {mediaItems.length}
               </span>
             </div>
             <button
@@ -358,12 +393,12 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
           </div>
 
           {/* ─── Bottom thumbnail strip ─── */}
-          {images.length > 1 && (
+          {mediaItems.length > 1 && (
             <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-8 pb-5 px-4">
               <div className="flex gap-2.5 justify-center">
-                {images.map((image, index) => (
+                {mediaItems.map((media, index) => (
                   <button
-                    key={image.id}
+                    key={media.key}
                     onClick={() => handleZoomImageSwitch(index)}
                     className={`relative w-12 h-12 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
                       selectedImageIndex === index
@@ -371,14 +406,36 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
                         : 'border-white/30 opacity-50'
                     }`}
                   >
-                    <Image
-                      src={image.imageUrl}
-                      alt={image.altText || `${productName} ${index + 1}`}
-                      fill
-                      unoptimized={isSupabaseImage(image.imageUrl)}
-                      className="object-cover"
-                      sizes="48px"
-                    />
+                    {media.type === 'image' ? (
+                      <Image
+                        src={media.image.imageUrl}
+                        alt={media.image.altText || `${productName} ${index + 1}`}
+                        fill
+                        unoptimized={isSupabaseImage(media.image.imageUrl)}
+                        className="object-cover"
+                        sizes="48px"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-neutral-900 flex items-center justify-center">
+                        {images[0]?.imageUrl && (
+                          <Image
+                            src={images[0].imageUrl}
+                            alt={`${productName} video thumbnail`}
+                            fill
+                            unoptimized={isSupabaseImage(images[0].imageUrl)}
+                            className="object-cover opacity-70"
+                            sizes="48px"
+                          />
+                        )}
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                          <div className="w-5 h-5 rounded-full bg-white/90 flex items-center justify-center">
+                            <svg className="w-2.5 h-2.5 text-neutral-800 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M8 5v14l11-7z" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </button>
                 ))}
               </div>
