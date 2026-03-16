@@ -28,6 +28,14 @@ const CATEGORY_THEMES = [
 export default function LuxuryHighlightedCollections({ config }: LuxuryHighlightedCollectionsProps) {
   if (!config.enabled || config.items.length === 0) return null;
 
+  const visibleItems = config.items.filter((item) => {
+    const title = item.title?.toLowerCase() || '';
+    const link = item.link?.toLowerCase() || '';
+    return title !== 'earrings' && !link.includes('/earrings');
+  });
+
+  if (visibleItems.length === 0) return null;
+
   return (
     <section className="py-16 md:py-24 bg-[#FAFAF9]">
       <div className="max-w-[1440px] mx-auto px-5 lg:px-10">
@@ -53,7 +61,7 @@ export default function LuxuryHighlightedCollections({ config }: LuxuryHighlight
 
         {/* Cards Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          {config.items.map((item, index) => {
+          {visibleItems.map((item, index) => {
             const hasImage = item.image && item.image.length > 0;
             const theme = CATEGORY_THEMES[index % CATEGORY_THEMES.length];
 

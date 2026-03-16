@@ -31,12 +31,11 @@
  * lazy loading, intersection observer, and skeleton loaders.
  */
 
-import { Suspense, useCallback, useEffect, useState } from 'react';
-import { useShopAllCmsStore, DEFAULT_CMS_CONFIG, MoodItem } from '@/store/shopAllCmsStore';
+import { Suspense, useEffect } from 'react';
+import { useShopAllCmsStore, DEFAULT_CMS_CONFIG } from '@/store/shopAllCmsStore';
 
 import LuxuryHeroSection from '@/components/shopall-v2/LuxuryHeroSection';
 import LuxuryTrustStrip from '@/components/shopall-v2/LuxuryTrustStrip';
-import MoodCarousel from '@/components/shopall-v2/MoodCarousel';
 import LuxuryProductGrid from '@/components/shopall-v2/LuxuryProductGrid';
 import LuxuryHighlightedCollections from '@/components/shopall-v2/LuxuryHighlightedCollections';
 import LuxuryEmotionalPause from '@/components/shopall-v2/LuxuryEmotionalPause';
@@ -49,26 +48,12 @@ import NewsletterCTA from '@/components/shopall-v2/NewsletterCTA';
 
 function ShopAllContent() {
   const { config, fetchConfig } = useShopAllCmsStore();
-  const [activeMood, setActiveMood] = useState<MoodItem | null>(null);
 
   useEffect(() => {
     fetchConfig();
   }, [fetchConfig]);
 
   const cms = config || DEFAULT_CMS_CONFIG;
-
-  const handleMoodSelect = useCallback((mood: MoodItem) => {
-    setActiveMood((prev) => (prev?.id === mood.id ? null : mood));
-    // Scroll to product grid
-    setTimeout(() => {
-      const el = document.getElementById('products-section');
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
-  }, []);
-
-  const handleClearMood = useCallback(() => {
-    setActiveMood(null);
-  }, []);
 
   return (
     <div className="min-h-screen bg-white">
@@ -78,23 +63,14 @@ function ShopAllContent() {
       {/* 2️⃣ TRUST STRIP (Luxury Icon Bar) */}
       <LuxuryTrustStrip config={cms.promiseStrip} />
 
-      {/* 3️⃣ SHOP BY MOOD (Emotion-Based Filtering) */}
-      <MoodCarousel
-        config={cms.moodStrip}
-        onMoodSelect={handleMoodSelect}
-        activeMood={activeMood?.id || null}
-      />
+      {/* 3️⃣ HIGHLIGHTED COLLECTIONS (Moved to top) */}
+      <LuxuryHighlightedCollections config={cms.highlightedCollections} />
 
       {/* 4️⃣ FILTER + SORT + PRODUCT GRID (Core Section) */}
       <LuxuryProductGrid
         defaultSort={cms.productGrid.defaultSort}
         productsPerPage={cms.productGrid.productsPerPage}
-        activeMood={activeMood}
-        onClearMood={handleClearMood}
       />
-
-      {/* 5️⃣ HIGHLIGHTED COLLECTIONS */}
-      <LuxuryHighlightedCollections config={cms.highlightedCollections} />
 
       {/* 6️⃣ EMOTIONAL PAUSE */}
       <LuxuryEmotionalPause config={cms.emotionalPause} />
@@ -138,21 +114,6 @@ function ShopAllLoadingSkeleton() {
               <div className="w-28 h-3 bg-neutral-100 rounded-full animate-pulse" />
             </div>
           ))}
-        </div>
-      </div>
-
-      {/* Mood carousel skeleton */}
-      <div className="py-12 bg-white">
-        <div className="max-w-[1440px] mx-auto px-5">
-          <div className="text-center mb-10">
-            <div className="w-24 h-2.5 bg-[#D4AF37]/15 rounded-full mx-auto mb-3" />
-            <div className="w-40 h-8 bg-neutral-100 rounded-lg mx-auto" />
-          </div>
-          <div className="flex gap-5 overflow-hidden">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="flex-shrink-0 w-[260px] aspect-[3/4] bg-gradient-to-br from-neutral-100 to-neutral-50 rounded-2xl animate-pulse" />
-            ))}
-          </div>
         </div>
       </div>
 

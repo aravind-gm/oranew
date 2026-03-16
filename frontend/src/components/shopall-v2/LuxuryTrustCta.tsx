@@ -32,6 +32,10 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   package: <Package className="w-6 h-6" />,
 };
 
+function normalizeTrustText(text: string): string {
+  return text.replace(/7\s*-?\s*day(s)?/gi, '5days');
+}
+
 export default function LuxuryTrustCta({ config }: LuxuryTrustCtaProps) {
   if (!config.enabled) return null;
 
@@ -60,7 +64,7 @@ export default function LuxuryTrustCta({ config }: LuxuryTrustCtaProps) {
                 {ICON_MAP[item.icon] || <Heart className="w-6 h-6" />}
               </div>
               <span className="text-[11px] md:text-xs text-white/60 tracking-[0.1em] font-medium uppercase">
-                {item.text}
+                {normalizeTrustText(item.text)}
               </span>
             </motion.div>
           ))}
