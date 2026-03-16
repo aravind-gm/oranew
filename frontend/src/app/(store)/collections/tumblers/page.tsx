@@ -67,31 +67,31 @@ function TumblersHero() {
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: `url(${TUMBLERS_HERO_POSTER_URL})` }}
       />
-      <div className="absolute inset-0 bg-slate-900/55" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/35 to-transparent" />
 
       {/* Ambient glow */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 left-1/4 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-[#f18ab4]/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 left-1/4 w-80 h-80 bg-[#f4b6cf]/10 rounded-full blur-3xl" />
       </div>
 
       <div className="relative max-w-7xl mx-auto px-5 lg:px-8 py-16 sm:py-20 lg:py-24">
         <div className="max-w-2xl">
-          <p className="text-xs tracking-[0.3em] uppercase text-cyan-400 mb-4 font-medium">
+          <p className="text-xs tracking-[0.3em] uppercase text-[#f7c9dc] mb-4 font-medium">
             New Category
           </p>
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-serif font-light leading-[1.1] mb-5">
             Premium Tumblers{' '}
-            <span className="italic text-cyan-300">&amp; Mugs</span>
+            <span className="italic text-[#ffd6e8]">&amp; Mugs</span>
           </h1>
-          <p className="text-base sm:text-lg text-white/60 leading-relaxed mb-8 max-w-lg">
+          <p className="text-base sm:text-lg text-white/85 leading-relaxed mb-8 max-w-lg">
             Stanley-grade quality at prices that make sense. Insulated, leak-proof, 
             and designed to keep up with your day — from morning coffee to evening workouts.
           </p>
           <div className="flex flex-wrap gap-3">
             <a
               href="#products"
-              className="inline-flex items-center gap-2.5 px-7 py-3.5 bg-white text-slate-900 font-medium rounded-full hover:bg-neutral-100 transition-all shadow-lg text-sm"
+              className="inline-flex items-center gap-2.5 px-7 py-3.5 bg-[#f18ab4] text-white font-medium rounded-full hover:bg-[#e06e9d] transition-all shadow-lg text-sm"
             >
               Shop Tumblers
               <ArrowRight className="w-4 h-4" />
@@ -193,7 +193,7 @@ function TumblerCard({ product }: { product: TumblerProduct }) {
 
   return (
     <Link
-      href={`/product/${product.slug}`}
+      href={`/products/${product.slug}`}
       className="group block bg-white rounded-2xl border border-neutral-100 overflow-hidden hover:shadow-lg hover:border-neutral-200 transition-all duration-300"
     >
       {/* Image */}
