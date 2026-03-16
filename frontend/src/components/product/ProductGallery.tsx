@@ -58,6 +58,7 @@ export default function ProductGallery({ images, productName, videoUrl }: Produc
   const lastTapRef = useRef<number>(0);
   const touchStartXRef = useRef<number | null>(null);
   const wasSwipeRef = useRef(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const imageItems: ProductMediaItem[] = images.map((image) => ({ type: 'image' as const, key: image.id, image }));
   const mediaItems: ProductMediaItem[] = (() => {
@@ -186,6 +187,21 @@ export default function ProductGallery({ images, productName, videoUrl }: Produc
     setSelectedImageIndex(index);
   }, []);
 
+  useEffect(() => {
+    if (selectedMedia?.type !== 'video' || !videoRef.current) return;
+
+    const videoEl = videoRef.current;
+    videoEl.muted = false;
+    videoEl.volume = 1;
+
+    const playPromise = videoEl.play();
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(() => {
+        // Browser may block autoplay with audio until explicit user gesture.
+      });
+    }
+  }, [selectedMedia]);
+
   return (
     <>
       <div className="flex flex-col-reverse md:flex-row gap-3 md:gap-4">
@@ -253,11 +269,11 @@ export default function ProductGallery({ images, productName, videoUrl }: Produc
             {selectedMedia?.type === 'video' ? (
               <video
                 key={selectedMedia.videoUrl}
+                ref={videoRef}
                 src={selectedMedia.videoUrl}
                 className="w-full h-full object-cover"
                 controls
                 autoPlay
-                muted
                 loop
                 playsInline
                 preload="metadata"
