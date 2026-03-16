@@ -1,5 +1,6 @@
 /**
  * Scheduled Jobs — Campaign auto-expiry + inventory lock cleanup + abandoned cart emails
+ *                  + payment reconciliation
  *
  * Runs on a simple setInterval basis (no external cron dependency).
  * Safe for single-instance deployments (Render free tier).

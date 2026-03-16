@@ -4,55 +4,18 @@ exports.searchProducts = exports.getRecommendedProducts = exports.getProductById
 const database_1 = require("../config/database");
 const errorHandler_1 = require("../middleware/errorHandler");
 const helpers_1 = require("../utils/helpers");
-// Helper function to transform image URL to CDN URL
-// Handles both Supabase legacy URLs and R2/CDN URLs
-function transformImageUrlToCDN(imageUrl) {
-    if (!imageUrl)
-        return null;
-    // Already a CDN URL
-    if (imageUrl.includes('cdn.orashop.in')) {
-        return imageUrl;
-    }
-    // Supabase URL - extract the filename and use CDN
-    if (imageUrl.includes('supabase.co')) {
-        const filenameMatch = imageUrl.match(/\/([^\/]+\.(?:jpg|jpeg|png|gif|webp))$/i);
-        if (filenameMatch) {
-            const filename = filenameMatch[1];
-            return `${process.env.R2_PUBLIC_BASE_URL || 'https://cdn.orashop.in'}/products/${filename}`;
-        }
-    }
-    // R2 bucket URL - transform to CDN
-    if (imageUrl.includes('.r2.dev') || imageUrl.includes('r2.dev')) {
-        const filenameMatch = imageUrl.match(/\/([^\/]+\.(?:jpg|jpeg|png|gif|webp))$/i);
-        if (filenameMatch) {
-            const filename = filenameMatch[1];
-            return `${process.env.R2_PUBLIC_BASE_URL || 'https://cdn.orashop.in'}/products/${filename}`;
-        }
-    }
-    // Relative path - prepend CDN URL
-    if (!imageUrl.startsWith('http')) {
-        return `${process.env.R2_PUBLIC_BASE_URL || 'https://cdn.orashop.in'}/${imageUrl}`;
-    }
-    // Unknown format - return as is
-    return imageUrl;
+const auditLog_1 = require("../utils/auditLog");
+const imageUrl_1 = require("../utils/imageUrl");
+const redis_1 = require("../config/redis");
+const CATEGORY_SLUG_ALIASES = {
+    tumbler: ['tumblers'],
+    tumblers: ['tumbler'],
+};
+function getCategorySlugCandidates(rawSlug) {
+    const normalized = rawSlug.toLowerCase().trim();
+    const aliases = CATEGORY_SLUG_ALIASES[normalized] || [];
+    return [normalized, ...aliases];
 }
-// Helper function to ensure product images have correct CDN URLs
-// Both storefront and admin now use CDN URLs for consistency
-async function transformProductImages(product, forPublic = true) {
-    if (!product.images || product.images.length === 0) {
-        return product;
-    }
-    const transformedImages = product.images.map((img) => {
-        if (!img.imageUrl) {
-            return img;
-        }
-        // Transform to CDN URL
-        const cdnUrl = transformImageUrlToCDN(img.imageUrl);
-        return { ...img, imageUrl: cdnUrl };
-    });
-    return { ...product, images: transformedImages };
-}
-// Note: Signed URLs no longer needed - using CDN public URLs instead
 // @desc    Create product (Admin)
 // @route   POST /api/admin/products
 // @access  Private/Admin
@@ -71,7 +34,13 @@ const createProduct = async (req, res, next) => {
             userRole: req.user.role,
             userEmail: req.user.email,
         });
-        const { name, description, shortDescription, price, discountPercent, categoryId, material, careInstructions, weight, dimensions, stockQuantity, isFeatured, isActive, images, metaTitle, metaDescription, collections, occasions, isFeaturedGift, } = req.body;
+        const { name, description, shortDescription, price, discountPercent, categoryId, sku, material, careInstructions, weight, dimensions, stockQuantity, lowStockThreshold, isFeatured, isActive, images, metaTitle, metaDescription, collections, occasions, isFeaturedGift, 
+        // BOGO fields
+        isBOGOEligible, bogoPriceTier, bogoCategory, bogoActive, 
+        // Tumbler fields
+        isTumbler, capacity, isBestseller, hsnCode, videoUrl, 
+        // Offer fields
+        isOnOffer, offerType, offerValue, offerExpiry, showCountdown, } = req.body;
         // Validation
         const errors = [];
         if (!name || !name.trim()) {
@@ -130,13 +99,14 @@ const createProduct = async (req, res, next) => {
                     price: parseFloat(price),
                     discountPercent: parseFloat(discountPercent || 0),
                     finalPrice,
-                    sku: `ORA-${Date.now()}`,
+                    sku: sku && String(sku).trim() ? String(sku).trim() : `ORA-${Date.now()}`,
                     categoryId,
                     material,
                     careInstructions,
                     weight,
                     dimensions,
                     stockQuantity: parseInt(stockQuantity || '0'),
+                    lowStockThreshold: lowStockThreshold ? parseInt(lowStockThreshold, 10) : 5,
                     isFeatured: isFeatured || false,
                     isActive: isActive !== false,
                     metaTitle,
@@ -144,6 +114,23 @@ const createProduct = async (req, res, next) => {
                     collections: collections || [],
                     occasions: occasions || [],
                     isFeaturedGift: isFeaturedGift || false,
+                    // BOGO
+                    isBOGOEligible: isBOGOEligible || false,
+                    bogoPriceTier: bogoPriceTier ? parseInt(bogoPriceTier, 10) : 0,
+                    bogoCategory: bogoCategory || null,
+                    bogoActive: bogoActive || false,
+                    // Tumbler
+                    isTumbler: isTumbler || false,
+                    capacity: capacity || null,
+                    isBestseller: isBestseller || false,
+                    hsnCode: hsnCode && String(hsnCode).trim() ? String(hsnCode).trim() : null,
+                    videoUrl: videoUrl && String(videoUrl).trim() ? String(videoUrl).trim() : null,
+                    // Offers
+                    isOnOffer: isOnOffer || false,
+                    offerType: offerType || null,
+                    offerValue: offerValue ? parseFloat(offerValue) : null,
+                    offerExpiry: offerExpiry ? new Date(offerExpiry) : null,
+                    showCountdown: showCountdown || false,
                 },
             });
             // Create images if provided
@@ -168,6 +155,12 @@ const createProduct = async (req, res, next) => {
             productId: product.id,
             productName: product.name,
             imageCount: product.images.length,
+        });
+        // Audit log — non-blocking
+        (0, auditLog_1.logAdminAction)(req, 'CREATE', 'PRODUCT', product.id, {
+            name: product.name,
+            price: Number(product.price),
+            categoryId: product.categoryId,
         });
         res.status(201).json({
             success: true,
@@ -208,22 +201,25 @@ const getProducts = async (req, res, next) => {
         let categoryId = undefined;
         // 🔑 Resolve category slug → categoryId
         if (category && typeof category === 'string') {
+            const categorySlugCandidates = getCategorySlugCandidates(category);
             const foundCategory = await database_1.prisma.category.findFirst({
                 where: {
-                    slug: category.toLowerCase(),
+                    slug: { in: categorySlugCandidates },
                 },
-                select: { id: true },
+                select: { id: true, slug: true },
             });
             if (foundCategory) {
                 categoryId = foundCategory.id;
                 console.log('[Product Controller] ✅ Category resolved', {
                     slug: category,
+                    matchedSlug: foundCategory.slug,
                     id: categoryId,
                 });
             }
             else {
                 console.warn('[Product Controller] ⚠️ Category slug not found', {
                     requestedSlug: category,
+                    triedSlugs: categorySlugCandidates,
                     fallback: 'showing all active products',
                 });
             }
@@ -393,8 +389,8 @@ const getProducts = async (req, res, next) => {
             database_1.prisma.product.findMany({
                 where: whereClause,
                 orderBy: orderByClause,
-                skip: (Number(page) - 1) * Number(limit),
-                take: Number(limit),
+                skip: (Number(page) - 1) * Math.min(Number(limit) || 16, 100),
+                take: Math.min(Number(limit) || 16, 100),
                 include: {
                     category: true,
                     images: true,
@@ -417,7 +413,7 @@ const getProducts = async (req, res, next) => {
             },
         });
         // Transform image URLs to PUBLIC URLs for storefront (no expiration)
-        const productsWithPublicUrls = await Promise.all(products.map((product) => transformProductImages(product, true)));
+        const productsWithPublicUrls = await Promise.all(products.map((product) => (0, imageUrl_1.transformProductImages)(product, true)));
         res.json({
             data: productsWithPublicUrls,
             pagination: {
@@ -451,7 +447,7 @@ const getProductById = async (req, res, next) => {
             throw new errorHandler_1.AppError('Product not found', 404);
         }
         // Transform images to signed URLs
-        const productWithSignedUrls = await transformProductImages(product);
+        const productWithSignedUrls = await (0, imageUrl_1.transformProductImages)(product);
         res.json({
             success: true,
             data: productWithSignedUrls,
@@ -471,7 +467,7 @@ const updateProduct = async (req, res, next) => {
         // SECURITY: Explicit whitelist — NEVER spread req.body into Prisma.
         // Spreading otherData would allow callers to inject any DB column
         // (e.g. isDeleted, deletedAt, bogoActive, gstRate) bypassing all validation.
-        const { name, description, shortDescription, price, discountPercent, categoryId, material, careInstructions, weight, dimensions, stockQuantity, isFeatured, isActive, images, metaTitle, metaDescription, collections, occasions, isFeaturedGift, isBOGOEligible, bogoPriceTier, bogoCategory, bogoActive, isTumbler, capacity, isBestseller, isOnOffer, offerType, offerValue, offerExpiry, showCountdown, lowStockThreshold, } = req.body;
+        const { name, slug, description, shortDescription, price, discountPercent, categoryId, material, careInstructions, weight, dimensions, stockQuantity, isFeatured, isActive, images, metaTitle, metaDescription, collections, occasions, isFeaturedGift, isBOGOEligible, bogoPriceTier, bogoCategory, bogoActive, isTumbler, capacity, isBestseller, hsnCode, videoUrl, isOnOffer, offerType, offerValue, offerExpiry, showCountdown, lowStockThreshold, sku, } = req.body;
         const product = await database_1.prisma.product.findUnique({ where: { id } });
         if (!product) {
             throw new errorHandler_1.AppError('Product not found', 404);
@@ -480,6 +476,24 @@ const updateProduct = async (req, res, next) => {
         const updateData = {};
         if (name !== undefined) {
             updateData.name = String(name).trim();
+        }
+        // Use explicit slug from frontend if provided (preserves SEO);
+        // only regenerate from name if slug is NOT sent.
+        if (slug !== undefined && String(slug).trim()) {
+            const candidateSlug = String(slug).trim();
+            const existingSlug = await database_1.prisma.product.findFirst({
+                where: { slug: candidateSlug, id: { not: id } },
+            });
+            if (existingSlug) {
+                const suffix = Math.random().toString(36).substring(2, 7);
+                updateData.slug = `${candidateSlug}-${suffix}`;
+            }
+            else {
+                updateData.slug = candidateSlug;
+            }
+        }
+        else if (name !== undefined) {
+            // Fallback: regenerate from name only if no slug provided
             const newSlug = (0, helpers_1.slugify)(String(name));
             const existingSlug = await database_1.prisma.product.findFirst({
                 where: { slug: newSlug, id: { not: id } },
@@ -552,6 +566,10 @@ const updateProduct = async (req, res, next) => {
             updateData.capacity = String(capacity);
         if (isBestseller !== undefined)
             updateData.isBestseller = Boolean(isBestseller);
+        if (hsnCode !== undefined)
+            updateData.hsnCode = String(hsnCode).trim() || null;
+        if (videoUrl !== undefined)
+            updateData.videoUrl = String(videoUrl).trim() || null;
         if (isOnOffer !== undefined)
             updateData.isOnOffer = Boolean(isOnOffer);
         if (offerType !== undefined)
@@ -562,9 +580,46 @@ const updateProduct = async (req, res, next) => {
             updateData.offerExpiry = new Date(offerExpiry);
         if (showCountdown !== undefined)
             updateData.showCountdown = Boolean(showCountdown);
-        if (images !== undefined) {
-            // images are handled as nested upserts — not a raw spread
-            // (handled separately by image-specific endpoints; ignore here if empty)
+        if (sku !== undefined && String(sku).trim())
+            updateData.sku = String(sku).trim();
+        // Sync images: delete old, create new in a transaction
+        if (images !== undefined && Array.isArray(images) && images.length > 0) {
+            const updated = await database_1.prisma.$transaction(async (tx) => {
+                // Update product fields
+                const updatedProduct = await tx.product.update({
+                    where: { id },
+                    data: updateData,
+                });
+                // Delete existing images
+                await tx.productImage.deleteMany({ where: { productId: id } });
+                // Create new images
+                await tx.productImage.createMany({
+                    data: images.map((img, index) => ({
+                        productId: id,
+                        imageUrl: img.url || img.imageUrl,
+                        altText: img.alt || updatedProduct.name,
+                        sortOrder: index,
+                        isPrimary: img.isPrimary || index === 0,
+                    })),
+                });
+                return tx.product.findUnique({
+                    where: { id },
+                    include: { images: true, category: true },
+                });
+            });
+            console.log('[Product Controller] ✅ Product updated successfully (with images):', {
+                productId: id,
+                productName: updated.name,
+                fieldsUpdated: Object.keys(updateData),
+                imageCount: updated.images.length,
+            });
+            (0, auditLog_1.logAdminAction)(req, 'UPDATE', 'PRODUCT', id, {
+                fieldsUpdated: [...Object.keys(updateData), 'images'],
+            });
+            return res.json({
+                success: true,
+                data: updated,
+            });
         }
         const updated = await database_1.prisma.product.update({
             where: { id },
@@ -574,6 +629,10 @@ const updateProduct = async (req, res, next) => {
         console.log('[Product Controller] ✅ Product updated successfully:', {
             productId: id,
             productName: updated.name,
+            fieldsUpdated: Object.keys(updateData),
+        });
+        // Audit log — non-blocking
+        (0, auditLog_1.logAdminAction)(req, 'UPDATE', 'PRODUCT', id, {
             fieldsUpdated: Object.keys(updateData),
         });
         res.json({
@@ -624,6 +683,8 @@ const deleteProduct = async (req, res, next) => {
                 bogoActive: false,
             },
         });
+        // Audit log — non-blocking
+        (0, auditLog_1.logAdminAction)(req, 'DELETE', 'PRODUCT', id, { name: product.name });
         res.json({
             success: true,
             message: 'Product deleted successfully (soft delete)',
@@ -647,11 +708,11 @@ const getFeaturedProducts = async (req, res, next) => {
                 deletedAt: null,
             },
             include: { images: true, category: true },
-            take: parseInt(limit),
+            take: Math.min(parseInt(limit) || 8, 100),
             orderBy: { createdAt: 'desc' },
         });
         // Transform image URLs to signed URLs for reliable access
-        const productsWithSignedUrls = await Promise.all(products.map((product) => transformProductImages(product)));
+        const productsWithSignedUrls = await Promise.all(products.map((product) => (0, imageUrl_1.transformProductImages)(product)));
         res.json({
             success: true,
             data: productsWithSignedUrls,
@@ -679,11 +740,37 @@ const getProductBySlug = async (req, res, next) => {
         if (!product) {
             throw new errorHandler_1.AppError('Product not found', 404);
         }
+        // ── soldThisWeek: Redis cache (60s) with DB fallback ──────────────────
+        let soldThisWeek = 0;
+        const soldCacheKey = `sold:week:${product.id}`;
+        try {
+            const cached = await (0, redis_1.cacheGet)(soldCacheKey);
+            if (cached !== null) {
+                soldThisWeek = cached;
+            }
+            else {
+                const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                soldThisWeek = await database_1.prisma.orderItem.count({
+                    where: {
+                        productId: product.id,
+                        order: {
+                            status: 'CONFIRMED',
+                            createdAt: { gte: sevenDaysAgo },
+                        },
+                    },
+                });
+                await (0, redis_1.cacheSet)(soldCacheKey, soldThisWeek, 60);
+            }
+        }
+        catch {
+            // Redis down — silently fall back to 0; non-blocking
+            soldThisWeek = 0;
+        }
         // Transform images to PUBLIC URLs for storefront
-        const productWithPublicUrls = await transformProductImages(product, true);
+        const productWithPublicUrls = await (0, imageUrl_1.transformProductImages)(product, true);
         res.json({
             success: true,
-            data: productWithPublicUrls,
+            data: { ...productWithPublicUrls, soldThisWeek },
         });
     }
     catch (error) {
@@ -705,7 +792,7 @@ const getProductByIdPublic = async (req, res, next) => {
             throw new errorHandler_1.AppError('Product not found', 404);
         }
         // Transform images to PUBLIC URLs for storefront
-        const productWithPublicUrls = await transformProductImages(product, true);
+        const productWithPublicUrls = await (0, imageUrl_1.transformProductImages)(product, true);
         res.json({
             success: true,
             data: productWithPublicUrls,
@@ -748,7 +835,7 @@ const getRecommendedProducts = async (req, res, next) => {
         let products = await database_1.prisma.product.findMany({
             where: whereClause,
             orderBy: [{ isFeatured: 'desc' }, { averageRating: 'desc' }],
-            take: Number(limit),
+            take: Math.min(Number(limit) || 20, 100),
             include: {
                 category: true,
                 images: { where: { isPrimary: true }, take: 1 },
@@ -774,7 +861,7 @@ const getRecommendedProducts = async (req, res, next) => {
             });
             products = [...products, ...moreProducts];
         }
-        const productsWithUrls = await Promise.all(products.map((product) => transformProductImages(product, true)));
+        const productsWithUrls = await Promise.all(products.map((product) => (0, imageUrl_1.transformProductImages)(product, true)));
         res.json({
             success: true,
             data: productsWithUrls,
@@ -818,13 +905,13 @@ const searchProducts = async (req, res, next) => {
                 where,
                 include: { images: true, category: true },
                 skip,
-                take: parseInt(limit),
+                take: Math.min(parseInt(limit) || 20, 100),
                 orderBy: { createdAt: 'desc' },
             }),
             database_1.prisma.product.count({ where }),
         ]);
         // Transform image URLs to signed URLs for reliable access
-        const productsWithSignedUrls = await Promise.all(products.map((product) => transformProductImages(product)));
+        const productsWithSignedUrls = await Promise.all(products.map((product) => (0, imageUrl_1.transformProductImages)(product)));
         res.json({
             success: true,
             data: productsWithSignedUrls,

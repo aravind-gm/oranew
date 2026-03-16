@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const payment_controller_1 = require("../controllers/payment.controller");
+const retryPayment_controller_1 = require("../controllers/retryPayment.controller");
 const auth_1 = require("../middleware/auth");
 const rateLimiter_1 = require("../middleware/rateLimiter");
 const router = (0, express_1.Router)();
@@ -57,5 +58,17 @@ router.post('/webhook', payment_controller_1.webhook);
  * Called by admin after approving a return request
  */
 router.post('/refund', auth_1.protect, (0, auth_1.authorize)('ADMIN'), payment_controller_1.initiateRefund);
+/**
+ * POST /api/payments/retry/token
+ * Generate a 15-minute retry token for a FAILED order
+ * Validates order ownership + confirms order hasn't been paid already
+ */
+router.post('/retry/token', auth_1.protect, rateLimiter_1.paymentLimiter, retryPayment_controller_1.generateRetryToken);
+/**
+ * POST /api/payments/retry/execute
+ * Use a retry token to reinitialize Razorpay on the SAME order
+ * No new order is created — preserves stock reservation
+ */
+router.post('/retry/execute', auth_1.protect, rateLimiter_1.paymentLimiter, retryPayment_controller_1.executeRetryPayment);
 exports.default = router;
 //# sourceMappingURL=payment.routes.js.map

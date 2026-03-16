@@ -8,23 +8,28 @@ const database_1 = require("../config/database");
 /**
  * Set HttpOnly cookies for access and refresh tokens
  * SECURITY: HttpOnly prevents XSS attacks, Secure ensures HTTPS only
+ *
+ * Architecture: Frontend (orashop.in) and backend (api.orashop.in) share
+ * the same root domain, so we use sameSite 'lax' + domain '.orashop.in'
+ * to allow cookies across subdomains securely.
  */
 const setAuthCookies = (res, accessToken, refreshToken) => {
+    const isProduction = process.env.NODE_ENV === 'production';
     // Access token cookie (30 minutes)
     res.cookie('access_token', accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: isProduction,
         sameSite: 'lax',
-        domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+        domain: isProduction ? '.orashop.in' : undefined,
         path: '/',
         maxAge: 30 * 60 * 1000, // 30 minutes
     });
     // Refresh token cookie (7 days)
     res.cookie('refresh_token', refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: isProduction,
         sameSite: 'lax',
-        domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+        domain: isProduction ? '.orashop.in' : undefined,
         path: '/',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
@@ -34,18 +39,19 @@ exports.setAuthCookies = setAuthCookies;
  * Clear authentication cookies
  */
 const clearAuthCookies = (res) => {
+    const isProduction = process.env.NODE_ENV === 'production';
     res.clearCookie('access_token', {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: isProduction,
         sameSite: 'lax',
-        domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+        domain: isProduction ? '.orashop.in' : undefined,
         path: '/',
     });
     res.clearCookie('refresh_token', {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: isProduction,
         sameSite: 'lax',
-        domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+        domain: isProduction ? '.orashop.in' : undefined,
         path: '/',
     });
 };

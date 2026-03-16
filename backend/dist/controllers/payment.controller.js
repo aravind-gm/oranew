@@ -11,6 +11,9 @@ const database_1 = require("../config/database");
 const retry_1 = require("../utils/retry");
 const email_1 = require("../utils/email");
 const helpers_1 = require("../utils/helpers");
+const alerts_1 = require("../utils/alerts");
+const sentry_1 = require("../config/sentry");
+const auditLog_1 = require("../utils/auditLog");
 // ============================================
 // RAZORPAY SINGLETON
 // ============================================
@@ -262,6 +265,15 @@ exports.verifyPayment = (0, helpers_1.asyncHandler)(async (req, res) => {
             orderStatus: order.status,
         });
     }
+    // IDEMPOTENCY GUARD: If order is already beyond PENDING, don't re-verify
+    if (order.status !== 'PENDING' && order.status !== 'CONFIRMED') {
+        console.log('[Payment.verify] ⚠️ Order status already advanced past PENDING:', order.status);
+        return res.json({
+            success: true,
+            message: `Order already in ${order.status} state`,
+            orderStatus: order.status,
+        });
+    }
     // ────────────────────────────────────────────
     // VERIFY RAZORPAY SIGNATURE
     // ────────────────────────────────────────────
@@ -288,6 +300,13 @@ exports.verifyPayment = (0, helpers_1.asyncHandler)(async (req, res) => {
     }
     if (!signatureValid) {
         console.error('[Payment.verify] Signature verification FAILED - possible tampering');
+        (0, alerts_1.sendPaymentAlert)({
+            level: 'critical',
+            event: 'Payment verify HMAC mismatch — possible tampering',
+            orderId,
+            userId: req.user?.id,
+            reason: 'timingSafeEqual failed on verify endpoint',
+        });
         throw new helpers_1.AppError('Invalid payment signature - verification failed', 400);
     }
     console.log('[Payment.verify] ✓ Signature verified successfully');
@@ -300,35 +319,116 @@ exports.verifyPayment = (0, helpers_1.asyncHandler)(async (req, res) => {
     }
     console.log('[Payment.verify] ✓ Razorpay order ID matches');
     // ────────────────────────────────────────────
-    // UPDATE PAYMENT TO VERIFIED (NOT CONFIRMED)
+    // CONFIRM PAYMENT & ORDER IN ONE ATOMIC TRANSACTION
     // ────────────────────────────────────────────
-    // CRITICAL: Only mark as VERIFIED, NOT CONFIRMED
-    // Webhook is the source of truth for CONFIRMED status
-    console.log('[Payment.verify] Marking payment as VERIFIED (waiting for webhook confirmation)');
-    const updatedPayment = await (0, retry_1.withRetry)(() => database_1.prisma.payment.update({
-        where: { id: payment.id },
-        data: {
-            status: 'VERIFIED',
-            gatewayResponse: {
-                ...(typeof payment.gatewayResponse === 'object' && payment.gatewayResponse ? payment.gatewayResponse : {}),
-                razorpayPaymentId: razorpay_payment_id,
-                verifiedAt: new Date().toISOString(),
-                verifiedBy: 'frontend',
-            },
-        },
-    }));
-    // Return early - do NOT update order status yet
-    // Webhook will update order.status to CONFIRMED
-    console.log('[Payment.verify] ✓ Payment marked as VERIFIED');
-    console.log('[Payment.verify] ════════════════════════════════════════');
-    console.log('[Payment.verify] Waiting for webhook confirmation...');
-    console.log('[Payment.verify] ════════════════════════════════════════');
-    res.json({
-        success: true,
-        message: 'Signature verified. Awaiting webhook confirmation.',
-        orderStatus: order.status,
-        paymentStatus: updatedPayment.status,
-    });
+    // The frontend signature verification is cryptographically valid:
+    //   HMAC-SHA256(razorpay_order_id|razorpay_payment_id, key_secret) === signature
+    // This is the SAME proof Razorpay uses. Waiting for a webhook that may
+    // never arrive (misconfigured URL, network issues, secret mismatch)
+    // leaves the customer stuck on the "Confirming…" spinner forever.
+    //
+    // FIX: Confirm everything here. The webhook handler is idempotent —
+    // if it arrives later it will see status=CONFIRMED and return early.
+    console.log('[Payment.verify] Confirming payment + order atomically');
+    try {
+        await database_1.prisma.$transaction(async (tx) => {
+            // 1. Payment → CONFIRMED
+            await tx.payment.update({
+                where: { id: payment.id },
+                data: {
+                    status: 'CONFIRMED',
+                    gatewayResponse: {
+                        ...(typeof payment.gatewayResponse === 'object' && payment.gatewayResponse ? payment.gatewayResponse : {}),
+                        razorpayPaymentId: razorpay_payment_id,
+                        verifiedAt: new Date().toISOString(),
+                        confirmedAt: new Date().toISOString(),
+                        confirmedBy: 'verify-endpoint',
+                    },
+                },
+            });
+            console.log('[Payment.verify] ✓ Payment updated to CONFIRMED');
+            // 2. Order → CONFIRMED + paymentStatus CONFIRMED
+            await tx.order.update({
+                where: { id: order.id },
+                data: {
+                    status: 'CONFIRMED',
+                    paymentStatus: 'CONFIRMED',
+                    paymentMethod: 'RAZORPAY',
+                },
+            });
+            console.log('[Payment.verify] ✓ Order updated to CONFIRMED');
+            // 3. Deduct inventory (with stock-floor check)
+            for (const item of order.items) {
+                const currentProduct = await tx.product.findUnique({
+                    where: { id: item.productId },
+                    select: { stockQuantity: true, name: true },
+                });
+                if (!currentProduct) {
+                    throw new Error(`Product ${item.productId} not found during inventory deduction`);
+                }
+                if (currentProduct.stockQuantity < item.quantity) {
+                    throw new Error(`Insufficient stock for "${currentProduct.name}": available=${currentProduct.stockQuantity}, needed=${item.quantity}`);
+                }
+                await tx.product.update({
+                    where: { id: item.productId },
+                    data: { stockQuantity: { decrement: item.quantity } },
+                });
+            }
+            console.log('[Payment.verify] ✓ Inventory deducted');
+            // 4. Clear cart
+            await tx.cartItem.deleteMany({ where: { userId } });
+            console.log('[Payment.verify] ✓ Cart cleared');
+            // 5. Release inventory locks
+            await tx.inventoryLock.deleteMany({ where: { orderId: order.id } });
+            console.log('[Payment.verify] ✓ Inventory locks removed');
+        });
+        console.log('[Payment.verify] ════════════════════════════════════════');
+        console.log('[Payment.verify] ✅ PAYMENT + ORDER CONFIRMED');
+        console.log('[Payment.verify] Order:', order.orderNumber);
+        console.log('[Payment.verify] ════════════════════════════════════════');
+        // Send confirmation email (non-blocking — don't fail the response)
+        try {
+            const emailTemplate = (0, email_1.getOrderConfirmationTemplate)(order.orderNumber, Number(order.totalAmount));
+            await (0, email_1.sendEmail)({
+                to: order.user.email,
+                subject: `Order Confirmed - ${order.orderNumber}`,
+                html: emailTemplate,
+            });
+            console.log('[Payment.verify] ✓ Confirmation email sent');
+        }
+        catch (emailErr) {
+            console.error('[Payment.verify] ⚠️ Email send failed (non-fatal):', emailErr);
+        }
+        res.json({
+            success: true,
+            message: 'Payment confirmed successfully',
+            orderStatus: 'CONFIRMED',
+            paymentStatus: 'CONFIRMED',
+        });
+    }
+    catch (txErr) {
+        console.error('[Payment.verify] ❌ Transaction failed:', txErr);
+        // Fallback: at minimum mark payment as VERIFIED so webhook can finish the job
+        try {
+            await database_1.prisma.payment.update({
+                where: { id: payment.id },
+                data: {
+                    status: 'VERIFIED',
+                    gatewayResponse: {
+                        ...(typeof payment.gatewayResponse === 'object' && payment.gatewayResponse ? payment.gatewayResponse : {}),
+                        razorpayPaymentId: razorpay_payment_id,
+                        verifiedAt: new Date().toISOString(),
+                        verifiedBy: 'frontend',
+                        confirmError: txErr.message,
+                    },
+                },
+            });
+        }
+        catch {
+            // best-effort
+        }
+        throw new helpers_1.AppError('Payment verified but order confirmation failed. Our team has been notified — your order will be confirmed shortly.', 500);
+    }
 });
 // ============================================
 // ENDPOINT 3: WEBHOOK HANDLER (RAZORPAY payment.captured)
@@ -352,39 +452,20 @@ exports.verifyPayment = (0, helpers_1.asyncHandler)(async (req, res) => {
  * configured in server.ts to receive raw body for signature verification.
  */
 const webhook = async (req, res) => {
-    console.log('[Webhook] ════════════════════════════════════════════════');
-    console.log('[Webhook] Webhook received at:', new Date().toISOString());
-    // ────────────────────────────────────────────
-    // DEBUG: Log request info for troubleshooting
-    // ────────────────────────────────────────────
-    console.log('[Webhook] Request path:', req.originalUrl);
-    console.log('[Webhook] Content-Type:', req.headers['content-type']);
-    console.log('[Webhook] Body type:', typeof req.body, Buffer.isBuffer(req.body) ? '(Buffer)' : '');
-    // Log all headers containing 'razorpay' for debugging
-    const razorpayHeaders = Object.keys(req.headers).filter(h => h.toLowerCase().includes('razorpay'));
-    console.log('[Webhook] Razorpay headers found:', razorpayHeaders.length > 0 ? razorpayHeaders : 'NONE');
     // ────────────────────────────────────────────
     // STEP 1: Extract raw body (CRITICAL for signature)
     // ────────────────────────────────────────────
     let rawBody;
     if (Buffer.isBuffer(req.body)) {
         rawBody = req.body;
-        console.log('[Webhook] ✓ Body is Buffer (correct)');
     }
     else if (req.rawBody && Buffer.isBuffer(req.rawBody)) {
         rawBody = req.rawBody;
-        console.log('[Webhook] ✓ Using rawBody attachment');
-    }
-    else if (typeof req.body === 'object' && req.body !== null) {
-        // Body was parsed by express.json() - this is a problem!
-        console.log('[Webhook] ⚠️ Body was parsed as JSON object - express.json() ran before webhook!');
-        rawBody = Buffer.from(JSON.stringify(req.body));
     }
     else {
-        rawBody = Buffer.from('');
-        console.log('[Webhook] ⚠️ No body found');
+        console.error('[Webhook] HARD REJECT: Raw body missing — cannot verify signature');
+        return res.status(400).json({ success: false, reason: 'Raw body missing — signature unverifiable' });
     }
-    console.log('[Webhook] Raw body length:', rawBody.length);
     // ────────────────────────────────────────────
     // STEP 2: Validate signature exists (ALWAYS REQUIRED)
     // ────────────────────────────────────────────
@@ -397,9 +478,7 @@ const webhook = async (req, res) => {
         });
         return res.status(400).json({ success: false, reason: 'Signature missing' });
     }
-    console.log('[Webhook] ✓ Signature present:', signature.substring(0, 20) + '...');
     if (!rawBody || !rawBody.length) {
-        console.log('[Webhook] ❌ Raw body missing');
         return res.status(400).json({ success: false, reason: 'Raw body missing' });
     }
     // ────────────────────────────────────────────
@@ -407,7 +486,7 @@ const webhook = async (req, res) => {
     // ────────────────────────────────────────────
     const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_KEY_SECRET;
     if (!webhookSecret) {
-        console.log('[Webhook] ❌ Webhook secret not configured');
+        console.error('[Webhook] Webhook secret not configured');
         return res.status(500).json({ success: false, reason: 'Webhook secret not configured' });
     }
     const expectedWebhookSig = crypto_1.default
@@ -424,6 +503,11 @@ const webhook = async (req, res) => {
     }
     if (!webhookSigValid) {
         console.error('[Webhook] Signature verification FAILED - possible replay/forgery');
+        (0, alerts_1.sendPaymentAlert)({
+            level: 'critical',
+            event: 'Webhook HMAC mismatch — possible replay/forgery attack',
+            reason: 'Incoming webhook signature did not match expected HMAC',
+        });
         return res.status(400).json({ success: false, reason: 'Invalid signature' });
     }
     if (process.env.NODE_ENV === 'development') {
@@ -437,23 +521,40 @@ const webhook = async (req, res) => {
         event = JSON.parse(rawBody.toString());
     }
     catch (err) {
-        console.log('[Webhook] ❌ Invalid JSON:', err);
+        console.error('[Webhook] Invalid JSON in webhook body');
         return res.status(400).json({ success: false, reason: 'Invalid JSON' });
     }
-    const eventType = event?.event;
-    console.log('[Webhook] Event type:', eventType);
+    // ────────────────────────────────────────────
+    // STEP 4.5: Validate webhook timestamp (replay protection)
+    // ────────────────────────────────────────────
+    // Razorpay events include created_at (Unix timestamp in seconds).
+    // Reject events older than 5 minutes to prevent replay attacks.
+    if (event.created_at) {
+        const eventAgeMs = Math.abs(Date.now() - event.created_at * 1000);
+        if (eventAgeMs > 300000) { // 5 minutes
+            console.warn('[Webhook] ⚠️ REPLAY PROTECTION: Webhook event too old', {
+                eventAge: `${Math.round(eventAgeMs / 1000)}s`,
+                created_at: event.created_at,
+                now: Math.floor(Date.now() / 1000),
+            });
+            return res.status(400).json({ success: false, reason: 'Webhook expired' });
+        }
+    }
     // ────────────────────────────────────────────
     // STEP 5: Route to appropriate handler
     // ────────────────────────────────────────────
-    // ONLY handle payment.captured and payment.failed
+    // ONLY handle payment.captured, payment.failed, and payment.refunded
+    const eventType = event?.event;
     if (eventType === 'payment.captured') {
         return handlePaymentCaptured(event, res);
     }
     else if (eventType === 'payment.failed') {
         return handlePaymentFailed(event, res);
     }
+    else if (eventType === 'payment.refunded') {
+        return handlePaymentRefunded(event, res);
+    }
     else {
-        console.log('[Webhook] Ignoring event type:', eventType);
         return res.status(200).json({ success: true, reason: 'Event ignored' });
     }
 };
@@ -516,11 +617,21 @@ async function handlePaymentCaptured(event, res) {
     // Validate amount matches (HARD REJECTION)
     const expectedAmountPaise = Math.round(Number(payment.amount) * 100);
     if (webhookAmount !== expectedAmountPaise) {
-        console.warn("SECURITY ALERT: Payment amount mismatch", {
+        console.error("[Webhook:Captured] ❌ RECONCILIATION MISMATCH: Payment amount mismatch", {
             expected: expectedAmountPaise,
             received: webhookAmount,
             paymentId: payment.id,
-            timestamp: new Date().toISOString()
+            orderId: payment.order?.id,
+            orderNumber: payment.order?.orderNumber,
+            timestamp: new Date().toISOString(),
+            severity: 'CRITICAL',
+            action: 'HARD_REJECT',
+        });
+        (0, alerts_1.sendPaymentAlert)({
+            level: 'critical',
+            event: 'Webhook amount mismatch — reconciliation failure',
+            reason: `Expected ${expectedAmountPaise} paise, received ${webhookAmount} paise`,
+            orderId: payment.order?.id,
         });
         return res.status(400).json({
             success: false,
@@ -739,10 +850,110 @@ async function handlePaymentFailed(event, res) {
         console.log('[Webhook:Failed] Order:', order.orderNumber);
         console.log('[Webhook:Failed] Reason:', error_description || error_reason);
         console.log('[Webhook:Failed] ════════════════════════════════════════');
+        // Fire-and-forget Slack alert
+        (0, alerts_1.sendPaymentAlert)({
+            level: 'error',
+            event: 'Payment failed (webhook)',
+            orderId: order.orderNumber,
+            userId: order.user?.id,
+            reason: error_description || error_reason || error_code || 'Unknown',
+        });
         return res.status(200).json({ success: true });
     }
     catch (err) {
         console.error('[Webhook:Failed] ❌ Transaction error:', err);
+        return res.status(500).json({ success: false, reason: 'Transaction failed' });
+    }
+}
+// ============================================
+// WEBHOOK HANDLER: PAYMENT REFUNDED
+// ============================================
+async function handlePaymentRefunded(event, res) {
+    console.log('[Webhook:Refunded] Processing payment.refunded event');
+    const paymentEntity = event.payload?.payment?.entity;
+    if (!paymentEntity) {
+        console.log('[Webhook:Refunded] ❌ Missing payment entity in payload');
+        return res.status(400).json({ success: false, reason: 'Missing payment entity' });
+    }
+    const { id: razorpayPaymentId, order_id: razorpayOrderId, notes } = paymentEntity;
+    console.log('[Webhook:Refunded] Refund data:', { razorpayPaymentId, razorpayOrderId });
+    const payment = await database_1.prisma.payment.findFirst({
+        where: { transactionId: razorpayOrderId },
+        include: {
+            order: {
+                include: { items: true, user: true },
+            },
+        },
+    });
+    if (!payment) {
+        console.log('[Webhook:Refunded] ❌ Payment record not found:', razorpayOrderId);
+        return res.status(200).json({ success: false, reason: 'Payment not found' });
+    }
+    // Idempotency: already marked refunded
+    if (payment.status === 'REFUNDED') {
+        console.log('[Webhook:Refunded] ✓ Already REFUNDED (idempotent)');
+        return res.status(200).json({ success: true, reason: 'Already refunded' });
+    }
+    const order = payment.order;
+    if (!order) {
+        return res.status(200).json({ success: false, reason: 'Order not found' });
+    }
+    try {
+        await database_1.prisma.$transaction(async (tx) => {
+            // 1. Mark payment as REFUNDED
+            await tx.payment.update({
+                where: { id: payment.id },
+                data: {
+                    status: 'REFUNDED',
+                    gatewayResponse: {
+                        ...(typeof payment.gatewayResponse === 'object' && payment.gatewayResponse
+                            ? payment.gatewayResponse
+                            : {}),
+                        razorpayPaymentId,
+                        webhookEvent: 'payment.refunded',
+                        refundedAt: new Date().toISOString(),
+                    },
+                },
+            });
+            // 2. Update order status to REFUNDED if not already cancelled
+            if (order.status !== 'CANCELLED') {
+                await tx.order.update({
+                    where: { id: order.id },
+                    data: { status: 'CANCELLED', paymentStatus: 'REFUNDED', cancelledAt: new Date(), cancelReason: 'Refund processed via Razorpay webhook' },
+                });
+            }
+            else {
+                // Just update payment status
+                await tx.order.update({
+                    where: { id: order.id },
+                    data: { paymentStatus: 'REFUNDED' },
+                });
+            }
+            // 3. Restore stock if not already restored (i.e. order was previously CONFIRMED)
+            if (order.status === 'CONFIRMED') {
+                for (const item of order.items) {
+                    await tx.product.update({
+                        where: { id: item.productId },
+                        data: { stockQuantity: { increment: item.quantity } },
+                    });
+                }
+                console.log('[Webhook:Refunded] ✓ Stock restored for', order.items.length, 'items');
+            }
+        });
+        console.log('[Webhook:Refunded] ════════════════════════════════════════');
+        console.log('[Webhook:Refunded] ✅ REFUND PROCESSED — Order:', order.orderNumber);
+        console.log('[Webhook:Refunded] ════════════════════════════════════════');
+        (0, alerts_1.sendPaymentAlert)({
+            level: 'warning',
+            event: 'Refund processed (webhook)',
+            orderId: order.orderNumber,
+            userId: order.user?.id,
+            reason: `payment.refunded received for ${razorpayPaymentId}`,
+        });
+        return res.status(200).json({ success: true });
+    }
+    catch (err) {
+        console.error('[Webhook:Refunded] ❌ Transaction error:', err);
         return res.status(500).json({ success: false, reason: 'Transaction failed' });
     }
 }
@@ -980,6 +1191,23 @@ exports.initiateRefund = (0, helpers_1.asyncHandler)(async (req, res) => {
             console.error('[Payment.refund] Failed to send refund email:', emailError);
             // Continue - don't fail the refund if email fails
         }
+        // Audit log: record admin refund action
+        (0, auditLog_1.logAdminAction)(req, 'UPDATE', 'ORDER', order.id, {
+            action: 'REFUND_PROCESSED',
+            returnId,
+            refundAmount,
+            refundId: refundResult?.id,
+            paymentId: payment.id,
+        });
+        // Fire-and-forget alert so team knows a refund was issued
+        (0, alerts_1.sendPaymentAlert)({
+            level: 'info',
+            event: 'Refund processed',
+            orderId: order.orderNumber,
+            userId: userId,
+            amount: Math.round(Number(refundAmount) * 100),
+            reason: `returnId=${returnId}`,
+        });
         res.json({
             success: true,
             message: 'Refund processed successfully',
@@ -989,6 +1217,14 @@ exports.initiateRefund = (0, helpers_1.asyncHandler)(async (req, res) => {
         });
     }
     catch (error) {
+        (0, sentry_1.captureException)(error, { context: 'initiateRefund', returnId, userId });
+        (0, alerts_1.sendPaymentAlert)({
+            level: 'critical',
+            event: 'Refund FAILED',
+            userId,
+            reason: error instanceof Error ? error.message : String(error),
+            extra: { returnId },
+        });
         console.error('[Payment.refund] Error:', error);
         throw error;
     }

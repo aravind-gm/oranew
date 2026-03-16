@@ -2,6 +2,10 @@
 /**
  * GST Calculation — Configurable per product/category
  *
+ * IMPORTANT: For B2C e-commerce in India, all displayed prices are
+ * GST-INCLUSIVE (MRP includes GST). The GST amount is extracted from
+ * the price for invoice/tax filing purposes, NOT added on top.
+ *
  * Priority: Product.gstRate > TaxConfig by category > default 3%
  */
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -57,10 +61,14 @@ async function getGSTRate(productGstRate, categorySlug) {
     return DEFAULT_GST_RATE;
 }
 /**
- * Calculate GST amount given a base amount and rate.
+ * Calculate GST amount INCLUDED in a given price (reverse calculation).
+ * Since prices are GST-inclusive, we extract the GST portion.
+ * Formula: GST = amount - (amount / (1 + rate/100))
+ * e.g. ₹1,000 at 3% → GST included = ₹1,000 - ₹970.87 = ₹29.13
  */
 function calculateGSTAmount(amount, gstRate) {
-    return Math.round((amount * gstRate) / 100 * 100) / 100; // Round to 2 decimals
+    const gstInclusive = amount - (amount / (1 + gstRate / 100));
+    return Math.round(gstInclusive * 100) / 100; // Round to 2 decimals
 }
 /**
  * Invalidate tax config cache (call after admin updates).

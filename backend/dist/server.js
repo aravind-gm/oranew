@@ -41,6 +41,7 @@ const express_1 = __importDefault(require("express"));
 const helmet_1 = __importDefault(require("helmet"));
 const path_1 = __importDefault(require("path"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
+const compression_1 = __importDefault(require("compression"));
 // Routes
 const admin_routes_1 = __importDefault(require("./routes/admin.routes"));
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
@@ -62,6 +63,7 @@ const shopall_cms_routes_1 = __importDefault(require("./routes/shopall-cms.route
 const combo_routes_1 = __importDefault(require("./routes/combo.routes"));
 const bogo_routes_1 = __importDefault(require("./routes/bogo.routes"));
 const offers_routes_1 = __importDefault(require("./routes/offers.routes"));
+const contact_routes_1 = __importDefault(require("./routes/contact.routes"));
 const supabase_1 = require("./config/supabase");
 const migrations_1 = require("./config/migrations");
 const errorHandler_1 = require("./middleware/errorHandler");
@@ -69,6 +71,15 @@ const notFound_1 = require("./middleware/notFound");
 const database_1 = require("./config/database");
 const scheduler_1 = require("./utils/scheduler");
 const rateLimiter_1 = require("./middleware/rateLimiter");
+const sentry_1 = require("./config/sentry");
+const duplicateOrderGuard_1 = require("./middleware/duplicateOrderGuard");
+const redis_1 = require("./config/redis");
+const jobQueue_service_1 = require("./services/jobQueue.service");
+// ============================================
+// SENTRY — must be initialized before anything else
+// that might throw or import third-party code
+// ============================================
+(0, sentry_1.initSentry)();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 8000;
 // ============================================
@@ -125,18 +136,41 @@ app.use((0, helmet_1.default)({
     frameguard: { action: 'deny' },
     hidePoweredBy: true,
 }));
+// ============================================
+// COMPRESSION — Brotli/Gzip for all responses
+// ============================================
+// Reduces payload size by 60-80% (especially for JSON APIs).
+// Cloudflare will also compress at CDN level, but this covers
+// direct API calls and non-CDN paths.
+app.use((0, compression_1.default)({
+    level: 6, // Good balance of speed vs compression ratio
+    threshold: 1024, // Only compress responses > 1KB
+    filter: (req, res) => {
+        // Don't compress webhook responses or SSE streams
+        if (req.path.includes('webhook'))
+            return false;
+        return compression_1.default.filter(req, res);
+    },
+}));
 // CORS - MUST be after helmet
 // Static origin whitelist — no callback, eliminates inconsistencies
 const allowedOrigins = [
     'https://orashop.in',
     'https://www.orashop.in',
+    'https://api.orashop.in',
+    'https://oranew.vercel.app',
+    'https://orashop.vercel.app',
 ];
 // Dev origins (only in non-production)
 if (process.env.NODE_ENV !== 'production') {
-    allowedOrigins.push('http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000', 'http://127.0.0.1:3001', 'https://oranew.vercel.app', 'https://orashop.vercel.app', 'https://oranew-staging.vercel.app');
+    allowedOrigins.push('http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000', 'http://127.0.0.1:3001', 'https://oranew-staging.vercel.app');
     if (process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL)) {
         allowedOrigins.push(process.env.FRONTEND_URL);
     }
+}
+// Also add FRONTEND_URL in production if set (for custom deployments)
+if (process.env.NODE_ENV === 'production' && process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL)) {
+    allowedOrigins.push(process.env.FRONTEND_URL);
 }
 console.log('[CORS] 🔐 Allowed Origins:', allowedOrigins);
 app.use((0, cors_1.default)({
@@ -163,16 +197,18 @@ app.use((req, res, next) => {
 // CRITICAL: This MUST be before express.json() middleware
 app.use('/api/payments/webhook', express_1.default.raw({ type: 'application/json' }));
 // ============================================
+// COOKIE PARSER - For HttpOnly Cookie Authentication
+// ============================================
+// CRITICAL: Must be BEFORE upload routes so that auth middleware
+// inside upload routes can read req.cookies.access_token
+app.use((0, cookie_parser_1.default)());
+// ============================================
 // UPLOAD ROUTES - MUST BE BEFORE express.json()
 // ============================================
 // Multer needs to handle multipart/form-data directly
 // Applying express.json() before upload routes will cause 400 errors
 app.use('/api/upload', upload_routes_1.default);
 app.use('/api/r2', r2_upload_routes_1.default);
-// ============================================
-// COOKIE PARSER - For HttpOnly Cookie Authentication
-// ============================================
-app.use((0, cookie_parser_1.default)());
 // ============================================
 // GLOBAL RATE LIMITER (100 req / 15 min per IP)
 // ============================================
@@ -200,6 +236,11 @@ app.use((req, res, next) => {
     express_1.default.json()(req, res, next);
 });
 app.use(express_1.default.urlencoded({ extended: true }));
+// ============================================
+// DUPLICATE ORDER GUARD - PREVENT DOUBLE CHECKOUT
+// ============================================
+// Applied AFTER auth middleware so we can check req.user
+app.use(duplicateOrderGuard_1.duplicateOrderGuard);
 // Static files (uploads)
 app.use('/uploads', express_1.default.static(path_1.default.join(__dirname, '../uploads')));
 // Request logging (development)
@@ -328,6 +369,7 @@ app.get('/api/health/detailed', detailedHealthCheck);
 // API Routes
 app.use('/api/health', health_routes_1.default);
 app.use('/api/auth', auth_routes_1.default);
+app.use('/api/products/bogo-eligible', bogo_routes_1.default);
 app.use('/api/products', product_routes_1.default);
 app.use('/api/categories', category_routes_1.default);
 app.use('/api/cart', cart_routes_1.default);
@@ -343,7 +385,7 @@ app.use('/api/announcements', announcements_routes_1.default);
 app.use('/api/pages', pages_routes_1.default);
 app.use('/api/shopall-cms', shopall_cms_routes_1.default);
 app.use('/api/combos', combo_routes_1.default);
-app.use('/api/products/bogo-eligible', bogo_routes_1.default);
+app.use('/api/contact', contact_routes_1.default);
 app.use('/api/offers', offers_routes_1.default);
 // Shipping config (public)
 const shipping_routes_1 = __importDefault(require("./routes/shipping.routes"));
@@ -351,6 +393,9 @@ app.use('/api/shipping', shipping_routes_1.default);
 // ============================================
 // ERROR HANDLING
 // ============================================
+// Sentry error handler must come AFTER all routes and BEFORE the custom
+// errorHandler so that Sentry captures the error with full request context.
+app.use(sentry_1.Sentry.expressErrorHandler());
 app.use(notFound_1.notFound);
 app.use(errorHandler_1.errorHandler);
 // ============================================
@@ -445,6 +490,41 @@ app.listen(PORT, async () => {
     // Start scheduled jobs (campaign expiry, inventory cleanup)
     (0, scheduler_1.startScheduler)();
     console.log('[Startup] ✅ Scheduler: STARTED (campaign expiry + inventory cleanup)');
+    // ============================================
+    // REDIS + BACKGROUND JOBS (Phase 4)
+    // ============================================
+    // Safe to fail — falls back to in-memory cache + setInterval scheduler
+    console.log('\n[Startup] 🔌 Initializing Redis...');
+    const redisReady = await (0, redis_1.initRedis)();
+    if (redisReady) {
+        console.log('[Startup] ✅ Redis: CONNECTED — caching enabled');
+        // Initialize BullMQ job queue (requires Redis)
+        console.log('[Startup] 🔄 Initializing BullMQ job queue...');
+        const jobQueueReady = await (0, jobQueue_service_1.initJobQueue)();
+        if (jobQueueReady) {
+            console.log('[Startup] ✅ BullMQ: ACTIVE — background jobs via Redis');
+        }
+        else {
+            console.log('[Startup] ⚠️  BullMQ: FAILED — using scheduler fallback');
+        }
+    }
+    else {
+        console.log('[Startup] ⚠️  Redis: NOT AVAILABLE — using in-memory cache + scheduler');
+    }
+    console.log('\n[Startup] 🎉 Phase 4 infrastructure ready');
+});
+// ============================================
+// GRACEFUL SHUTDOWN
+// ============================================
+process.on('SIGTERM', async () => {
+    console.log('[Shutdown] SIGTERM received — graceful shutdown...');
+    await (0, jobQueue_service_1.shutdownJobQueue)();
+    process.exit(0);
+});
+process.on('SIGINT', async () => {
+    console.log('[Shutdown] SIGINT received — graceful shutdown...');
+    await (0, jobQueue_service_1.shutdownJobQueue)();
+    process.exit(0);
 });
 exports.default = app;
 //# sourceMappingURL=server.js.map

@@ -63,6 +63,11 @@ interface ProductImage {
   file?: File;
 }
 
+interface ProductVideo {
+  url: string;
+  file?: File;
+}
+
 interface ProductVariant {
   id: string;
   name: string;
@@ -148,49 +153,74 @@ interface ProductFormData {
 
 interface ImageUploaderProps {
   images: ProductImage[];
+  video: ProductVideo | null;
   onChange: (images: ProductImage[]) => void;
+  onVideoChange: (video: ProductVideo | null) => void;
 }
 
-function ImageUploader({ images, onChange }: ImageUploaderProps) {
+function ImageUploader({ images, video, onChange, onVideoChange }: ImageUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
 
   const MAX_IMAGES = 10;
 
+  const splitFiles = (allFiles: File[]) => {
+    const remainingImages = MAX_IMAGES - images.length;
+    const imageFiles = allFiles
+      .filter(file => file.type.startsWith('image/'))
+      .slice(0, Math.max(0, remainingImages));
+    const videoFile = allFiles.find(file => file.type.startsWith('video/'));
+    return { imageFiles, videoFile };
+  };
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    
-    const remaining = MAX_IMAGES - images.length;
-    if (remaining <= 0) return;
 
-    const files = Array.from(e.dataTransfer.files)
-      .filter(file => file.type.startsWith('image/'))
-      .slice(0, remaining);
+    const files = Array.from(e.dataTransfer.files);
+    const { imageFiles, videoFile } = splitFiles(files);
     
-    const newImages: ProductImage[] = files.map((file, index) => ({
+    const newImages: ProductImage[] = imageFiles.map((file, index) => ({
       id: `new-${Date.now()}-${index}`,
       url: URL.createObjectURL(file),
       isPrimary: images.length === 0 && index === 0,
       file,
     }));
-    
-    onChange([...images, ...newImages]);
-  }, [images, onChange]);
+
+    if (newImages.length > 0) {
+      onChange([...images, ...newImages]);
+    }
+
+    if (videoFile) {
+      onVideoChange({
+        url: URL.createObjectURL(videoFile),
+        file: videoFile,
+      });
+    }
+  }, [images, onChange, onVideoChange]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const remaining = MAX_IMAGES - images.length;
-    if (remaining <= 0) return;
-
-    const files = Array.from(e.target.files || []).slice(0, remaining);
+    const files = Array.from(e.target.files || []);
+    const { imageFiles, videoFile } = splitFiles(files);
     
-    const newImages: ProductImage[] = files.map((file, index) => ({
+    const newImages: ProductImage[] = imageFiles.map((file, index) => ({
       id: `new-${Date.now()}-${index}`,
       url: URL.createObjectURL(file),
       isPrimary: images.length === 0 && index === 0,
       file,
     }));
-    
-    onChange([...images, ...newImages]);
+
+    if (newImages.length > 0) {
+      onChange([...images, ...newImages]);
+    }
+
+    if (videoFile) {
+      onVideoChange({
+        url: URL.createObjectURL(videoFile),
+        file: videoFile,
+      });
+    }
+
+    e.target.value = '';
   };
 
   const handleRemove = (id: string) => {
@@ -226,30 +256,53 @@ function ImageUploader({ images, onChange }: ImageUploaderProps) {
       >
         <input
           type="file"
-          id="image-upload"
+          id="media-upload"
           multiple
-          accept="image/*"
+          accept="image/*,video/mp4,video/webm,video/quicktime"
           onChange={handleFileSelect}
           className="hidden"
         />
-        <label htmlFor="image-upload" className="cursor-pointer">
+        <label htmlFor="media-upload" className="cursor-pointer">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#f6f7f9] flex items-center justify-center">
             <Upload size={24} className="text-[#9ca3af]" />
           </div>
           <p className="text-sm font-medium text-[#111827] mb-1">
             {images.length >= MAX_IMAGES
               ? 'Maximum 10 images reached'
-              : 'Drop images here or click to upload'}
+              : 'Drop images/videos here or click to upload'}
           </p>
           <p className="text-xs text-[#9ca3af]">
-            PNG, JPG, WEBP up to 5MB each · {images.length}/{MAX_IMAGES} images
+            PNG, JPG, WEBP up to 5MB · MP4/WebM/MOV up to 50MB · {images.length}/{MAX_IMAGES} images · {video ? '1/1 video' : '0/1 video'}
           </p>
         </label>
       </div>
 
       {/* Image Grid */}
-      {images.length > 0 && (
+      {(images.length > 0 || video) && (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          {video && (
+            <div className="relative aspect-square rounded-lg overflow-hidden border-2 border-[#e5e7eb] group bg-black">
+              <video
+                src={video.url}
+                className="w-full h-full object-cover"
+                controls
+                preload="metadata"
+              />
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <button
+                  onClick={() => onVideoChange(null)}
+                  className="p-2 bg-white rounded-lg hover:bg-gray-100 transition-colors"
+                  title="Remove video"
+                >
+                  <Trash2 size={16} className="text-[#dc2626]" />
+                </button>
+              </div>
+              <div className="absolute top-2 left-2 px-2 py-1 bg-black/70 text-white text-xs font-medium rounded">
+                Video
+              </div>
+            </div>
+          )}
+
           {images.map((image, index) => (
             <div
               key={image.id}
@@ -366,6 +419,7 @@ export default function ProductFormPage() {
   const [saveError, setSaveError] = useState('');
   const [categories, setCategories] = useState<{ id: string; name: string; slug: string }[]>([]);
   const [slugLocked, setSlugLocked] = useState(true); // Lock slug by default when editing
+  const [video, setVideo] = useState<ProductVideo | null>(null);
 
   // Fetch categories on mount
   useEffect(() => {
@@ -437,6 +491,8 @@ export default function ProductFormPage() {
             variants: [],
             hasVariants: false,
           });
+
+          setVideo(p.videoUrl ? { url: p.videoUrl } : null);
         }
       } catch (err) {
         console.error('Failed to load product:', err);
@@ -531,6 +587,19 @@ export default function ProductFormPage() {
         }
       }
 
+      // Step 1b: Upload selected video file (if any)
+      let uploadedVideoUrl = video?.url || '';
+      if (video?.file) {
+        const uploadVideoFormData = new FormData();
+        uploadVideoFormData.append('video', video.file);
+        const videoUploadRes = await api.post('/upload/videos', uploadVideoFormData);
+        if (videoUploadRes.data.success) {
+          uploadedVideoUrl = videoUploadRes.data.data.url || '';
+        } else {
+          throw new Error('Video upload failed');
+        }
+      }
+
       // Step 2: Build final images array with CDN URLs
       let uploadIndex = 0;
       const finalImages = formData.images.map(img => {
@@ -580,7 +649,7 @@ export default function ProductFormPage() {
         offerExpiry: formData.offerExpiry || undefined,
         showCountdown: formData.showCountdown,
         images: finalImages,
-        videoUrl: formData.videoUrl || undefined,
+        videoUrl: uploadedVideoUrl || undefined,
       };
 
       // Step 4: Create or update
@@ -756,18 +825,13 @@ export default function ProductFormPage() {
               <CardTitle className="mb-4">Media</CardTitle>
               <ImageUploader
                 images={formData.images}
+                video={video}
                 onChange={(images) => updateField('images', images)}
+                onVideoChange={(nextVideo) => {
+                  setVideo(nextVideo);
+                  updateField('videoUrl', nextVideo?.url || '');
+                }}
               />
-
-              <div className="mt-4">
-                <Input
-                  label="Product Video URL"
-                  placeholder="https://cdn.orashop.in/products/demo.mp4"
-                  value={formData.videoUrl}
-                  onChange={(e) => updateField('videoUrl', e.target.value)}
-                  hint="Optional: MP4/WebM URL for product listing cards"
-                />
-              </div>
             </Card>
 
             {/* Pricing */}

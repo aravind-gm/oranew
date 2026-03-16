@@ -42,13 +42,14 @@ const getPrismaClient = () => {
         errorFormat: 'pretty',
     });
     // Connection lifecycle handlers for pgBouncer
-    // Ensures connections are properly released back to the pool
+    // Log connection result but don't crash on failure — server.ts warmup handles retry
     globalPrisma.$connect()
         .then(() => {
         console.log('[DB] ✅ Prisma connected successfully (pgBouncer mode)');
     })
         .catch((error) => {
-        console.error('[DB] ❌ Prisma connection failed:', error);
+        console.error('[DB] ❌ Prisma initial connection failed:', error?.message || error);
+        console.error('[DB] ⚠️  Server will retry via warmupDatabase() — check REDIS_URL and DATABASE_URL');
     });
     return globalPrisma;
 };

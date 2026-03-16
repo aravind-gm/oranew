@@ -1,10 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.processRefund = exports.requestReturn = exports.cancelOrder = exports.getOrderById = exports.getOrders = exports.checkout = void 0;
+exports.trackOrder = exports.processRefund = exports.requestReturn = exports.cancelOrder = exports.getOrderById = exports.getOrders = exports.checkout = void 0;
 const library_1 = require("@prisma/client/runtime/library");
 const database_1 = require("../config/database");
 const retry_1 = require("../utils/retry");
 const email_service_1 = require("../services/email.service");
+const jobQueue_service_1 = require("../services/jobQueue.service");
+const whatsapp_service_1 = require("../services/whatsapp.service");
 const helpers_1 = require("../utils/helpers");
 const inventory_1 = require("../utils/inventory");
 // Shipping — single source of truth: always FREE
@@ -12,14 +14,19 @@ function calculateShipping() {
     return 0;
 }
 const tax_1 = require("../utils/tax");
+// COD constants
+const COD_MAX_AMOUNT = 5000; // ₹5,000 cap for COD orders
+const COD_MAX_PER_DAY = 3; // Max 3 COD orders per user per day
 exports.checkout = (0, helpers_1.asyncHandler)(async (req, res) => {
-    const { shippingAddressId, billingAddressId, shippingAddress, items, couponCode } = req.body;
+    const { shippingAddressId, billingAddressId, shippingAddress, items, couponCode, paymentMethod } = req.body;
+    const isCOD = paymentMethod === 'COD';
     console.log('[Checkout] Request received:', {
         userId: req.user?.id,
         hasShippingAddressId: !!shippingAddressId,
         hasShippingAddress: !!shippingAddress,
         itemsCount: items?.length || 0,
         couponCode: couponCode || 'None',
+        paymentMethod: paymentMethod || 'RAZORPAY',
     });
     let finalShippingAddrId = shippingAddressId;
     let finalBillingAddrId = billingAddressId;
@@ -123,18 +130,22 @@ exports.checkout = (0, helpers_1.asyncHandler)(async (req, res) => {
         throw new helpers_1.AppError('Invalid addresses', 400);
     }
     // ====== CART RE-VALIDATION (Step 6) ======
-    // Re-fetch products from DB — do NOT trust client-side prices
+    // Re-fetch ALL products in a single batch query — eliminates N+1
+    const cartProductIds = cartItems.map((item) => item.productId);
+    const freshProducts = await (0, retry_1.withRetry)(() => database_1.prisma.product.findMany({
+        where: { id: { in: cartProductIds } },
+        select: {
+            id: true, name: true, finalPrice: true, price: true,
+            stockQuantity: true, isActive: true, deletedAt: true,
+            isBOGOEligible: true, bogoActive: true, bogoPriceTier: true,
+            gstRate: true,
+            category: { select: { slug: true } },
+        },
+    }));
+    // Build a lookup map for O(1) access
+    const freshProductMap = new Map(freshProducts.map((p) => [p.id, p]));
     for (const item of cartItems) {
-        const freshProduct = await (0, retry_1.withRetry)(() => database_1.prisma.product.findUnique({
-            where: { id: item.productId },
-            select: {
-                id: true, name: true, finalPrice: true, price: true,
-                stockQuantity: true, isActive: true, deletedAt: true,
-                isBOGOEligible: true, bogoActive: true, bogoPriceTier: true,
-                gstRate: true,
-                category: { select: { slug: true } },
-            },
-        }));
+        const freshProduct = freshProductMap.get(item.productId);
         if (!freshProduct || freshProduct.deletedAt || !freshProduct.isActive) {
             throw new helpers_1.AppError(`Product "${item.product?.name || item.productId}" is no longer available`, 400);
         }
@@ -255,6 +266,8 @@ exports.checkout = (0, helpers_1.asyncHandler)(async (req, res) => {
         discountAmount = subtotal;
     }
     // ====== GST CALCULATION (per-item configurable GST) ======
+    // GST is INCLUSIVE in displayed prices (Indian B2C e-commerce standard).
+    // We calculate it here for invoice/tax filing purposes only — NOT added to total.
     let gstAmount = 0;
     const itemGstRates = [];
     for (const item of cartItems) {
@@ -271,15 +284,38 @@ exports.checkout = (0, helpers_1.asyncHandler)(async (req, res) => {
     }
     // ====== SHIPPING (server-side source of truth — always FREE) ======
     const shippingFee = calculateShipping();
-    // ====== TOTAL CALCULATION WITH NEGATIVE PREVENTION ======
-    const computedTotal = subtotal - discountAmount + gstAmount + shippingFee;
+    // ====== TOTAL CALCULATION ======
+    // GST is inclusive in finalPrice — so total = subtotal - discount + shipping only
+    const computedTotal = subtotal - discountAmount + shippingFee;
     if (computedTotal < 0) {
         throw new helpers_1.AppError('Invalid order amount: total cannot be negative', 400);
     }
     const totalAmount = Math.max(0, computedTotal);
-    // Final safety: Razorpay requires amount > 0
+    // Final safety: amount > 0
     if (totalAmount <= 0) {
         throw new helpers_1.AppError('Order total must be greater than zero', 400);
+    }
+    // ====== COD VALIDATION RULES ======
+    if (isCOD) {
+        // Rule 1: Cart total must be ≤ ₹5,000 for COD
+        if (totalAmount > COD_MAX_AMOUNT) {
+            throw new helpers_1.AppError(`Cash on Delivery is available only for orders up to ₹${COD_MAX_AMOUNT.toLocaleString()}. Your total is ₹${Math.round(totalAmount).toLocaleString()}.`, 400);
+        }
+        // Rule 2: Max 3 COD orders per user per day (fraud prevention)
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const codOrdersToday = await database_1.prisma.order.count({
+            where: {
+                userId: req.user.id,
+                paymentMethod: 'COD',
+                createdAt: { gte: todayStart },
+                status: { notIn: ['CANCELLED'] },
+            },
+        });
+        if (codOrdersToday >= COD_MAX_PER_DAY) {
+            throw new helpers_1.AppError(`You can place a maximum of ${COD_MAX_PER_DAY} Cash on Delivery orders per day. Please use online payment.`, 400);
+        }
+        console.log('[Checkout] COD validated:', { totalAmount, codOrdersToday });
     }
     // ====== TRANSACTIONAL ORDER + INVENTORY LOCK CREATION (CRITICAL) ======
     // ALL stock checks, order creation, inventory locks, and coupon updates
@@ -292,7 +328,13 @@ exports.checkout = (0, helpers_1.asyncHandler)(async (req, res) => {
     //   Serializable forces transactions to execute as if sequential, so the
     //   second checkout will see the stock already reserved and fail cleanly.
     const order = await database_1.prisma.$transaction(async (tx) => {
-        //    This is the definitive guard — the check above is a fast pre-check.
+        // DUPLICATE ORDER GUARD is handled by the duplicateOrderGuard middleware
+        // (Layer 1) which uses a cart-hash-aware in-memory check with a 60s window.
+        // The Serializable isolation level below (Layer 3) prevents inventory races.
+        // No need for an additional DB-level check here — the previous check was
+        // too aggressive (blocked ANY order by the same user within 60s, even
+        // with a completely different cart, causing false 409 errors).
+        // Stock availability check inside the Serializable transaction
         for (const item of cartItems) {
             const freshProduct = await tx.product.findUnique({
                 where: { id: item.productId },
@@ -327,7 +369,8 @@ exports.checkout = (0, helpers_1.asyncHandler)(async (req, res) => {
                 totalAmount: new library_1.Decimal(totalAmount),
                 shippingAddressId: finalShippingAddrId,
                 billingAddressId: finalBillingAddrId,
-                status: 'PENDING',
+                status: isCOD ? 'CONFIRMED' : 'PENDING',
+                paymentMethod: isCOD ? 'COD' : 'RAZORPAY',
                 paymentStatus: 'PENDING',
                 items: {
                     create: cartItems.map((item, index) => ({
@@ -400,6 +443,10 @@ exports.checkout = (0, helpers_1.asyncHandler)(async (req, res) => {
         // will surface it as a PrismaClientKnownRequestError (P2034) which we
         // catch in the global error handler and return as a 409 Conflict.
         isolationLevel: 'Serializable',
+        // Generous timeouts for Render free-tier (slow cold DB connections)
+        // Default is 5s which is too short when stock checks + order create + locks run sequentially
+        timeout: 30000, // 30s max for the transaction body
+        maxWait: 10000, // 10s max to acquire a connection from the pool
     });
     // Send order placed email (fire and forget - don't block response)
     try {
@@ -427,11 +474,93 @@ exports.checkout = (0, helpers_1.asyncHandler)(async (req, res) => {
     catch (emailError) {
         console.error('Email error (non-blocking):', emailError);
     }
+    // 🔔 Notify partners via WhatsApp about the new order (non-blocking)
+    try {
+        (0, whatsapp_service_1.notifyPartnersNewOrder)({
+            orderNumber: order.orderNumber,
+            customerName: order.user.fullName || 'Customer',
+            customerPhone: shippingAddr?.phone || '',
+            customerEmail: order.user.email || '',
+            totalAmount: Number(order.totalAmount),
+            paymentMethod: isCOD ? 'COD' : 'RAZORPAY',
+            items: order.items.map((item) => ({
+                productName: item.productName,
+                quantity: item.quantity,
+                unitPrice: Number(item.unitPrice),
+            })),
+            shippingAddress: {
+                fullName: order.shippingAddress.fullName,
+                addressLine1: order.shippingAddress.addressLine1,
+                addressLine2: order.shippingAddress.addressLine2 || undefined,
+                city: order.shippingAddress.city,
+                state: order.shippingAddress.state,
+                pincode: order.shippingAddress.pincode,
+            },
+        }).catch(err => console.error('[WhatsApp] Partner notification failed:', err));
+    }
+    catch { /* non-critical */ }
+    // ====== COD: Create payment record & confirm immediately ======
+    if (isCOD) {
+        await database_1.prisma.payment.create({
+            data: {
+                orderId: order.id,
+                paymentGateway: 'COD',
+                transactionId: `COD-${order.orderNumber}`,
+                amount: totalAmount,
+                currency: 'INR',
+                status: 'PENDING',
+            },
+        });
+        // For COD, deduct stock immediately (like a confirmed order)
+        for (const item of cartItems) {
+            await database_1.prisma.product.update({
+                where: { id: item.productId },
+                data: { stockQuantity: { decrement: item.quantity } },
+            });
+        }
+        // Release inventory locks since stock is now deducted
+        await (0, inventory_1.releaseInventoryLocks)(order.id);
+        console.log('[Checkout] ✅ COD order confirmed:', order.orderNumber);
+        // Schedule post-purchase lifecycle emails (Day 2/7/21)
+        const postPurchaseBase = {
+            orderId: order.id,
+            customerEmail: order.user.email,
+        };
+        try {
+            await (0, jobQueue_service_1.enqueueJob)('post-purchase-day2', { ...postPurchaseBase, type: 'post-purchase-day2' });
+            await (0, jobQueue_service_1.enqueueJob)('post-purchase-day7', { ...postPurchaseBase, type: 'post-purchase-day7' });
+            await (0, jobQueue_service_1.enqueueJob)('post-purchase-day21', { ...postPurchaseBase, type: 'post-purchase-day21' });
+        }
+        catch (e) {
+            console.error('[Checkout] Failed to schedule post-purchase emails (non-blocking):', e);
+        }
+        // WhatsApp order confirmation (non-blocking)
+        try {
+            const userPhone = shippingAddr?.phone || '';
+            if (userPhone) {
+                (0, whatsapp_service_1.sendWhatsAppOrderConfirmation)({
+                    phone: userPhone,
+                    customerName: order.user.fullName || 'Customer',
+                    orderNumber: order.orderNumber,
+                    totalAmount,
+                }).catch((err) => console.error('[WhatsApp] COD confirmation failed:', err));
+            }
+        }
+        catch { /* non-critical */ }
+        return res.status(201).json({
+            success: true,
+            order,
+            data: order,
+            codOrder: true,
+            message: 'COD order placed successfully. Pay on delivery.',
+        });
+    }
     // DO NOT clear cart yet - wait for payment confirmation webhook
     res.status(201).json({
         success: true,
         order, // Frontend expects response.data.order
         data: order,
+        codOrder: false,
         message: 'Order created. Proceed to payment.',
     });
 });
@@ -575,5 +704,55 @@ exports.processRefund = (0, helpers_1.asyncHandler)(async (req, res) => {
         await (0, inventory_1.restockInventory)(order.id);
     }));
     res.json({ success: true, message: 'Refund processed and inventory restocked' });
+});
+/**
+ * PUBLIC: Track order by order number + email (no auth required)
+ * POST /api/orders/track
+ */
+exports.trackOrder = (0, helpers_1.asyncHandler)(async (req, res) => {
+    const { orderNumber, email } = req.body;
+    if (!orderNumber || !email) {
+        throw new helpers_1.AppError('Order number and email are required', 400);
+    }
+    const order = await database_1.prisma.order.findFirst({
+        where: {
+            orderNumber: orderNumber.toUpperCase(),
+            user: { email: email.toLowerCase() },
+        },
+        select: {
+            id: true,
+            orderNumber: true,
+            status: true,
+            paymentStatus: true,
+            paymentMethod: true,
+            totalAmount: true,
+            trackingNumber: true,
+            courierName: true,
+            shipmentStatus: true,
+            createdAt: true,
+            shippedAt: true,
+            deliveredAt: true,
+            cancelledAt: true,
+            items: {
+                select: {
+                    productName: true,
+                    quantity: true,
+                    unitPrice: true,
+                    totalPrice: true,
+                },
+            },
+            shippingAddress: {
+                select: {
+                    city: true,
+                    state: true,
+                    pincode: true,
+                },
+            },
+        },
+    });
+    if (!order) {
+        throw new helpers_1.AppError('No order found with that order number and email combination', 404);
+    }
+    res.json({ success: true, data: order });
 });
 //# sourceMappingURL=order.controller.js.map

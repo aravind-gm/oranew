@@ -12,6 +12,7 @@ exports.getLowStockProducts = getLowStockProducts;
 exports.getProductInventoryStatus = getProductInventoryStatus;
 const database_1 = require("../config/database");
 const helpers_1 = require("./helpers");
+const stockAlerts_1 = require("./stockAlerts");
 const INVENTORY_LOCK_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
 /**
  * Validate if product has sufficient stock for purchase
@@ -89,12 +90,12 @@ async function lockInventory(orderId, items) {
  */
 async function confirmInventoryDeduction(orderId) {
     try {
+        // Fetch product details before transaction for alert use after
+        const locks = await database_1.prisma.inventoryLock.findMany({
+            where: { orderId },
+            select: { productId: true, quantity: true },
+        });
         await database_1.prisma.$transaction(async (tx) => {
-            // Get all locks for this order
-            const locks = await tx.inventoryLock.findMany({
-                where: { orderId },
-                select: { productId: true, quantity: true },
-            });
             // Deduct from stock for each product
             for (const lock of locks) {
                 await tx.product.update({
@@ -111,6 +112,27 @@ async function confirmInventoryDeduction(orderId) {
                 where: { orderId },
             });
         });
+        // Post-transaction: fire low-stock alerts (non-blocking)
+        for (const lock of locks) {
+            try {
+                const product = await database_1.prisma.product.findUnique({
+                    where: { id: lock.productId },
+                    select: {
+                        id: true,
+                        name: true,
+                        stockQuantity: true,
+                        lowStockThreshold: true,
+                        lowStockAlertSentAt: true,
+                    },
+                });
+                if (product) {
+                    await (0, stockAlerts_1.checkAndAlertLowStock)(product.id, product.name, product.stockQuantity, product.lowStockThreshold, product.lowStockAlertSentAt);
+                }
+            }
+            catch (alertErr) {
+                console.error(`[StockAlert] Failed for product ${lock.productId}:`, alertErr);
+            }
+        }
     }
     catch (error) {
         console.error('Inventory confirmation failed:', error);

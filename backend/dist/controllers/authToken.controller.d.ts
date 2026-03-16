@@ -2,6 +2,10 @@ import { Request, Response } from 'express';
 /**
  * Set HttpOnly cookies for access and refresh tokens
  * SECURITY: HttpOnly prevents XSS attacks, Secure ensures HTTPS only
+ *
+ * Architecture: Frontend (orashop.in) and backend (api.orashop.in) share
+ * the same root domain, so we use sameSite 'lax' + domain '.orashop.in'
+ * to allow cookies across subdomains securely.
  */
 export declare const setAuthCookies: (res: Response, accessToken: string, refreshToken: string) => void;
 /**

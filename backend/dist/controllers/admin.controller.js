@@ -37,54 +37,10 @@ exports.getAuditLogs = exports.deleteTaxConfig = exports.upsertTaxConfig = expor
 const database_1 = require("../config/database");
 const errorHandler_1 = require("../middleware/errorHandler");
 const email_service_1 = require("../services/email.service");
+const whatsapp_service_1 = require("../services/whatsapp.service");
 const inventory_1 = require("../utils/inventory");
-// Helper function to transform image URL to CDN URL
-// Handles both Supabase legacy URLs and R2/CDN URLs
-function transformImageUrlToCDN(imageUrl) {
-    if (!imageUrl)
-        return null;
-    // Already a CDN URL
-    if (imageUrl.includes('cdn.orashop.in')) {
-        return imageUrl;
-    }
-    // Supabase URL - extract the filename and use CDN
-    if (imageUrl.includes('supabase.co')) {
-        const filenameMatch = imageUrl.match(/\/([^\/]+\.(?:jpg|jpeg|png|gif|webp))$/i);
-        if (filenameMatch) {
-            const filename = filenameMatch[1];
-            return `${process.env.R2_PUBLIC_BASE_URL || 'https://cdn.orashop.in'}/products/${filename}`;
-        }
-    }
-    // R2 bucket URL - transform to CDN
-    if (imageUrl.includes('.r2.dev') || imageUrl.includes('r2.dev')) {
-        const filenameMatch = imageUrl.match(/\/([^\/]+\.(?:jpg|jpeg|png|gif|webp))$/i);
-        if (filenameMatch) {
-            const filename = filenameMatch[1];
-            return `${process.env.R2_PUBLIC_BASE_URL || 'https://cdn.orashop.in'}/products/${filename}`;
-        }
-    }
-    // Relative path - prepend CDN URL
-    if (!imageUrl.startsWith('http')) {
-        return `${process.env.R2_PUBLIC_BASE_URL || 'https://cdn.orashop.in'}/${imageUrl}`;
-    }
-    // Unknown format - return as is
-    return imageUrl;
-}
-// Helper function to transform product images to CDN URLs
-async function transformProductImages(product) {
-    if (!product.images || product.images.length === 0) {
-        return product;
-    }
-    const transformedImages = product.images.map((img) => {
-        if (!img.imageUrl) {
-            return img;
-        }
-        // Transform to CDN URL
-        const cdnUrl = transformImageUrlToCDN(img.imageUrl);
-        return { ...img, imageUrl: cdnUrl };
-    });
-    return { ...product, images: transformedImages };
-}
+const auditLog_1 = require("../utils/auditLog");
+const imageUrl_1 = require("../utils/imageUrl");
 // ============================================
 // DASHBOARD
 // ============================================
@@ -209,7 +165,7 @@ const getAllOrders = async (req, res, next) => {
                 },
                 orderBy: { createdAt: 'desc' },
                 skip,
-                take: parseInt(limit),
+                take: Math.min(parseInt(limit) || 20, 100),
             }),
             database_1.prisma.order.count({ where }),
         ]);
@@ -366,7 +322,24 @@ const updateOrderStatus = async (req, res, next) => {
             console.error('Email notification error:', emailError);
             // Don't fail the request if email fails
         }
+        // 🔔 Notify partners via WhatsApp about status change (non-blocking)
+        try {
+            (0, whatsapp_service_1.notifyPartnersStatusUpdate)({
+                orderNumber: order.orderNumber,
+                status,
+                trackingNumber: trackingNumber || order.trackingNumber || undefined,
+                courierName: courierName || undefined,
+            }).catch(err => console.error('[WhatsApp] Partner status update failed:', err));
+        }
+        catch { /* non-critical */ }
         console.log('[Admin] Order status updated successfully:', { orderId: id, newStatus: status });
+        // Audit log — non-blocking
+        (0, auditLog_1.logAdminAction)(req, 'UPDATE', 'ORDER', id, {
+            previousStatus: existingOrder.status,
+            newStatus: status,
+            trackingNumber,
+            courierName,
+        });
         res.json({ success: true, data: order });
     }
     catch (error) {
@@ -405,7 +378,7 @@ const getCustomers = async (req, res, next) => {
                 },
                 orderBy: { createdAt: 'desc' },
                 skip,
-                take: parseInt(limit),
+                take: Math.min(parseInt(limit) || 20, 100),
             }),
             database_1.prisma.user.count({ where }),
         ]);
@@ -509,7 +482,7 @@ const getAdminProducts = async (req, res, next) => {
                     images: true,
                 },
                 skip,
-                take: parseInt(limit),
+                take: Math.min(parseInt(limit) || 20, 100),
                 orderBy: { createdAt: 'desc' },
             }),
             database_1.prisma.product.count({ where }),
@@ -528,7 +501,7 @@ const getAdminProducts = async (req, res, next) => {
             },
         });
         // Transform image URLs to signed URLs for reliable access
-        const productsWithSignedUrls = await Promise.all(products.map((product) => transformProductImages(product)));
+        const productsWithSignedUrls = await Promise.all(products.map((product) => (0, imageUrl_1.transformProductImages)(product)));
         res.json({
             success: true,
             data: {
@@ -576,7 +549,7 @@ const getInventory = async (req, res, next) => {
                 },
                 orderBy: { stockQuantity: 'asc' },
                 skip,
-                take: parseInt(limit),
+                take: Math.min(parseInt(limit) || 20, 100),
             }),
             database_1.prisma.product.count({ where }),
         ]);
@@ -770,7 +743,7 @@ const getPaymentsReport = async (req, res, next) => {
                 },
                 orderBy: { createdAt: 'desc' },
                 skip,
-                take: parseInt(limit),
+                take: Math.min(parseInt(limit) || 20, 100),
             }),
             database_1.prisma.payment.count({ where }),
             database_1.prisma.payment.groupBy({
@@ -859,6 +832,7 @@ const createCategory = async (req, res, next) => {
                 sortOrder: sortOrder || 0,
             },
         });
+        (0, auditLog_1.logAdminAction)(req, 'CREATE', 'CATEGORY', category.id, { name });
         res.status(201).json({ success: true, data: category });
     }
     catch (error) {
@@ -881,6 +855,7 @@ const updateCategory = async (req, res, next) => {
             where: { id },
             data: updateData,
         });
+        (0, auditLog_1.logAdminAction)(req, 'UPDATE', 'CATEGORY', id, { fields: Object.keys(updateData) });
         res.json({ success: true, data: category });
     }
     catch (error) {
@@ -899,6 +874,7 @@ const deleteCategory = async (req, res, next) => {
             throw new errorHandler_1.AppError(`Cannot delete category with ${productCount} products. Move or delete products first.`, 400);
         }
         await database_1.prisma.category.delete({ where: { id } });
+        (0, auditLog_1.logAdminAction)(req, 'DELETE', 'CATEGORY', id, {});
         res.json({ success: true, message: 'Category deleted successfully' });
     }
     catch (error) {
@@ -1020,7 +996,7 @@ const getReturns = async (req, res, next) => {
                 },
                 orderBy: { createdAt: 'desc' },
                 skip,
-                take: parseInt(limit),
+                take: Math.min(parseInt(limit) || 20, 100),
             }),
             database_1.prisma.return.count({ where }),
         ]);
@@ -1465,7 +1441,7 @@ const getAuditLogs = async (req, res, next) => {
                 include: { user: { select: { id: true, fullName: true, email: true, role: true } } },
                 orderBy: { createdAt: 'desc' },
                 skip,
-                take: parseInt(limit),
+                take: Math.min(parseInt(limit) || 20, 100),
             }),
             database_1.prisma.adminAuditLog.count({ where }),
         ]);

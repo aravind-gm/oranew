@@ -54,13 +54,21 @@ interface TumblerProduct {
   isTumbler?: boolean;
 }
 
+const TUMBLERS_HERO_POSTER_URL = 'https://pub-631909e589a44206913f50fa8b711fc3.r2.dev/products/stanly.png';
+
 // ============================================================================
 // HERO SECTION
 // ============================================================================
 
 function TumblersHero() {
   return (
-    <section className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden">
+    <section className="relative bg-slate-900 text-white overflow-hidden">
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: `url(${TUMBLERS_HERO_POSTER_URL})` }}
+      />
+      <div className="absolute inset-0 bg-slate-900/55" />
+
       {/* Ambient glow */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />

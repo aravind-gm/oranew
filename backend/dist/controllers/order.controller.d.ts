@@ -9,4 +9,9 @@ export declare const requestReturn: (req: import("express").Request, res: Respon
  * Called by admin after approving a return request
  */
 export declare const processRefund: (req: import("express").Request, res: Response, next: import("express").NextFunction) => void;
+/**
+ * PUBLIC: Track order by order number + email (no auth required)
+ * POST /api/orders/track
+ */
+export declare const trackOrder: (req: import("express").Request, res: Response, next: import("express").NextFunction) => void;
 //# sourceMappingURL=order.controller.d.ts.map

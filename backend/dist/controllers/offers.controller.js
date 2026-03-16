@@ -94,8 +94,8 @@ const getOfferProducts = async (req, res, next) => {
             (0, retry_1.withRetry)(() => database_1.prisma.product.findMany({
                 where: whereClause,
                 orderBy,
-                skip: (Number(page) - 1) * Number(limit),
-                take: Number(limit),
+                skip: (Number(page) - 1) * Math.min(Number(limit) || 20, 100),
+                take: Math.min(Number(limit) || 20, 100),
                 include: {
                     category: true,
                     images: true,
@@ -314,8 +314,8 @@ const getAdminOfferProducts = async (req, res, next) => {
             (0, retry_1.withRetry)(() => database_1.prisma.product.findMany({
                 where: whereClause,
                 orderBy: { createdAt: 'desc' },
-                skip: (Number(page) - 1) * Number(limit),
-                take: Number(limit),
+                skip: (Number(page) - 1) * Math.min(Number(limit) || 20, 100),
+                take: Math.min(Number(limit) || 20, 100),
                 select: {
                     id: true,
                     name: true,

@@ -23,8 +23,8 @@ const BLOCKED_MIME_TYPES = [
     'application/x-sh',
     'application/x-executable',
 ];
-// Maximum file size: 2MB
-const MAX_FILE_SIZE = 2 * 1024 * 1024;
+// Maximum file size: 5MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 /**
  * Validate uploaded file for security
  * @param file - Multer file object

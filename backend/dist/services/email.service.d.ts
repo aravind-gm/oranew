@@ -51,6 +51,39 @@ export declare const sendAbandonedCartEmail: (data: {
     }>;
     cartTotal: number;
 }) => Promise<void>;
+/**
+ * Day 2 — Shipping Reassurance Email
+ * Builds trust while the order is in transit.
+ */
+export declare const sendShippingReassuranceEmail: (data: {
+    customerEmail: string;
+    customerName: string;
+    orderNumber: string;
+    trackingNumber?: string;
+    courierName?: string;
+}) => Promise<void>;
+/**
+ * Day 7 — Review Request Email
+ * Asks for a review after the customer has had time to try the product.
+ */
+export declare const sendReviewRequestEmail: (data: {
+    customerEmail: string;
+    customerName: string;
+    orderNumber: string;
+    items: Array<{
+        productName: string;
+        productSlug?: string;
+    }>;
+}) => Promise<void>;
+/**
+ * Day 21 — Reorder / Browse Again Suggestion
+ * Gentle reminder with new arrivals or complementary pieces.
+ */
+export declare const sendReorderSuggestionEmail: (data: {
+    customerEmail: string;
+    customerName: string;
+    orderNumber: string;
+}) => Promise<void>;
 declare const _default: {
     sendOrderPlacedEmail: (data: OrderEmailData) => Promise<void>;
     sendOrderConfirmedEmail: (data: OrderEmailData) => Promise<void>;
@@ -65,6 +98,27 @@ declare const _default: {
             quantity: number;
         }>;
         cartTotal: number;
+    }) => Promise<void>;
+    sendShippingReassuranceEmail: (data: {
+        customerEmail: string;
+        customerName: string;
+        orderNumber: string;
+        trackingNumber?: string;
+        courierName?: string;
+    }) => Promise<void>;
+    sendReviewRequestEmail: (data: {
+        customerEmail: string;
+        customerName: string;
+        orderNumber: string;
+        items: Array<{
+            productName: string;
+            productSlug?: string;
+        }>;
+    }) => Promise<void>;
+    sendReorderSuggestionEmail: (data: {
+        customerEmail: string;
+        customerName: string;
+        orderNumber: string;
     }) => Promise<void>;
 };
 export default _default;

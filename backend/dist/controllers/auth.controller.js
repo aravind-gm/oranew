@@ -7,13 +7,49 @@ exports.deleteAccount = exports.logout = exports.getMe = exports.changePassword 
 const crypto_1 = __importDefault(require("crypto"));
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const database_1 = require("../config/database");
+const errorHandler_1 = require("../middleware/errorHandler");
 const email_1 = require("../utils/email");
 const jwt_1 = require("../utils/jwt");
 const refreshToken_1 = require("../utils/refreshToken");
 const sanitize_1 = require("../utils/sanitize");
-// NOTE: In-memory store works for single-instance.
-// For multi-instance or restarts: migrate to Redis.
-const otpStore = new Map();
+const redis_1 = require("../config/redis");
+// Redis-based OTP store helpers
+const OTP_TTL_SECONDS = 5 * 60; // 5 minutes
+const OTP_KEY_PREFIX = 'otp:';
+async function storeOtp(email, entry) {
+    const redis = (0, redis_1.getRedis)();
+    if (!redis) {
+        throw new errorHandler_1.AppError('OTP service temporarily unavailable', 503);
+    }
+    await redis.setex(`${OTP_KEY_PREFIX}${email}`, OTP_TTL_SECONDS, JSON.stringify(entry));
+}
+async function getOtp(email) {
+    const redis = (0, redis_1.getRedis)();
+    if (!redis) {
+        throw new errorHandler_1.AppError('OTP service temporarily unavailable', 503);
+    }
+    const raw = await redis.get(`${OTP_KEY_PREFIX}${email}`);
+    if (!raw)
+        return null;
+    return JSON.parse(raw);
+}
+async function deleteOtp(email) {
+    const redis = (0, redis_1.getRedis)();
+    if (redis) {
+        await redis.del(`${OTP_KEY_PREFIX}${email}`);
+    }
+}
+async function incrementOtpAttempts(email, entry) {
+    const redis = (0, redis_1.getRedis)();
+    if (!redis)
+        return;
+    entry.attempts += 1;
+    // Preserve remaining TTL
+    const ttl = await redis.ttl(`${OTP_KEY_PREFIX}${email}`);
+    if (ttl > 0) {
+        await redis.setex(`${OTP_KEY_PREFIX}${email}`, ttl, JSON.stringify(entry));
+    }
+}
 // SECURITY: crypto.randomInt is CSPRNG-backed, unlike Math.random()
 function generate8DigitOTP() {
     // Generates a cryptographically secure random 8-digit number: 10000000–99999999
@@ -37,8 +73,8 @@ const otpLogin = async (req, res, next) => {
         // SECURITY: Hash the OTP before storing — never keep plaintext in memory
         const BCRYPT_ROUNDS = 10;
         const otpHash = await bcrypt_1.default.hash(otp, BCRYPT_ROUNDS);
-        // Store HASH only, not the plaintext OTP
-        otpStore.set(email.toLowerCase(), { hash: otpHash, expiresAt, attempts: 0 });
+        // Store HASH only in Redis with TTL, not the plaintext OTP
+        await storeOtp(email.toLowerCase(), { hash: otpHash, expiresAt: expiresAt.toISOString(), attempts: 0 });
         // Send OTP via email
         const emailSent = await (0, email_1.sendEmail)({
             to: email.toLowerCase(),
@@ -117,7 +153,7 @@ const verifyOtp = async (req, res, next) => {
         }
         const emailLower = email.toLowerCase();
         // Check if OTP exists for this email
-        const storedOtpData = otpStore.get(emailLower);
+        const storedOtpData = await getOtp(emailLower);
         if (!storedOtpData) {
             return res.status(400).json({
                 success: false,
@@ -125,8 +161,8 @@ const verifyOtp = async (req, res, next) => {
             });
         }
         // Check if OTP is expired
-        if (new Date() > storedOtpData.expiresAt) {
-            otpStore.delete(emailLower);
+        if (new Date() > new Date(storedOtpData.expiresAt)) {
+            await deleteOtp(emailLower);
             return res.status(400).json({
                 success: false,
                 error: 'OTP has expired. Please request a new one.',
@@ -134,7 +170,7 @@ const verifyOtp = async (req, res, next) => {
         }
         // SECURITY: Brute-force guard — max 5 wrong attempts per OTP
         if (storedOtpData.attempts >= 5) {
-            otpStore.delete(emailLower);
+            await deleteOtp(emailLower);
             return res.status(429).json({
                 success: false,
                 error: 'Too many incorrect attempts. Please request a new OTP.',
@@ -144,14 +180,14 @@ const verifyOtp = async (req, res, next) => {
         const otpValid = await bcrypt_1.default.compare(otp, storedOtpData.hash);
         if (!otpValid) {
             // Increment attempt counter without exposing which field failed
-            storedOtpData.attempts += 1;
+            await incrementOtpAttempts(emailLower, storedOtpData);
             return res.status(400).json({
                 success: false,
                 error: 'Invalid OTP. Please try again.',
             });
         }
         // OTP is valid - delete it immediately (one-time use)
-        otpStore.delete(emailLower);
+        await deleteOtp(emailLower);
         // Get or create user in Prisma
         let user = await database_1.prisma.user.findUnique({
             where: { email: emailLower },
@@ -196,7 +232,7 @@ const verifyOtp = async (req, res, next) => {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+            domain: process.env.NODE_ENV === 'production' ? '.orashop.in' : undefined,
             path: '/',
             maxAge: 30 * 60 * 1000, // 30 minutes
         });
@@ -204,7 +240,7 @@ const verifyOtp = async (req, res, next) => {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+            domain: process.env.NODE_ENV === 'production' ? '.orashop.in' : undefined,
             path: '/',
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
@@ -247,21 +283,13 @@ const login = async (req, res, next) => {
         const emailLower = email.toLowerCase();
         if (password) {
             // PASSWORD LOGIN FLOW
-            console.log(`[Auth] 🔐 Password login attempt for: ${email}`);
-            console.log(`[Auth] 📧 Email received:`, email);
-            console.log(`[Auth] 🔑 Password length:`, password?.length);
             // Find user by email
             const user = await database_1.prisma.user.findUnique({
                 where: { email: emailLower },
             });
-            console.log(`[Auth] 👤 User found:`, !!user);
             if (user) {
-                console.log(`[Auth] 🔐 Has passwordHash:`, !!user.passwordHash);
-                console.log(`[Auth] 📝 User ID:`, user.id);
-                console.log(`[Auth] ✉️  User email:`, user.email);
             }
             if (!user) {
-                console.log(`[Auth] ❌ LOGIN FAILED: User not found for email: ${emailLower}`);
                 return res.status(401).json({
                     success: false,
                     error: 'Invalid email or password',
@@ -269,7 +297,6 @@ const login = async (req, res, next) => {
             }
             // Check if user has password set
             if (!user.passwordHash) {
-                console.log(`[Auth] ❌ LOGIN FAILED: Account is OTP-only (no password set)`);
                 return res.status(401).json({
                     success: false,
                     error: 'This account uses OTP login. Please use the OTP option instead.',
@@ -277,9 +304,7 @@ const login = async (req, res, next) => {
             }
             // Verify password
             const passwordMatch = await bcrypt_1.default.compare(password, user.passwordHash);
-            console.log(`[Auth] 🔑 Password match result:`, passwordMatch);
             if (!passwordMatch) {
-                console.log(`[Auth] ❌ LOGIN FAILED: Password mismatch for ${email}`);
                 return res.status(401).json({
                     success: false,
                     error: 'Invalid email or password',
@@ -299,7 +324,7 @@ const login = async (req, res, next) => {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax',
-                domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+                domain: process.env.NODE_ENV === 'production' ? '.orashop.in' : undefined,
                 path: '/',
                 maxAge: 30 * 60 * 1000, // 30 minutes
             });
@@ -307,17 +332,9 @@ const login = async (req, res, next) => {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax',
-                domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+                domain: process.env.NODE_ENV === 'production' ? '.orashop.in' : undefined,
                 path: '/',
                 maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-            });
-            console.log(`[Auth] ✅ User logged in with password: ${email}`);
-            console.log(`[Auth] 🍪 Cookies set:`, {
-                access_token: 'SET',
-                refresh_token: 'SET',
-                domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : 'localhost',
-                sameSite: 'lax',
-                secure: process.env.NODE_ENV === 'production',
             });
             return res.status(200).json({
                 success: true,
@@ -335,40 +352,37 @@ const login = async (req, res, next) => {
         }
         else {
             // OTP LOGIN FLOW (EXISTING LOGIC)
-            console.log(`[Auth] 📧 OTP login request for: ${email}`);
             // Generate 8-digit OTP
             const otp = generate8DigitOTP();
             const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
             // Hash OTP before storing (never store plaintext)
             const otpHash = await bcrypt_1.default.hash(otp, 10);
-            otpStore.set(emailLower, { hash: otpHash, expiresAt, attempts: 0 });
-            console.log(`[Auth] 🔢 Generated OTP for ${email}: ${otp} (expires at ${expiresAt})`);
-            // Try to send email with enhanced error handling
-            try {
-                await (0, email_1.sendEmail)({
-                    to: emailLower,
-                    subject: 'ORA Jewellery - Your Login Code',
-                    html: `
-            <div style="font-family: Arial, sans-serif; max-width: 400px; margin: 0 auto;">
-              <h2>ORA Jewellery</h2>
-              <p>Your login code is:</p>
-              <h1 style="font-size: 32px; letter-spacing: 4px; color: #2563eb;">${otp}</h1>
-              <p>This code expires in 5 minutes.</p>
-              <p style="color: #666; font-size: 14px;">If you didn't request this code, please ignore this email.</p>
-            </div>
-          `,
-                });
+            await storeOtp(emailLower, { hash: otpHash, expiresAt: expiresAt.toISOString(), attempts: 0 });
+            // Send OTP email
+            const emailSent = await (0, email_1.sendEmail)({
+                to: emailLower,
+                subject: 'ORA Jewellery - Your Login Code',
+                html: `
+          <div style="font-family: Arial, sans-serif; max-width: 400px; margin: 0 auto;">
+            <h2>ORA Jewellery</h2>
+            <p>Your login code is:</p>
+            <h1 style="font-size: 32px; letter-spacing: 4px; color: #2563eb;">${otp}</h1>
+            <p>This code expires in 5 minutes.</p>
+            <p style="color: #666; font-size: 14px;">If you didn't request this code, please ignore this email.</p>
+          </div>
+        `,
+            });
+            if (emailSent) {
                 console.log(`[Auth] ✅ OTP email sent to: ${email}`);
             }
-            catch (emailError) {
-                // SMTP FAILURE HANDLING - Don't crash, just log warning
-                console.warn(`[Auth] ⚠️ SMTP failed for ${email}:`, emailError);
-                // Don't return error - continue with success response
-                // This is the "temporary hybrid" solution for unreliable SMTP
+            else {
+                console.error(`[Auth] ❌ OTP email FAILED for: ${email} — check EMAIL_HOST, EMAIL_USER, EMAIL_PASS env vars`);
             }
             return res.status(200).json({
-                success: true,
-                message: 'Login code sent to your email',
+                success: emailSent,
+                message: emailSent
+                    ? 'Login code sent to your email. Please check your inbox.'
+                    : 'Unable to send OTP email. Please try again or contact support.',
                 requiresOTP: true,
             });
         }
@@ -478,7 +492,7 @@ const register = async (req, res, next) => {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax',
-                domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+                domain: process.env.NODE_ENV === 'production' ? '.orashop.in' : undefined,
                 path: '/',
                 maxAge: 30 * 60 * 1000, // 30 minutes
             });
@@ -486,7 +500,7 @@ const register = async (req, res, next) => {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax',
-                domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+                domain: process.env.NODE_ENV === 'production' ? '.orashop.in' : undefined,
                 path: '/',
                 maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
             });
@@ -526,33 +540,32 @@ const register = async (req, res, next) => {
             const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
             // Hash OTP before storing (never store plaintext)
             const otpHash = await bcrypt_1.default.hash(otp, 10);
-            otpStore.set(emailLower, { hash: otpHash, expiresAt, attempts: 0 });
-            console.log(`[Auth] 🔢 Generated registration OTP for ${email}: ${otp}`);
-            // Try to send welcome email with OTP
-            try {
-                await (0, email_1.sendEmail)({
-                    to: emailLower,
-                    subject: 'Welcome to ORA Jewellery - Verify Your Account',
-                    html: `
-            <div style="font-family: Arial, sans-serif; max-width: 400px; margin: 0 auto;">
-              <h2>Welcome to ORA Jewellery! ✨</h2>
-              <p>Thank you for signing up. Your verification code is:</p>
-              <h1 style="font-size: 32px; letter-spacing: 4px; color: #2563eb;">${otp}</h1>
-              <p>This code expires in 5 minutes.</p>
-              <p style="color: #666; font-size: 14px;">If you didn't create this account, please ignore this email.</p>
-            </div>
-          `,
-                });
+            await storeOtp(emailLower, { hash: otpHash, expiresAt: expiresAt.toISOString(), attempts: 0 });
+            // Send welcome email with OTP
+            const emailSent = await (0, email_1.sendEmail)({
+                to: emailLower,
+                subject: 'Welcome to ORA Jewellery - Verify Your Account',
+                html: `
+          <div style="font-family: Arial, sans-serif; max-width: 400px; margin: 0 auto;">
+            <h2>Welcome to ORA Jewellery! ✨</h2>
+            <p>Thank you for signing up. Your verification code is:</p>
+            <h1 style="font-size: 32px; letter-spacing: 4px; color: #2563eb;">${otp}</h1>
+            <p>This code expires in 5 minutes.</p>
+            <p style="color: #666; font-size: 14px;">If you didn't create this account, please ignore this email.</p>
+          </div>
+        `,
+            });
+            if (emailSent) {
                 console.log(`[Auth] ✅ Welcome email sent to: ${email}`);
             }
-            catch (emailError) {
-                // SMTP FAILURE HANDLING - Don't crash, just log warning
-                console.warn(`[Auth] ⚠️ SMTP failed for registration ${email}:`, emailError);
-                // Don't return error - user is created, they can still verify later
+            else {
+                console.error(`[Auth] ❌ Welcome email FAILED for: ${email} — check EMAIL_HOST, EMAIL_USER, EMAIL_PASS env vars`);
             }
             return res.status(201).json({
                 success: true,
-                message: 'Registration successful. Check your email for verification code.',
+                message: emailSent
+                    ? 'Registration successful. Check your email for verification code.'
+                    : 'Registration successful but email delivery failed. Please try requesting a new OTP.',
                 requiresOTP: true,
                 user: {
                     id: user.id,
@@ -623,7 +636,7 @@ const passwordLogin = async (req, res, next) => {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+            domain: process.env.NODE_ENV === 'production' ? '.orashop.in' : undefined,
             path: '/',
             maxAge: 30 * 60 * 1000, // 30 minutes
         });
@@ -631,7 +644,7 @@ const passwordLogin = async (req, res, next) => {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+            domain: process.env.NODE_ENV === 'production' ? '.orashop.in' : undefined,
             path: '/',
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
@@ -757,14 +770,14 @@ const logout = async (req, res, next) => {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+            domain: process.env.NODE_ENV === 'production' ? '.orashop.in' : undefined,
             path: '/',
         });
         res.clearCookie('refresh_token', {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            domain: process.env.NODE_ENV === 'production' ? 'orashop.in' : undefined,
+            domain: process.env.NODE_ENV === 'production' ? '.orashop.in' : undefined,
             path: '/',
         });
         console.log(`[Auth] ✅ User logged out: ${req.user.email}`);

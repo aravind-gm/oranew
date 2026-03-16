@@ -18,7 +18,6 @@ const protectSupabase = async (req, res, next) => {
         if (!token) {
             throw new errorHandler_1.AppError('Not authorized, no token provided', 401);
         }
-        console.log('[Supabase Auth] 🔐 Validating Supabase token...');
         try {
             // Verify with Supabase
             const supabase = (0, supabase_1.getSupabaseAdmin)();
@@ -27,11 +26,6 @@ const protectSupabase = async (req, res, next) => {
                 console.error('[Supabase Auth] ❌ Token validation failed:', error?.message);
                 throw new errorHandler_1.AppError('Invalid token', 401);
             }
-            console.log('[Supabase Auth] ✅ Token verified:', {
-                userId: data.user.id,
-                email: data.user.email,
-                phone: data.user.phone,
-            });
             // Attach Supabase user to request
             req.supabaseUser = {
                 id: data.user.id,

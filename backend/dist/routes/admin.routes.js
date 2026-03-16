@@ -3,8 +3,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const admin_controller_1 = require("../controllers/admin.controller");
 const bogo_controller_1 = require("../controllers/bogo.controller");
+const analytics_controller_1 = require("../controllers/analytics.controller");
+const health_controller_1 = require("../controllers/health.controller");
 const product_controller_1 = require("../controllers/product.controller");
 const auth_1 = require("../middleware/auth");
+const rateLimiter_1 = require("../middleware/rateLimiter");
 const router = (0, express_1.Router)();
 // All admin routes require authentication and admin/staff role
 router.use(auth_1.protect, (0, auth_1.authorize)('ADMIN', 'STAFF'));
@@ -87,5 +90,17 @@ router.delete('/settings/taxes/:id', admin_controller_1.deleteTaxConfig);
 // AUDIT LOG
 // ============================================
 router.get('/audit-log', admin_controller_1.getAuditLogs);
+// ============================================
+// ANALYTICS (Phase 3) — rate limited
+// ============================================
+router.get('/analytics/overview', rateLimiter_1.analyticsLimiter, analytics_controller_1.analyticsOverview);
+router.get('/analytics/products', rateLimiter_1.analyticsLimiter, analytics_controller_1.analyticsProducts);
+router.get('/analytics/payments', rateLimiter_1.analyticsLimiter, analytics_controller_1.analyticsPayments);
+router.get('/analytics/carts', rateLimiter_1.analyticsLimiter, analytics_controller_1.analyticsCarts);
+router.get('/analytics/aov', rateLimiter_1.analyticsLimiter, analytics_controller_1.analyticsAOV);
+// ============================================
+// SYSTEM DIAGNOSTICS (Phase 10)
+// ============================================
+router.get('/system/health', health_controller_1.systemDiagnostics);
 exports.default = router;
 //# sourceMappingURL=admin.routes.js.map

@@ -474,18 +474,10 @@ exports.checkR2Health = checkR2Health;
  */
 const getBanners = async (req, res, next) => {
     try {
-        console.log('[getBanners] Request received', {
-            headers: req.headers.authorization ? '***' : 'NO_AUTH',
-            user: req.user?.id,
-            role: req.user?.role,
-            query: req.query,
-        });
         if (!req.user) {
-            console.error('[getBanners] No user in request');
             throw new errorHandler_1.AppError('Authentication required', 401);
         }
         if (req.user.role !== 'ADMIN') {
-            console.error('[getBanners] User is not admin', { role: req.user.role });
             throw new errorHandler_1.AppError('Only admin can view banners', 403);
         }
         const { position, page } = req.query;
@@ -494,7 +486,6 @@ const getBanners = async (req, res, next) => {
             where.position = position;
         if (page)
             where.page = page;
-        console.log('[getBanners] Query filter:', where);
         const banners = await database_1.prisma.banner.findMany({
             where,
             orderBy: [
@@ -502,7 +493,6 @@ const getBanners = async (req, res, next) => {
                 { sortOrder: 'asc' },
             ],
         });
-        console.log('[getBanners] Found banners:', banners.length);
         res.json({
             success: true,
             banners,

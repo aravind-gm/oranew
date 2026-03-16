@@ -114,6 +114,122 @@ async function applyPhase0SecurityMigration() {
         console.error('[Migration:Phase0] ⚠️  Phase 0 migration partial failure:', err.message?.split('\n')[0]);
     }
 }
+// ============================================================
+// PHASE 2: REVENUE ENGINES MIGRATION
+// Applies on every startup — idempotent (IF NOT EXISTS guards)
+// ============================================================
+async function applyPhase2RevenueMigration() {
+    try {
+        // 1. Add low_stock_alert_sent_at column to products
+        await database_1.prisma.$executeRawUnsafe(`
+      ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "low_stock_alert_sent_at" TIMESTAMP(3)
+    `);
+        // 2. Create abandoned_cart_logs table
+        await database_1.prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "abandoned_cart_logs" (
+        "id"            TEXT NOT NULL,
+        "user_id"       TEXT NOT NULL,
+        "email_sent_at" TIMESTAMP(3) NOT NULL,
+        "cart_total"    DOUBLE PRECISION NOT NULL,
+        "item_count"    INTEGER NOT NULL,
+        "created_at"    TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at"    TIMESTAMP(3) NOT NULL,
+        CONSTRAINT "abandoned_cart_logs_pkey" PRIMARY KEY ("id")
+      )
+    `);
+        await database_1.prisma.$executeRawUnsafe(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "abandoned_cart_logs_user_id_key"
+        ON "abandoned_cart_logs"("user_id")
+    `);
+        await database_1.prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "abandoned_cart_logs_email_sent_at_idx"
+        ON "abandoned_cart_logs"("email_sent_at")
+    `);
+        await database_1.prisma.$executeRawUnsafe(`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.table_constraints
+          WHERE constraint_name = 'abandoned_cart_logs_user_id_fkey'
+        ) THEN
+          ALTER TABLE "abandoned_cart_logs"
+            ADD CONSTRAINT "abandoned_cart_logs_user_id_fkey"
+            FOREIGN KEY ("user_id") REFERENCES "users"("id")
+            ON DELETE CASCADE ON UPDATE CASCADE;
+        END IF;
+      END $$
+    `);
+        // 3. Create payment_retry_tokens table
+        await database_1.prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "payment_retry_tokens" (
+        "id"         TEXT NOT NULL,
+        "order_id"   TEXT NOT NULL,
+        "token"      TEXT NOT NULL,
+        "expires_at" TIMESTAMP(3) NOT NULL,
+        "used"       BOOLEAN NOT NULL DEFAULT false,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "payment_retry_tokens_pkey" PRIMARY KEY ("id")
+      )
+    `);
+        await database_1.prisma.$executeRawUnsafe(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "payment_retry_tokens_token_key"
+        ON "payment_retry_tokens"("token")
+    `);
+        await database_1.prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "payment_retry_tokens_token_idx"
+        ON "payment_retry_tokens"("token")
+    `);
+        await database_1.prisma.$executeRawUnsafe(`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.table_constraints
+          WHERE constraint_name = 'payment_retry_tokens_order_id_fkey'
+        ) THEN
+          ALTER TABLE "payment_retry_tokens"
+            ADD CONSTRAINT "payment_retry_tokens_order_id_fkey"
+            FOREIGN KEY ("order_id") REFERENCES "orders"("id")
+            ON DELETE CASCADE ON UPDATE CASCADE;
+        END IF;
+      END $$
+    `);
+        console.log('[Migration:Phase2] ✅ Revenue engines schema: OK');
+    }
+    catch (err) {
+        console.error('[Migration:Phase2] ⚠️  Phase 2 migration partial failure:', err.message?.split('\n')[0]);
+    }
+}
+// ============================================================
+// PHASE 3: ANALYTICS INDEXES
+// Composite indexes for fast aggregation queries
+// ============================================================
+async function applyPhase3AnalyticsIndexes() {
+    const indexes = [
+        // Orders — analytics queries filter by paymentStatus + createdAt heavily
+        ['idx_orders_payment_status_created', 'CREATE INDEX IF NOT EXISTS idx_orders_payment_status_created ON orders (payment_status, created_at DESC)'],
+        ['idx_orders_user_status', 'CREATE INDEX IF NOT EXISTS idx_orders_user_status ON orders (user_id, payment_status)'],
+        // Payments — success/failure rate queries
+        ['idx_payments_status_created', 'CREATE INDEX IF NOT EXISTS idx_payments_status_created ON payments (status, created_at DESC)'],
+        // Order items — product revenue aggregation
+        ['idx_order_items_product_id', 'CREATE INDEX IF NOT EXISTS idx_order_items_product_id ON order_items (product_id)'],
+        // Coupons — usage tracking
+        ['idx_coupon_usage_coupon_id', 'CREATE INDEX IF NOT EXISTS idx_coupon_usage_coupon_id ON coupon_usages (coupon_id)'],
+        // Cart items — abandoned cart queries
+        ['idx_cart_items_user_added', 'CREATE INDEX IF NOT EXISTS idx_cart_items_user_added ON cart_items (user_id, added_at DESC)'],
+    ];
+    try {
+        for (const [, sql] of indexes) {
+            try {
+                await database_1.prisma.$executeRawUnsafe(sql);
+            }
+            catch {
+                // Non-fatal — index may already exist
+            }
+        }
+        console.log('[Migration:Phase3] ✅ Analytics indexes: OK');
+    }
+    catch (err) {
+        console.error('[Migration:Phase3] ⚠️  Phase 3 indexes partial failure:', err.message?.split('\n')[0]);
+    }
+}
 /**
  * Fallback: Apply critical migrations manually if prisma migrate fails
  */
@@ -125,6 +241,12 @@ async function runPendingMigrations() {
         // Phase 0 security hardening — always runs (idempotent)
         console.log('[Migration] ⏳ Applying Phase 0 security hardening...');
         await applyPhase0SecurityMigration();
+        // Phase 2 revenue engines — always runs (idempotent)
+        console.log('[Migration] ⏳ Applying Phase 2 revenue engines...');
+        await applyPhase2RevenueMigration();
+        // Phase 3 analytics indexes — always runs (idempotent)
+        console.log('[Migration] ⏳ Applying Phase 3 analytics indexes...');
+        await applyPhase3AnalyticsIndexes();
         if (manualSuccess) {
             return true;
         }

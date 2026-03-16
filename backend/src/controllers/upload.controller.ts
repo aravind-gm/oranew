@@ -4,7 +4,7 @@ import {
     isStorageConfigured,
     uploadToStorage,
 } from '../config/supabase';
-import { isR2Configured, uploadToR2, generateProductImagePath, getCdnUrl, deleteFromR2 } from '../config/r2';
+import { isR2Configured, uploadToR2, generateProductImagePath, getCdnUrl, deleteFromR2, sanitizeFilename } from '../config/r2';
 import { generateProductVariants } from '../services/image.service';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
@@ -222,6 +222,67 @@ export const uploadImages = async (
       userId: req.user?.id,
       errorType: error instanceof Error ? error.constructor.name : typeof error,
     });
+    next(error);
+  }
+};
+
+/**
+ * Upload single product video to Cloudflare R2 (or fallback to Supabase Storage)
+ * @route POST /api/upload/videos
+ * @access Private (Admin/Staff)
+ */
+export const uploadVideo = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.user) {
+      throw new AppError('Not authenticated', 401);
+    }
+
+    const file = req.file as Express.Multer.File | undefined;
+    if (!file) {
+      throw new AppError('No video file uploaded', 400);
+    }
+
+    const allowedVideoMimeTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
+    if (!allowedVideoMimeTypes.includes(file.mimetype)) {
+      throw new AppError('Invalid video format. Only MP4, WebM, and MOV are allowed.', 400);
+    }
+
+    const useR2 = isR2Configured();
+    const useSupabase = !useR2 && isStorageConfigured();
+
+    if (!useR2 && !useSupabase) {
+      throw new AppError(
+        'Storage not configured. Please set R2 or Supabase environment variables.',
+        500
+      );
+    }
+
+    let uploadedUrl: string;
+
+    if (useR2) {
+      const extension = file.originalname.split('.').pop()?.toLowerCase() || 'mp4';
+      const sanitizedName = sanitizeFilename(file.originalname.replace(/\.[^.]+$/, ''));
+      const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+      const videoPath = `products/videos/${uniqueId}-${sanitizedName}.${extension}`;
+
+      await uploadToR2(file.buffer, videoPath, file.mimetype);
+      uploadedUrl = getCdnUrl(videoPath);
+    } else {
+      uploadedUrl = await uploadToStorage(file.buffer, file.originalname, file.mimetype);
+    }
+
+    res.json({
+      success: true,
+      data: {
+        url: uploadedUrl,
+      },
+      message: 'Video uploaded successfully',
+    });
+  } catch (error) {
     next(error);
   }
 };

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteImage = exports.uploadImages = void 0;
+exports.deleteImage = exports.uploadVideo = exports.uploadImages = void 0;
 const supabase_1 = require("../config/supabase");
 const r2_1 = require("../config/r2");
 const image_service_1 = require("../services/image.service");
@@ -192,6 +192,54 @@ const uploadImages = async (req, res, next) => {
     }
 };
 exports.uploadImages = uploadImages;
+/**
+ * Upload single product video to Cloudflare R2 (or fallback to Supabase Storage)
+ * @route POST /api/upload/videos
+ * @access Private (Admin/Staff)
+ */
+const uploadVideo = async (req, res, next) => {
+    try {
+        if (!req.user) {
+            throw new errorHandler_1.AppError('Not authenticated', 401);
+        }
+        const file = req.file;
+        if (!file) {
+            throw new errorHandler_1.AppError('No video file uploaded', 400);
+        }
+        const allowedVideoMimeTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
+        if (!allowedVideoMimeTypes.includes(file.mimetype)) {
+            throw new errorHandler_1.AppError('Invalid video format. Only MP4, WebM, and MOV are allowed.', 400);
+        }
+        const useR2 = (0, r2_1.isR2Configured)();
+        const useSupabase = !useR2 && (0, supabase_1.isStorageConfigured)();
+        if (!useR2 && !useSupabase) {
+            throw new errorHandler_1.AppError('Storage not configured. Please set R2 or Supabase environment variables.', 500);
+        }
+        let uploadedUrl;
+        if (useR2) {
+            const extension = file.originalname.split('.').pop()?.toLowerCase() || 'mp4';
+            const sanitizedName = (0, r2_1.sanitizeFilename)(file.originalname.replace(/\.[^.]+$/, ''));
+            const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+            const videoPath = `products/videos/${uniqueId}-${sanitizedName}.${extension}`;
+            await (0, r2_1.uploadToR2)(file.buffer, videoPath, file.mimetype);
+            uploadedUrl = (0, r2_1.getCdnUrl)(videoPath);
+        }
+        else {
+            uploadedUrl = await (0, supabase_1.uploadToStorage)(file.buffer, file.originalname, file.mimetype);
+        }
+        res.json({
+            success: true,
+            data: {
+                url: uploadedUrl,
+            },
+            message: 'Video uploaded successfully',
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.uploadVideo = uploadVideo;
 /**
  * Delete an image from storage (R2 or Supabase)
  * @route DELETE /api/upload/images
