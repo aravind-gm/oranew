@@ -191,14 +191,13 @@ export default function ProductGallery({ images, productName, videoUrl }: Produc
     if (selectedMedia?.type !== 'video' || !videoRef.current) return;
 
     const videoEl = videoRef.current;
-    videoEl.muted = false;
-    videoEl.volume = 1;
+    videoEl.muted = true;
+    videoEl.defaultMuted = true;
+    videoEl.volume = 0;
 
     const playPromise = videoEl.play();
     if (playPromise && typeof playPromise.catch === 'function') {
-      playPromise.catch(() => {
-        // Browser may block autoplay with audio until explicit user gesture.
-      });
+      playPromise.catch(() => {});
     }
   }, [selectedMedia]);
 
@@ -274,6 +273,7 @@ export default function ProductGallery({ images, productName, videoUrl }: Produc
                 className="w-full h-full object-cover"
                 controls
                 autoPlay
+                muted
                 loop
                 playsInline
                 preload="metadata"
