@@ -22,6 +22,7 @@ import api from '@/lib/api';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
 import Image from 'next/image';
+import Link from 'next/link';
 import { GuestCheckoutSkeleton } from '@/components/checkout/SkeletonBlock';
 import { TrustStrip, ReturnPolicyLine } from '@/components/checkout/TrustStrip';
 import { CODBadge } from '@/components/checkout/CODBadge';
@@ -44,6 +45,7 @@ export default function GuestCheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'razorpay' | 'cod'>('razorpay');
+  const [showGuestForm, setShowGuestForm] = useState(false);
 
   const COD_MAX_AMOUNT = 5000;
   const cartTotal = getTotal();
@@ -205,6 +207,33 @@ export default function GuestCheckoutPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+      {!showGuestForm && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[1px] flex items-center justify-center px-4">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-100 p-6 sm:p-7 text-center">
+            <p className="text-xs uppercase tracking-wide text-gray-500 mb-2">Recommended</p>
+            <h2 className="text-2xl font-semibold text-gray-900">Login for Faster Checkout</h2>
+            <p className="text-sm text-gray-600 mt-2 mb-6">
+              Use saved addresses, faster checkout, and better order tracking.
+            </p>
+
+            <Link
+              href="/auth/login?redirect=/checkout"
+              className="w-full inline-flex items-center justify-center px-5 py-3 rounded-xl bg-[#d4af37] text-white font-semibold hover:bg-[#c4a030] transition"
+            >
+              Login / Sign Up
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => setShowGuestForm(true)}
+              className="mt-4 text-xs text-gray-500 hover:text-gray-700 underline"
+            >
+              Continue as guest (optional)
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
@@ -214,23 +243,10 @@ export default function GuestCheckoutPage() {
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-2xl font-semibold text-gray-900">Guest Checkout</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">Checkout</h1>
         </div>
 
-        <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-gray-900">Returning customer?</p>
-            <p className="text-sm text-gray-600">Log in for saved addresses, faster checkout, and order tracking.</p>
-          </div>
-          <a
-            href="/auth/login?redirect=/checkout"
-            className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-[#d4af37] text-white text-sm font-medium hover:bg-[#c4a030] transition"
-          >
-            Login / Sign Up
-          </a>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+        <div className={`grid grid-cols-1 lg:grid-cols-5 gap-8 ${!showGuestForm ? 'pointer-events-none select-none blur-[1px]' : ''}`}>
           {/* Form — Left side */}
           <div className="lg:col-span-3">
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -447,13 +463,14 @@ export default function GuestCheckoutPage() {
               {/* Return policy reassurance */}
               <ReturnPolicyLine />
 
-              {/* Login prompt */}
-              <p className="text-center text-sm text-gray-500">
-                Prefer account checkout?{' '}
-                <a href="/auth/login?redirect=/checkout" className="text-[#d4af37] hover:underline font-medium">
-                  Login here
-                </a>
-              </p>
+              {showGuestForm && (
+                <p className="text-center text-xs text-gray-500">
+                  Prefer account checkout?{' '}
+                  <a href="/auth/login?redirect=/checkout" className="text-[#d4af37] hover:underline font-medium">
+                    Login here
+                  </a>
+                </p>
+              )}
             </form>
           </div>
 
