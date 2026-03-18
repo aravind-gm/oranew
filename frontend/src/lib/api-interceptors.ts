@@ -28,6 +28,19 @@ const RETRY_DELAY = 2000;
 // queue behind the same promise.
 let _refreshPromise: Promise<boolean> | null = null;
 
+function isAuthProbeRequest(url?: string): boolean {
+  if (!url) return false;
+  return url.includes('/auth/me');
+}
+
+function shouldForceLoginRedirect(pathname: string): boolean {
+  return (
+    pathname.startsWith('/account') ||
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/checkout/payment')
+  );
+}
+
 // Extend AxiosRequestConfig to carry a _retry flag
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
@@ -94,7 +107,8 @@ export function setupErrorInterceptor(api: AxiosInstance) {
         reqConfig &&
         !reqConfig._retry &&
         !reqConfig.url?.includes('/auth/refresh') &&
-        !reqConfig.url?.includes('/auth/login')
+        !reqConfig.url?.includes('/auth/login') &&
+        !isAuthProbeRequest(reqConfig.url)
       ) {
         reqConfig._retry = true;
 
@@ -111,7 +125,7 @@ export function setupErrorInterceptor(api: AxiosInstance) {
         if (typeof window !== 'undefined') {
           const currentPath = window.location.pathname;
           // Don't redirect if already on an auth page
-          if (!currentPath.startsWith('/auth/')) {
+          if (!currentPath.startsWith('/auth/') && shouldForceLoginRedirect(currentPath)) {
             window.location.href = `/auth/login?from=${encodeURIComponent(currentPath)}`;
           }
         }
