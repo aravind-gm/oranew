@@ -217,6 +217,19 @@ export default function GuestCheckoutPage() {
           <h1 className="text-2xl font-semibold text-gray-900">Guest Checkout</h1>
         </div>
 
+        <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-gray-900">Returning customer?</p>
+            <p className="text-sm text-gray-600">Log in for saved addresses, faster checkout, and order tracking.</p>
+          </div>
+          <a
+            href="/auth/login?redirect=/checkout"
+            className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-[#d4af37] text-white text-sm font-medium hover:bg-[#c4a030] transition"
+          >
+            Login / Sign Up
+          </a>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
           {/* Form — Left side */}
           <div className="lg:col-span-3">
@@ -436,9 +449,9 @@ export default function GuestCheckoutPage() {
 
               {/* Login prompt */}
               <p className="text-center text-sm text-gray-500">
-                Already have an account?{' '}
+                Prefer account checkout?{' '}
                 <a href="/auth/login?redirect=/checkout" className="text-[#d4af37] hover:underline font-medium">
-                  Log in for faster checkout
+                  Login here
                 </a>
               </p>
             </form>

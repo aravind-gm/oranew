@@ -20,6 +20,7 @@
  */
 
 import { useCartStore } from '@/store/cartStore';
+import { useAuthStore } from '@/store/authStore';
 import { trackViewCart } from '@/lib/analytics';
 import RelatedProductsCart from '@/components/RelatedProductsCart';
 import CartUpsell from '@/components/cart/CartUpsell';
@@ -295,6 +296,7 @@ function TrustBadges() {
 export default function CartPage() {
   const router = useRouter();
   const { items, removeItem, updateQuantity, validateStock, stockErrors, stockValidating } = useCartStore();
+  const { user, loading: authLoading } = useAuthStore();
 
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
@@ -517,6 +519,18 @@ export default function CartPage() {
                 </div>
 
                 {/* Express Checkout Button - Desktop */}
+                {!authLoading && !user && (
+                  <div className="mt-6 mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                    <p className="text-sm font-semibold text-gray-900">Returning customer?</p>
+                    <p className="text-xs text-gray-600 mt-0.5">
+                      <Link href="/auth/login?redirect=/checkout" className="text-amber-700 hover:underline font-medium">
+                        Login / Sign Up
+                      </Link>{' '}
+                      for saved address and faster checkout.
+                    </p>
+                  </div>
+                )}
+
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -643,6 +657,14 @@ export default function CartPage() {
             )}
           </motion.button>
         </div>
+
+        {!authLoading && !user && (
+          <div className="mt-2 text-center">
+            <Link href="/auth/login?redirect=/checkout" className="text-xs text-amber-700 font-medium hover:underline">
+              Returning customer? Login / Sign Up for faster checkout
+            </Link>
+          </div>
+        )}
       </div>
     </main>
   );
