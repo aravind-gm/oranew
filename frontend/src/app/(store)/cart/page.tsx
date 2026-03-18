@@ -359,7 +359,7 @@ export default function CartPage() {
         return;
       }
 
-      router.push('/checkout');
+      window.location.href = '/checkout';
     } catch (error) {
       console.error('Checkout error:', error);
       setIsCheckingOut(false);

@@ -334,7 +334,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
       quantity,
       stockQuantity: product.stockQuantity,
     });
-    router.push('/checkout');
+    window.location.href = '/checkout';
   };
 
   const handleWishlistToggle = () => {

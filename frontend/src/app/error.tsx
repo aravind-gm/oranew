@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 
 interface ErrorProps {
@@ -8,6 +9,27 @@ interface ErrorProps {
 }
 
 export default function Error({ error, reset }: ErrorProps) {
+  useEffect(() => {
+    const message = error?.message || '';
+    const isChunkLoadError =
+      message.includes('Failed to load chunk') ||
+      message.includes('Loading chunk') ||
+      message.includes('ChunkLoadError');
+
+    if (!isChunkLoadError || typeof window === 'undefined') return;
+
+    const reloadKey = 'ora_chunk_reload_once';
+    const alreadyReloaded = sessionStorage.getItem(reloadKey) === '1';
+
+    if (!alreadyReloaded) {
+      sessionStorage.setItem(reloadKey, '1');
+      window.location.reload();
+      return;
+    }
+
+    sessionStorage.removeItem(reloadKey);
+  }, [error]);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex items-center justify-center px-4">
       <div className="text-center">
