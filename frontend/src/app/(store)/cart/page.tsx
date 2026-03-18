@@ -359,7 +359,12 @@ export default function CartPage() {
         return;
       }
 
-      window.location.href = '/checkout';
+      if (!authLoading && !user) {
+        window.location.href = `/checkout/guest?fresh=${Date.now()}`;
+        return;
+      }
+
+      window.location.href = `/checkout?fresh=${Date.now()}`;
     } catch (error) {
       console.error('Checkout error:', error);
       setIsCheckingOut(false);

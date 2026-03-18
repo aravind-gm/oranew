@@ -23,7 +23,9 @@ export default function Error({ error, reset }: ErrorProps) {
 
     if (!alreadyReloaded) {
       sessionStorage.setItem(reloadKey, '1');
-      window.location.reload();
+      const current = new URL(window.location.href);
+      current.searchParams.set('__chunk_reload', Date.now().toString());
+      window.location.replace(current.toString());
       return;
     }
 

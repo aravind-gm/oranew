@@ -36,6 +36,24 @@ const nextConfig = {
           },
         ],
       },
+      // Checkout pages should never be cached at HTML level
+      {
+        source: '/checkout/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          },
+          {
+            key: 'Pragma',
+            value: 'no-cache',
+          },
+          {
+            key: 'Expires',
+            value: '0',
+          },
+        ],
+      },
       // Static assets — immutable cache (fonts, images, chunks)
       {
         source: '/_next/static/:path*',
