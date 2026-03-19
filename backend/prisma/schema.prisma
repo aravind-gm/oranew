@@ -126,6 +126,8 @@ model Product {
   
   metaTitle         String?         @map("meta_title") @db.VarChar(60)
   metaDescription   String?         @map("meta_description") @db.VarChar(160)
+  canonicalUrl      String?         @map("canonical_url")
+  noindex           Boolean         @default(false) @map("noindex")
   primaryImageAlt   String?         @map("primary_image_alt") @db.VarChar(125)
   averageRating     Decimal         @default(0) @map("average_rating") @db.Decimal(3, 2)
   reviewCount       Int             @default(0) @map("review_count")

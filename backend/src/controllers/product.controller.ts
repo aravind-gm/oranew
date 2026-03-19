@@ -47,6 +47,7 @@ export const createProduct = async (
 
     const {
       name,
+      slug,
       description,
       shortDescription,
       price,
@@ -64,6 +65,8 @@ export const createProduct = async (
       images,
       metaTitle,
       metaDescription,
+      canonicalUrl,
+      noindex,
       primaryImageAlt,
       collections,
       occasions,
@@ -122,6 +125,14 @@ export const createProduct = async (
       errors.push('metaDescription must be 160 characters or less');
     }
 
+    if (canonicalUrl != null && String(canonicalUrl).trim() !== '') {
+      try {
+        new URL(String(canonicalUrl).trim());
+      } catch {
+        errors.push('canonicalUrl must be a valid absolute URL');
+      }
+    }
+
     if (primaryImageAlt != null && String(primaryImageAlt).length > 125) {
       errors.push('primaryImageAlt must be 125 characters or less');
     }
@@ -140,7 +151,9 @@ export const createProduct = async (
       throw new AppError(`Category with ID ${categoryId} not found`, 400);
     }
 
-    const slug = slugify(name);
+    const slugFromInput = slug && String(slug).trim() ? slugify(String(slug).trim()) : '';
+    const slugFromName = slugify(name);
+    const slug = slugFromInput || slugFromName;
     // Ensure slug uniqueness — append random suffix if collision
     let finalSlug = slug;
     const existingSlug = await prisma.product.findUnique({ where: { slug: finalSlug } });
@@ -184,6 +197,11 @@ export const createProduct = async (
           isActive: isActive !== false,
           metaTitle: metaTitle == null ? null : String(metaTitle).trim().slice(0, 60),
           metaDescription: metaDescription == null ? null : String(metaDescription).trim().slice(0, 160),
+          canonicalUrl:
+            canonicalUrl == null || String(canonicalUrl).trim() === ''
+              ? null
+              : String(canonicalUrl).trim(),
+          noindex: Boolean(noindex),
           primaryImageAlt:
             primaryImageAlt == null ? null : String(primaryImageAlt).trim().slice(0, 125),
           collections: collections || [],
@@ -720,6 +738,8 @@ export const updateProduct = async (
       images,
       metaTitle,
       metaDescription,
+      canonicalUrl,
+      noindex,
       primaryImageAlt,
       collections,
       occasions,
@@ -821,6 +841,20 @@ export const updateProduct = async (
         updateData.metaDescription = value.trim();
       }
     }
+    if (canonicalUrl !== undefined) {
+      if (canonicalUrl == null || String(canonicalUrl).trim() === '') {
+        updateData.canonicalUrl = null;
+      } else {
+        const value = String(canonicalUrl).trim();
+        try {
+          new URL(value);
+        } catch {
+          throw new AppError('canonicalUrl must be a valid absolute URL', 400);
+        }
+        updateData.canonicalUrl = value;
+      }
+    }
+    if (noindex !== undefined) updateData.noindex = Boolean(noindex);
     if (primaryImageAlt !== undefined) {
       if (primaryImageAlt == null || String(primaryImageAlt).trim() === '') {
         updateData.primaryImageAlt = null;

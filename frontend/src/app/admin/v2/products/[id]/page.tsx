@@ -137,6 +137,8 @@ interface ProductFormData {
   // SEO
   metaTitle: string;
   metaDescription: string;
+  canonicalUrl: string;
+  noindex: boolean;
   primaryImageAlt: string;
   
   // Images
@@ -408,6 +410,8 @@ export default function ProductFormPage() {
     showCountdown: false,
     metaTitle: '',
     metaDescription: '',
+    canonicalUrl: '',
+    noindex: false,
     primaryImageAlt: '',
     images: [],
     videoUrl: '',
@@ -421,6 +425,7 @@ export default function ProductFormPage() {
   const [saveError, setSaveError] = useState('');
   const [categories, setCategories] = useState<{ id: string; name: string; slug: string }[]>([]);
   const [slugLocked, setSlugLocked] = useState(true); // Lock slug by default when editing
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [video, setVideo] = useState<ProductVideo | null>(null);
 
   // Fetch categories on mount
@@ -484,6 +489,8 @@ export default function ProductFormPage() {
             showCountdown: p.showCountdown ?? false,
             metaTitle: p.metaTitle || '',
             metaDescription: p.metaDescription || '',
+            canonicalUrl: p.canonicalUrl || '',
+            noindex: p.noindex ?? false,
             primaryImageAlt: p.primaryImageAlt || '',
             images: (p.images || []).map((img: { id: string; imageUrl?: string; url?: string; isPrimary?: boolean }) => ({
               id: img.id,
@@ -516,7 +523,7 @@ export default function ProductFormPage() {
 
   // Auto-generate slug from name (only for new products, not locked slugs)
   useEffect(() => {
-    if (!isEditing && formData.name) {
+    if (!isEditing && !slugManuallyEdited && formData.name) {
       const slug = formData.name
         .toLowerCase()
         .replace(/[^a-z0-9\s-]/g, '')
@@ -525,7 +532,7 @@ export default function ProductFormPage() {
         .trim();
       setFormData(prev => ({ ...prev, slug }));
     }
-  }, [formData.name, isEditing]);
+  }, [formData.name, isEditing, slugManuallyEdited]);
 
   // Update form field
   const updateField = <K extends keyof ProductFormData>(
@@ -635,6 +642,8 @@ export default function ProductFormPage() {
         isActive: publish ? true : formData.isActive,
         metaTitle: formData.metaTitle,
         metaDescription: formData.metaDescription,
+        canonicalUrl: formData.canonicalUrl || undefined,
+        noindex: formData.noindex,
         primaryImageAlt: formData.primaryImageAlt,
         collections: formData.collections,
         occasions: formData.occasions,
@@ -795,7 +804,10 @@ export default function ProductFormPage() {
                   <Input
                     placeholder="gold-diamond-necklace"
                     value={formData.slug}
-                    onChange={(e) => updateField('slug', e.target.value)}
+                    onChange={(e) => {
+                      if (!isEditing) setSlugManuallyEdited(true);
+                      updateField('slug', e.target.value);
+                    }}
                     error={errors.slug}
                     leftIcon={<Globe size={16} />}
                     disabled={!!(isEditing && slugLocked)}
@@ -804,6 +816,11 @@ export default function ProductFormPage() {
                       : 'This will be used in the product URL'
                     }
                   />
+                  {!isEditing && (
+                    <p className="mt-1 text-xs text-[#9ca3af]">
+                      Auto-generated from product name until you edit it manually.
+                    </p>
+                  )}
                 </div>
 
                 <Textarea
@@ -981,6 +998,21 @@ export default function ProductFormPage() {
                 />
 
                 <Input
+                  label="Canonical URL"
+                  placeholder="https://orashop.in/products/your-product-slug"
+                  value={formData.canonicalUrl}
+                  onChange={(e) => updateField('canonicalUrl', e.target.value)}
+                  hint="Optional override to control duplicate indexing"
+                />
+
+                <Checkbox
+                  label="Hide from Search Engines (Noindex)"
+                  description="Use for VIP, staging, or private products"
+                  checked={formData.noindex}
+                  onChange={(e) => updateField('noindex', e.target.checked)}
+                />
+
+                <Input
                   label="Primary Image Alt"
                   placeholder="Alt text for the primary product image"
                   value={formData.primaryImageAlt}
@@ -996,7 +1028,7 @@ export default function ProductFormPage() {
                       {formData.metaTitle || formData.name || 'Product Title'}
                     </p>
                     <p className="text-[#006621] text-sm">
-                      orashop.in/products/{formData.slug || 'product-url'}
+                      {formData.canonicalUrl || `orashop.in/products/${formData.slug || 'product-url'}`}
                     </p>
                     <p className="text-sm text-[#545454] mt-1">
                       {formData.metaDescription || formData.shortDescription || 'Product description will appear here...'}

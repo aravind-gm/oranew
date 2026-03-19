@@ -16,6 +16,8 @@ interface ProductMeta {
   id: string;
   name: string;
   slug: string;
+  canonicalUrl?: string;
+  noindex?: boolean;
   description: string;
   shortDescription: string;
   metaTitle?: string;
@@ -69,18 +71,23 @@ export async function generateMetadata({
     product.description?.slice(0, 160) ||
     `Shop ${product.name} at ORA Jewellery. Premium everyday jewellery.`;
   const pageTitle = product.metaTitle || product.name;
+  const canonical = product.canonicalUrl || `${SITE_URL}/products/${product.slug}`;
 
   return {
     title: pageTitle,
     description,
     keywords: `${product.name}, ${product.category.name}, jewellery, ORA, fashion jewellery, ${product.material || 'premium'}`,
     alternates: {
-      canonical: `${SITE_URL}/products/${product.slug}`,
+      canonical,
+    },
+    robots: {
+      index: !product.noindex,
+      follow: !product.noindex,
     },
     openGraph: {
       title: pageTitle,
       description,
-      url: `${SITE_URL}/products/${product.slug}`,
+      url: canonical,
       siteName: 'ORA Jewellery',
       images: [
         {
