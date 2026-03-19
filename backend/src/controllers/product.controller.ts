@@ -288,6 +288,7 @@ export const getProducts = async (
       isBestseller,
       isTumbler,
       search,
+      view,
     } = req.query;
 
     // 📊 Log incoming request
@@ -512,6 +513,8 @@ export const getProducts = async (
       }
     }
 
+    const isListingView = view === 'listing';
+
     // 🔍 Execute query with filters
     const [products, total] = await Promise.all([
       prisma.product.findMany({
@@ -519,10 +522,46 @@ export const getProducts = async (
         orderBy: orderByClause,
         skip: (Number(page) - 1) * Math.min(Number(limit) || 16, 100),
         take: Math.min(Number(limit) || 16, 100),
-        include: {
-          category: true,
-          images: true,
-        },
+        ...(isListingView
+          ? {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                price: true,
+                finalPrice: true,
+                discountPercent: true,
+                primaryImageAlt: true,
+                averageRating: true,
+                reviewCount: true,
+                stockQuantity: true,
+                category: {
+                  select: {
+                    id: true,
+                    name: true,
+                    slug: true,
+                  },
+                },
+                images: {
+                  select: {
+                    id: true,
+                    imageUrl: true,
+                    altText: true,
+                    isPrimary: true,
+                    sortOrder: true,
+                  },
+                  orderBy: {
+                    sortOrder: 'asc',
+                  },
+                },
+              },
+            }
+          : {
+              include: {
+                category: true,
+                images: true,
+              },
+            }),
       }),
       prisma.product.count({ where: whereClause }),
     ]);
@@ -547,8 +586,43 @@ export const getProducts = async (
       products.map((product) => transformProductImages(product, true))
     );
 
+    const responseProducts = isListingView
+      ? productsWithPublicUrls.map((product: any) => {
+          const primaryImage = product.images?.find((img: any) => img.isPrimary) || product.images?.[0] || null;
+          return {
+            id: product.id,
+            name: product.name,
+            slug: product.slug,
+            price: product.price,
+            finalPrice: product.finalPrice,
+            discountPercent: product.discountPercent,
+            primaryImage: primaryImage
+              ? {
+                  id: primaryImage.id,
+                  imageUrl: primaryImage.imageUrl,
+                  altText: primaryImage.altText,
+                  isPrimary: primaryImage.isPrimary,
+                }
+              : null,
+            primaryImageAlt: product.primaryImageAlt || primaryImage?.altText || product.name,
+            rating: Number(product.averageRating || 0),
+            averageRating: Number(product.averageRating || 0),
+            reviewCount: product.reviewCount || 0,
+            inStock: Number(product.stockQuantity || 0) > 0,
+            stockQuantity: Number(product.stockQuantity || 0),
+            category: product.category
+              ? {
+                  id: product.category.id,
+                  name: product.category.name,
+                  slug: product.category.slug,
+                }
+              : null,
+          };
+        })
+      : productsWithPublicUrls;
+
     res.json({
-      data: productsWithPublicUrls,
+      data: responseProducts,
       pagination: {
         total,
         page: Number(page),

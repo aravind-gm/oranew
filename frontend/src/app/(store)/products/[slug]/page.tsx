@@ -158,6 +158,43 @@ function ProductJsonLd({ product }: { product: ProductMeta }) {
   );
 }
 
+function ProductBreadcrumbJsonLd({ product }: { product: ProductMeta }) {
+  const categoryUrl = `${SITE_URL}/collections/${product.category.slug}`;
+  const productUrl = `${SITE_URL}/products/${product.slug}`;
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: SITE_URL,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: product.category.name,
+        item: categoryUrl,
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: product.name,
+        item: productUrl,
+      },
+    ],
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+    />
+  );
+}
+
 // ── Server Component Page ─────────────────────────────────────────────
 export default async function ProductDetailPage({
   params,
@@ -170,6 +207,7 @@ export default async function ProductDetailPage({
   return (
     <>
       {product && <ProductJsonLd product={product} />}
+      {product && <ProductBreadcrumbJsonLd product={product} />}
       <ProductDetailClient slug={slug} />
     </>
   );

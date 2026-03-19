@@ -37,9 +37,36 @@ export const getCategoryBySlug = async (
 ) => {
   try {
     const { slug } = req.params;
+    const minimal = req.query.minimal === 'true';
 
-    const category = await withRetry(() =>
-      prisma.category.findUnique({
+    const category = await withRetry(() => {
+      if (minimal) {
+        return prisma.category.findUnique({
+          where: { slug },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+            imageUrl: true,
+            metaTitle: true,
+            metaDescription: true,
+            canonicalUrl: true,
+            ogImage: true,
+            seoContent: true,
+            isActive: true,
+            parent: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+              },
+            },
+          },
+        });
+      }
+
+      return prisma.category.findUnique({
         where: { slug },
         include: {
           children: { where: { isActive: true } },
@@ -51,8 +78,8 @@ export const getCategoryBySlug = async (
             take: 12,
           },
         },
-      })
-    );
+      });
+    });
 
     if (!category) {
       throw new AppError('Category not found', 404);
@@ -70,7 +97,17 @@ export const createCategory = async (
   next: NextFunction
 ) => {
   try {
-    const { name, description, parentId, imageUrl } = req.body;
+    const {
+      name,
+      description,
+      parentId,
+      imageUrl,
+      metaTitle,
+      metaDescription,
+      canonicalUrl,
+      ogImage,
+      seoContent,
+    } = req.body;
 
     const category = await withRetry(() =>
       prisma.category.create({
@@ -80,6 +117,11 @@ export const createCategory = async (
           description,
           parentId,
           imageUrl,
+          metaTitle,
+          metaDescription,
+          canonicalUrl,
+          ogImage,
+          seoContent,
         },
       })
     );
