@@ -5,7 +5,6 @@ import {
   categoryDescriptionFallback,
   categoryTitleFallback,
   getCategoryProducts,
-  getCategorySeo,
   toAbsoluteUrl,
 } from '@/lib/seo/collectionSeo';
 import type { GiftProduct } from '@/components/gifts/GiftProductCard';
@@ -43,15 +42,11 @@ function mapToGiftProducts(items: Awaited<ReturnType<typeof getCategoryProducts>
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const category = await getCategorySeo(CATEGORY_SLUG);
-  const categoryName = category?.name || 'Gifts For Her';
-  const title = category?.metaTitle || categoryTitleFallback(categoryName);
-  const description =
-    category?.metaDescription ||
-    category?.description ||
-    categoryDescriptionFallback(categoryName);
-  const canonical = category?.canonicalUrl || canonicalUrl();
-  const image = toAbsoluteUrl(category?.ogImage || category?.imageUrl || '/oralogo.png');
+  const categoryName = 'Gifts For Her';
+  const title = categoryTitleFallback(categoryName);
+  const description = categoryDescriptionFallback(categoryName);
+  const canonical = canonicalUrl();
+  const image = toAbsoluteUrl('/oralogo.png');
 
   return {
     title,
@@ -92,18 +87,14 @@ export default async function GiftsForHerPage({ searchParams }: Props) {
   const query = await searchParams;
   const page = Math.max(1, Number(query.page || '1') || 1);
 
-  const [category, listing] = await Promise.all([
-    getCategorySeo(CATEGORY_SLUG),
-    getCategoryProducts({
-      slug: CATEGORY_SLUG,
-      page,
-      limit: 12,
-      sortBy: '-createdAt',
-    }),
-  ]);
+  const listing = await getCategoryProducts({
+    slug: CATEGORY_SLUG,
+    page,
+    limit: 12,
+    sortBy: '-createdAt',
+  });
 
   const resolvedCategory =
-    category ||
     ({
       id: 'virtual-gifts-for-her',
       name: 'Gifts For Her',
@@ -111,7 +102,7 @@ export default async function GiftsForHerPage({ searchParams }: Props) {
       description: 'Curated jewellery gift ideas for her by ORA Jewellery.',
     } as const);
 
-  const canonical = category?.canonicalUrl || canonicalUrl();
+  const canonical = canonicalUrl();
 
   const collectionSchema = buildCollectionPageJsonLd({
     category: resolvedCategory,

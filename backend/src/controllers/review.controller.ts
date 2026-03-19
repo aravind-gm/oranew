@@ -79,15 +79,18 @@ export const createReview = async (
       })
     );
 
+    const approvedCount = (reviews as any).length;
     const avgRating =
-      (reviews as any).reduce((sum: number, r: any) => sum + r.rating, 0) / (reviews as any).length;
+      approvedCount > 0
+        ? (reviews as any).reduce((sum: number, r: any) => sum + r.rating, 0) / approvedCount
+        : 0;
 
     await withRetry(() =>
       prisma.product.update({
         where: { id: productId },
         data: {
           averageRating: avgRating,
-          reviewCount: (reviews as any).length,
+          reviewCount: approvedCount,
         },
       })
     );
