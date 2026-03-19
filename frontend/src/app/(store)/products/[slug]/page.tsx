@@ -18,6 +18,9 @@ interface ProductMeta {
   slug: string;
   description: string;
   shortDescription: string;
+  metaTitle?: string;
+  metaDescription?: string;
+  primaryImageAlt?: string;
   price: number;
   discountPercent: number;
   finalPrice: number;
@@ -61,19 +64,21 @@ export async function generateMetadata({
   const primaryImage = product.images?.find((img) => img.isPrimary) || product.images?.[0];
   const imageUrl = primaryImage?.imageUrl || `${SITE_URL}/oralogo.png`;
   const description =
+    product.metaDescription ||
     product.shortDescription ||
     product.description?.slice(0, 160) ||
     `Shop ${product.name} at ORA Jewellery. Premium everyday jewellery.`;
+  const pageTitle = product.metaTitle || product.name;
 
   return {
-    title: product.name,
+    title: pageTitle,
     description,
     keywords: `${product.name}, ${product.category.name}, jewellery, ORA, fashion jewellery, ${product.material || 'premium'}`,
     alternates: {
       canonical: `${SITE_URL}/products/${product.slug}`,
     },
     openGraph: {
-      title: `${product.name} — ₹${Number(product.finalPrice).toFixed(0)}`,
+      title: pageTitle,
       description,
       url: `${SITE_URL}/products/${product.slug}`,
       siteName: 'ORA Jewellery',
@@ -82,7 +87,7 @@ export async function generateMetadata({
           url: imageUrl,
           width: 800,
           height: 800,
-          alt: primaryImage?.altText || product.name,
+          alt: product.primaryImageAlt || primaryImage?.altText || product.name,
         },
       ],
       type: 'website', // Note: Next.js Metadata doesn't support og:type="product" yet - use schema.org Product instead
@@ -90,7 +95,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${product.name} — ₹${Number(product.finalPrice).toFixed(0)}`,
+      title: pageTitle,
       description,
       images: [imageUrl],
     },
@@ -102,15 +107,15 @@ function ProductJsonLd({ product }: { product: ProductMeta }) {
   const primaryImage = product.images?.find((img) => img.isPrimary) || product.images?.[0];
 
   const jsonLd = {
-    '@context': 'https://schema.org',
+    '@context': 'https://schema.org/',
     '@type': 'Product',
     name: product.name,
-    description: product.shortDescription || product.description,
-    image: product.images?.map((img) => img.imageUrl) || [],
+    description: product.metaDescription || product.shortDescription || product.description,
+    image: primaryImage?.imageUrl || `${SITE_URL}/oralogo.png`,
     sku: `ORA-${product.id.slice(0, 8).toUpperCase()}`,
     brand: {
       '@type': 'Brand',
-      name: 'ORA Jewellery',
+      name: 'ORA GLOBAL',
     },
     category: product.category.name,
     material: product.material || undefined,
@@ -129,7 +134,7 @@ function ProductJsonLd({ product }: { product: ProductMeta }) {
           : 'https://schema.org/OutOfStock',
       seller: {
         '@type': 'Organization',
-        name: 'ORA Jewellery',
+        name: 'ORA GLOBAL',
       },
     },
     ...(product.reviewCount > 0

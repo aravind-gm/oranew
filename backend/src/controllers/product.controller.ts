@@ -64,6 +64,7 @@ export const createProduct = async (
       images,
       metaTitle,
       metaDescription,
+      primaryImageAlt,
       collections,
       occasions,
       isFeaturedGift,
@@ -111,6 +112,18 @@ export const createProduct = async (
 
     if (images && !Array.isArray(images)) {
       errors.push('Images must be an array');
+    }
+
+    if (metaTitle != null && String(metaTitle).length > 60) {
+      errors.push('metaTitle must be 60 characters or less');
+    }
+
+    if (metaDescription != null && String(metaDescription).length > 160) {
+      errors.push('metaDescription must be 160 characters or less');
+    }
+
+    if (primaryImageAlt != null && String(primaryImageAlt).length > 125) {
+      errors.push('primaryImageAlt must be 125 characters or less');
     }
 
     if (errors.length > 0) {
@@ -169,8 +182,10 @@ export const createProduct = async (
           lowStockThreshold: lowStockThreshold ? parseInt(lowStockThreshold, 10) : 5,
           isFeatured: isFeatured || false,
           isActive: isActive !== false,
-          metaTitle,
-          metaDescription,
+          metaTitle: metaTitle == null ? null : String(metaTitle).trim().slice(0, 60),
+          metaDescription: metaDescription == null ? null : String(metaDescription).trim().slice(0, 160),
+          primaryImageAlt:
+            primaryImageAlt == null ? null : String(primaryImageAlt).trim().slice(0, 125),
           collections: collections || [],
           occasions: occasions || [],
           isFeaturedGift: isFeaturedGift || false,
@@ -197,13 +212,18 @@ export const createProduct = async (
       // Create images if provided
       if (images && images.length > 0) {
         await tx.productImage.createMany({
-          data: images.map((img: any, index: number) => ({
-            productId: createdProduct.id,
-            imageUrl: img.url,
-            altText: img.alt || name,
-            sortOrder: index,
-            isPrimary: img.isPrimary || index === 0,
-          })),
+          data: images.map((img: any, index: number) => {
+            const isPrimaryImage = img.isPrimary || index === 0;
+            return {
+              productId: createdProduct.id,
+              imageUrl: img.url,
+              altText:
+                img.alt ||
+                (isPrimaryImage && primaryImageAlt ? String(primaryImageAlt).trim().slice(0, 125) : name),
+              sortOrder: index,
+              isPrimary: isPrimaryImage,
+            };
+          }),
         });
       }
 
@@ -609,6 +629,7 @@ export const updateProduct = async (
       images,
       metaTitle,
       metaDescription,
+      primaryImageAlt,
       collections,
       occasions,
       isFeaturedGift,
@@ -691,8 +712,33 @@ export const updateProduct = async (
     if (lowStockThreshold !== undefined) updateData.lowStockThreshold = parseInt(lowStockThreshold, 10);
     if (isFeatured !== undefined) updateData.isFeatured = Boolean(isFeatured);
     if (isActive !== undefined) updateData.isActive = Boolean(isActive);
-    if (metaTitle !== undefined) updateData.metaTitle = String(metaTitle);
-    if (metaDescription !== undefined) updateData.metaDescription = String(metaDescription);
+    if (metaTitle !== undefined) {
+      if (metaTitle == null || String(metaTitle).trim() === '') {
+        updateData.metaTitle = null;
+      } else {
+        const value = String(metaTitle);
+        if (value.length > 60) throw new AppError('metaTitle must be 60 characters or less', 400);
+        updateData.metaTitle = value.trim();
+      }
+    }
+    if (metaDescription !== undefined) {
+      if (metaDescription == null || String(metaDescription).trim() === '') {
+        updateData.metaDescription = null;
+      } else {
+        const value = String(metaDescription);
+        if (value.length > 160) throw new AppError('metaDescription must be 160 characters or less', 400);
+        updateData.metaDescription = value.trim();
+      }
+    }
+    if (primaryImageAlt !== undefined) {
+      if (primaryImageAlt == null || String(primaryImageAlt).trim() === '') {
+        updateData.primaryImageAlt = null;
+      } else {
+        const value = String(primaryImageAlt);
+        if (value.length > 125) throw new AppError('primaryImageAlt must be 125 characters or less', 400);
+        updateData.primaryImageAlt = value.trim();
+      }
+    }
     if (collections !== undefined && Array.isArray(collections)) updateData.collections = collections.map(String);
     if (occasions !== undefined && Array.isArray(occasions)) updateData.occasions = occasions.map(String);
     if (isFeaturedGift !== undefined) updateData.isFeaturedGift = Boolean(isFeaturedGift);
@@ -725,13 +771,18 @@ export const updateProduct = async (
 
         // Create new images
         await tx.productImage.createMany({
-          data: images.map((img: any, index: number) => ({
-            productId: id,
-            imageUrl: img.url || img.imageUrl,
-            altText: img.alt || updatedProduct.name,
-            sortOrder: index,
-            isPrimary: img.isPrimary || index === 0,
-          })),
+          data: images.map((img: any, index: number) => {
+            const isPrimaryImage = img.isPrimary || index === 0;
+            return {
+              productId: id,
+              imageUrl: img.url || img.imageUrl,
+              altText:
+                img.alt ||
+                (isPrimaryImage && updatedProduct.primaryImageAlt ? updatedProduct.primaryImageAlt : updatedProduct.name),
+              sortOrder: index,
+              isPrimary: isPrimaryImage,
+            };
+          }),
         });
 
         return tx.product.findUnique({

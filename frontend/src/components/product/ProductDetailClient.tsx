@@ -72,6 +72,7 @@ interface ProductData {
   name: string;
   slug: string;
   sku: string;
+  primaryImageAlt?: string;
   description: string;
   shortDescription: string;
   price: number;
@@ -195,6 +196,16 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
           discountPercent: Number(raw.discountPercent) || 0,
           soldThisWeek:  raw.soldThisWeek != null ? Number(raw.soldThisWeek) : undefined,
         } : raw;
+        if (fetchedProduct?.images?.length) {
+          const primaryIndex = fetchedProduct.images.findIndex((img: ProductImage) => img.isPrimary);
+          const targetIndex = primaryIndex >= 0 ? primaryIndex : 0;
+          if (fetchedProduct.primaryImageAlt && targetIndex >= 0) {
+            fetchedProduct.images[targetIndex] = {
+              ...fetchedProduct.images[targetIndex],
+              altText: fetchedProduct.images[targetIndex].altText || fetchedProduct.primaryImageAlt,
+            };
+          }
+        }
         setProduct(fetchedProduct);
 
         if (fetchedProduct) {
@@ -265,7 +276,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-sans font-semibold text-neutral-900 mb-4">Product not found</h1>
+          <h2 className="text-2xl font-sans font-semibold text-neutral-900 mb-4">Product not found</h2>
           <Link href="/products" className="text-neutral-600 hover:text-neutral-900 underline text-sm">
             Back to products
           </Link>
@@ -714,7 +725,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
         {product.description && (
           <section className="py-8 sm:py-10 border-t border-neutral-100">
             <div className="max-w-3xl">
-              <h2 className="text-lg sm:text-xl font-semibold text-neutral-900 mb-1">Product Description</h2>
+              <h2 className="text-lg sm:text-xl font-semibold text-neutral-900 mb-1">Full Description</h2>
               {product.shortDescription && (
                 <p className="text-sm font-medium text-neutral-700 mb-4 italic">
                   {product.shortDescription}
@@ -788,6 +799,18 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
             evening refinement. This piece transitions effortlessly from work to occasion wear.
           </p>
         </section>
+
+        {/* Product Specs */}
+        {product.careInstructions && (
+          <section className="py-8 sm:py-10 border-t border-neutral-100">
+            <h2 className="text-lg sm:text-xl font-semibold text-neutral-900 mb-3">
+              Care &amp; Usage
+            </h2>
+            <p className="text-sm sm:text-base text-neutral-600 leading-relaxed max-w-3xl whitespace-pre-wrap">
+              {product.careInstructions}
+            </p>
+          </section>
+        )}
 
         {/* Product Specs */}
         <section className="py-8 sm:py-10 border-t border-neutral-100">

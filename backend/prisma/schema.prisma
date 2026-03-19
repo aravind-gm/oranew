@@ -119,8 +119,9 @@ model Product {
   occasions         String[]        @default([]) // e.g., ["birthday", "anniversary", "valentine"]
   isFeaturedGift    Boolean         @default(false) @map("is_featured_gift") // Featured in Gifts For Her
   
-  metaTitle         String?         @map("meta_title")
-  metaDescription   String?         @map("meta_description")
+  metaTitle         String?         @map("meta_title") @db.VarChar(60)
+  metaDescription   String?         @map("meta_description") @db.VarChar(160)
+  primaryImageAlt   String?         @map("primary_image_alt") @db.VarChar(125)
   averageRating     Decimal         @default(0) @map("average_rating") @db.Decimal(3, 2)
   reviewCount       Int             @default(0) @map("review_count")
 
