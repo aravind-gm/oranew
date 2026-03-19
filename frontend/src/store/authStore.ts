@@ -36,8 +36,25 @@ export const useAuthStore = create<AuthState>()((set) => ({
       } else {
         set({ user: null, loading: false });
       }
-    } catch (error) {
-      // 401 or network error = not authenticated
+    } catch (error: any) {
+      const status = error?.response?.status;
+
+      // Bootstrap hardening:
+      // If access token expired, try refresh once, then retry /auth/me.
+      if (status === 401) {
+        try {
+          await api.post('/auth/refresh');
+          const retryRes = await api.get('/auth/me');
+          if (retryRes.data.success && retryRes.data.user) {
+            set({ user: retryRes.data.user, loading: false });
+            return;
+          }
+        } catch {
+          // fall through to logged-out state
+        }
+      }
+
+      // 401 (after refresh attempt) or network error => not authenticated
       set({ user: null, loading: false });
     }
   },
