@@ -265,44 +265,15 @@ export default function TumblersCollectionClient({ initialProducts }: TumblersCo
         view: 'listing',
       };
 
-      const collected = new Map<string, TumblerProduct>();
-
-      const mergeItems = (incoming: TumblerProduct[]) => {
-        incoming.forEach((item) => {
-          if (!collected.has(item.id)) collected.set(item.id, item);
-        });
-      };
-
-      const requests = [{ category: 'tumblers' }, { category: 'tumbler' }, { isTumbler: true }];
-
-      for (const params of requests) {
-        const response = await api.get('/products', {
-          params: {
-            ...commonParams,
-            ...params,
-          },
-        });
-
-        const items: TumblerProduct[] = response.data?.data || [];
-        mergeItems(items);
-      }
-
-      const filteredItems = Array.from(collected.values()).filter((product) => {
-        const catName = product.category?.name?.toLowerCase() || '';
-        const catSlug = product.category?.slug?.toLowerCase() || '';
-        const productName = product.name?.toLowerCase() || '';
-
-        return (
-          catName.includes('tumbler') ||
-          catName.includes('mug') ||
-          catSlug.includes('tumbler') ||
-          catSlug.includes('mug') ||
-          productName.includes('tumbler') ||
-          productName.includes('mug')
-        );
+      const response = await api.get('/products', {
+        params: {
+          ...commonParams,
+          isTumbler: true,
+        },
       });
 
-      setProducts(filteredItems);
+      const items: TumblerProduct[] = response.data?.data || [];
+      setProducts(items);
     } catch {
       setError('Unable to load products. Please try again.');
     } finally {

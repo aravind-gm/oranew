@@ -65,6 +65,7 @@ interface CategoryProductsParams {
   sortBy?: string;
   material?: string;
   availability?: string;
+  isTumbler?: boolean;
 }
 
 export function formatCategoryTitle(slug: string): string {
@@ -117,6 +118,7 @@ export const getCategoryProducts = cache(
     sortBy = '-createdAt',
     material,
     availability,
+    isTumbler,
   }: CategoryProductsParams): Promise<CategoryListingResponse> => {
     const params = new URLSearchParams({
       category: slug,
@@ -130,6 +132,7 @@ export const getCategoryProducts = cache(
     if (availability === 'in-stock') params.set('inStock', 'true');
     if (availability === 'new') params.set('isNew', 'true');
     if (availability === 'bestseller') params.set('isBestseller', 'true');
+    if (isTumbler) params.set('isTumbler', 'true');
 
     try {
       const response = await fetch(`${API_URL}/products?${params.toString()}`, {

@@ -71,6 +71,7 @@ export default async function TumblersPage() {
       page: 1,
       limit: 50,
       sortBy: '-createdAt',
+      isTumbler: true,
     }),
   ]);
 
