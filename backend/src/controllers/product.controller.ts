@@ -153,13 +153,13 @@ export const createProduct = async (
 
     const slugFromInput = slug && String(slug).trim() ? slugify(String(slug).trim()) : '';
     const slugFromName = slugify(name);
-    const slug = slugFromInput || slugFromName;
+    const resolvedSlug = slugFromInput || slugFromName;
     // Ensure slug uniqueness — append random suffix if collision
-    let finalSlug = slug;
+    let finalSlug = resolvedSlug;
     const existingSlug = await prisma.product.findUnique({ where: { slug: finalSlug } });
     if (existingSlug) {
       const suffix = Math.random().toString(36).substring(2, 7);
-      finalSlug = `${slug}-${suffix}`;
+      finalSlug = `${resolvedSlug}-${suffix}`;
     }
     const finalPrice = calculateFinalPrice(
       parseFloat(price),
