@@ -45,13 +45,20 @@ function SearchContent() {
     setSearched(true);
     try {
       const response = await api.get(`/products?search=${encodeURIComponent(term)}&limit=24`);
-      if (response.data.success) {
-        setProducts(response.data.data?.products || []);
-        setTotalResults(response.data.data?.pagination?.total || 0);
-      }
+      const payload = response.data || {};
+      const resultItems = payload.data?.products || payload.data || payload.products || [];
+      const resultTotal =
+        payload.data?.pagination?.total ||
+        payload.pagination?.total ||
+        resultItems.length ||
+        0;
+
+      setProducts(resultItems);
+      setTotalResults(resultTotal);
     } catch (err) {
       console.error('Search failed:', err);
       setProducts([]);
+      setTotalResults(0);
     } finally {
       setLoading(false);
     }

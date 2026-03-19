@@ -477,11 +477,28 @@ export const getProducts = async (
 
     // 🔍 Handle 'search' filter
     if (search && typeof search === 'string' && search.trim()) {
+      const normalizedSearch = search.trim().toLowerCase();
+      const rawTokens = normalizedSearch.split(/\s+/).filter(Boolean);
+
+      const tokenSet = new Set<string>([normalizedSearch, ...rawTokens]);
+      rawTokens.forEach((token) => {
+        if (token.endsWith('s') && token.length > 3) tokenSet.add(token.slice(0, -1));
+        else tokenSet.add(`${token}s`);
+      });
+
+      const searchTokens = Array.from(tokenSet).filter(Boolean);
+      const searchConditions = searchTokens.flatMap((token) => [
+        { name: { contains: token, mode: 'insensitive' as const } },
+        { description: { contains: token, mode: 'insensitive' as const } },
+        { shortDescription: { contains: token, mode: 'insensitive' as const } },
+        { material: { contains: token, mode: 'insensitive' as const } },
+        { category: { is: { name: { contains: token, mode: 'insensitive' as const } } } },
+        { category: { is: { slug: { contains: token, mode: 'insensitive' as const } } } },
+      ]);
+
       whereClause.OR = [
         ...(whereClause.OR || []),
-        { name: { contains: search.trim(), mode: 'insensitive' } },
-        { description: { contains: search.trim(), mode: 'insensitive' } },
-        { shortDescription: { contains: search.trim(), mode: 'insensitive' } },
+        ...searchConditions,
       ];
     }
 
