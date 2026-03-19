@@ -329,7 +329,7 @@ export const useCartStore = create<CartState>()(
       name: 'ora-cart',
       onRehydrateStorage: () => {
         return () => {
-          set({ hasHydrated: true });
+          useCartStore.setState({ hasHydrated: true });
         };
       },
       partialize: (state) => ({
