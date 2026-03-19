@@ -46,6 +46,7 @@ interface StockInfo {
 interface CartState {
   items: CartItem[];
   hasHydrated: boolean;
+  setHasHydrated: (value: boolean) => void;
   savedForLater: SavedItem[];
   stockValidating: boolean;
   stockErrors: string[];
@@ -76,6 +77,7 @@ export const useCartStore = create<CartState>()(
     (set, get) => ({
       items: [],
       hasHydrated: false,
+      setHasHydrated: (value) => set({ hasHydrated: value }),
       totalPrice: 0,
       addItem: (item) =>
         set((state) => {
@@ -328,8 +330,8 @@ export const useCartStore = create<CartState>()(
     {
       name: 'ora-cart',
       onRehydrateStorage: () => {
-        return () => {
-          useCartStore.setState({ hasHydrated: true });
+        return (state) => {
+          state?.setHasHydrated(true);
         };
       },
       partialize: (state) => ({
