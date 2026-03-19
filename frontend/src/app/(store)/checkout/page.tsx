@@ -264,7 +264,7 @@ function OrderSummary({ items, totalPrice }: { items: Array<{ productId: string;
 export default function CheckoutPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuthStore();
-  const { items, totalPrice } = useCartStore();
+  const { items, totalPrice, hasHydrated } = useCartStore();
 
   // State
   const [loading, setLoading] = useState(false);
@@ -340,10 +340,11 @@ export default function CheckoutPage() {
   // Empty cart redirect (guarded: skip if order just completed)
   useEffect(() => {
     if (orderCompletedRef.current) return;
+    if (!hasHydrated) return;
     if (items.length === 0) {
       router.push('/cart');
     }
-  }, [items.length, router]);
+  }, [hasHydrated, items.length, router]);
 
   const handleUseSavedAddress = (saved: SavedAddress) => {
     setAddress(prev => ({
@@ -585,7 +586,7 @@ export default function CheckoutPage() {
   };
 
   // Loading / guard states → show skeleton instead of spinners
-  const isReady = !authLoading && !!user && items.length > 0;
+  const isReady = hasHydrated && !authLoading && !!user && items.length > 0;
 
   if (!isReady) {
     return (

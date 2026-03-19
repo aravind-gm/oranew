@@ -40,7 +40,7 @@ const INDIAN_STATES = [
 
 export default function GuestCheckoutPage() {
   const router = useRouter();
-  const { items, getTotal, clearCart } = useCartStore();
+  const { items, getTotal, clearCart, hasHydrated } = useCartStore();
   const { user, loading: authLoading } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -71,10 +71,11 @@ export default function GuestCheckoutPage() {
 
   // If cart is empty, redirect to products
   useEffect(() => {
+    if (!hasHydrated) return;
     if (items.length === 0) {
       router.replace('/products');
     }
-  }, [items, router]);
+  }, [hasHydrated, items.length, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -201,7 +202,7 @@ export default function GuestCheckoutPage() {
   const formatPrice = (price: number) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(price);
 
-  if (authLoading || user || items.length === 0) {
+  if (!hasHydrated || authLoading || user || items.length === 0) {
     return <GuestCheckoutSkeleton />;
   }
 
