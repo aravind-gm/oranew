@@ -31,6 +31,7 @@ import { prisma } from '../config/database';
 import { AppError, asyncHandler, generateOrderNumber } from '../utils/helpers';
 import { lockInventory } from '../utils/inventory';
 import { getGSTRate, calculateGSTAmount } from '../utils/tax';
+import { notifyPartnersNewOrder } from '../services/whatsapp.service';
 
 interface GuestCheckoutBody {
   email: string;
@@ -348,6 +349,32 @@ export const guestCheckout = asyncHandler(async (req: Request, res: Response) =>
 
     return newOrder;
   }, { timeout: 30000, maxWait: 10000 });
+
+  // 🔔 Notify owners/partners via WhatsApp about the new order (non-blocking)
+  try {
+    notifyPartnersNewOrder({
+      orderNumber: order.orderNumber,
+      customerName: fullName,
+      customerPhone: phone,
+      customerEmail: email,
+      totalAmount,
+      paymentMethod: isCOD ? 'COD' : 'RAZORPAY',
+      items: cartItems.map((item) => ({
+        productName: item.product.name,
+        quantity: item.quantity,
+        unitPrice: Number(item.product.finalPrice),
+      })),
+      shippingAddress: {
+        fullName,
+        addressLine1: address.street,
+        city: address.city,
+        state: address.state,
+        pincode: address.zipCode,
+      },
+    }).catch((err) => console.error('[WhatsApp] Guest checkout partner notification failed:', err));
+  } catch {
+    // non-critical
+  }
 
   // ====== COD: Skip Razorpay, create COD payment record ======
   if (isCOD) {

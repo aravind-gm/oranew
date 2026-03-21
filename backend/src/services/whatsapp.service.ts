@@ -387,9 +387,12 @@ export async function notifyPartnersNewOrder(data: {
     pincode: string;
   };
 }): Promise<void> {
-  // Default partner phones — override via PARTNER_PHONES env var
+  // Default partner phones — override via ORDER_ALERT_PHONES or PARTNER_PHONES env var
   const DEFAULT_PARTNER_PHONES = '+919842253984,+919342865987,+919095007887';
-  const partnerPhones = (process.env.PARTNER_PHONES || DEFAULT_PARTNER_PHONES).split(',').map(p => p.trim()).filter(Boolean);
+  const partnerPhones = (process.env.ORDER_ALERT_PHONES || process.env.PARTNER_PHONES || DEFAULT_PARTNER_PHONES)
+    .split(',')
+    .map(p => p.trim())
+    .filter(Boolean);
   
   if (partnerPhones.length === 0) {
     console.log('[WhatsApp] No PARTNER_PHONES configured — skipping partner notification');
@@ -435,7 +438,10 @@ export async function notifyPartnersStatusUpdate(data: {
   courierName?: string;
 }): Promise<void> {
   const DEFAULT_PARTNER_PHONES = '+919842253984,+919342865987,+919095007887';
-  const partnerPhones = (process.env.PARTNER_PHONES || DEFAULT_PARTNER_PHONES).split(',').map(p => p.trim()).filter(Boolean);
+  const partnerPhones = (process.env.ORDER_ALERT_PHONES || process.env.PARTNER_PHONES || DEFAULT_PARTNER_PHONES)
+    .split(',')
+    .map(p => p.trim())
+    .filter(Boolean);
   
   if (partnerPhones.length === 0) return;
 
