@@ -10,7 +10,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import AdminLayout from '../components/AdminLayout';
 import { PageHeader, Button, Badge, Input, Select, Card, Alert } from '../components/ui';
 import { DataTable, TableActions, TableActionItem, Column } from '../components/ui/DataTable';
@@ -85,7 +85,6 @@ const ProductStatusBadge = ({ isActive, stock, deletedAt }: { isActive: boolean;
 
 export default function ProductsPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { products, productsLoading, productsPagination, fetchProducts } = useAdminStore();
   
   // State
@@ -185,8 +184,34 @@ export default function ProductsPage() {
   };
 
   const handleDelete = async (productId: string) => {
-    if (!confirm('Delete this product? This performs a soft delete (archive).')) return;
-    await handleArchive(productId);
+    if (!confirm('Remove this product from the catalog?')) return;
+    setActionLoading(true);
+    try {
+      await api.delete(`/admin/products/${productId}`);
+      setActionMessage({ type: 'success', text: 'Product removed successfully' });
+      fetchProducts(page, buildParams());
+    } catch (err: any) {
+      setActionMessage({ type: 'error', text: err.response?.data?.message || 'Failed to remove product' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleBulkDelete = async (ids: string[]) => {
+    if (ids.length === 0) return;
+    if (!confirm(`Remove ${ids.length} product(s) from the catalog?`)) return;
+
+    setActionLoading(true);
+    try {
+      await Promise.all(ids.map((id) => api.delete(`/admin/products/${id}`)));
+      setActionMessage({ type: 'success', text: `${ids.length} product(s) removed successfully` });
+      setSelectedProducts([]);
+      fetchProducts(page, buildParams());
+    } catch (err: any) {
+      setActionMessage({ type: 'error', text: err.response?.data?.message || 'Failed to remove selected products' });
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleBulkAction = async (action: string, ids: string[]) => {
@@ -399,6 +424,7 @@ export default function ProductsPage() {
             { label: 'Deactivate', onClick: (ids) => handleBulkAction('deactivate', ids), variant: 'primary' },
             { label: 'Archive', onClick: (ids) => handleBulkAction('archive', ids), variant: 'danger' },
             { label: 'Restore', onClick: (ids) => handleBulkAction('restore', ids), variant: 'primary' },
+            { label: 'Remove', onClick: handleBulkDelete, variant: 'danger' },
           ]}
           rowActions={(row: any) => (
             <TableActions>

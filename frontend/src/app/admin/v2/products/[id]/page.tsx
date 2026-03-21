@@ -421,6 +421,7 @@ export default function ProductFormPage() {
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saveError, setSaveError] = useState('');
   const [categories, setCategories] = useState<{ id: string; name: string; slug: string }[]>([]);
@@ -714,6 +715,43 @@ export default function ProductFormPage() {
     }
   };
 
+  const handleDeleteProduct = async () => {
+    if (!isEditing || deleting || saving) return;
+    if (!confirm('Remove this product from the catalog?')) return;
+
+    setDeleting(true);
+    setSaveError('');
+
+    try {
+      const response = await api.delete(`/admin/products/${productId}`);
+
+      if (response.data.success) {
+        try { useAdminStore.getState().fetchProducts(); } catch (_) { /* best-effort */ }
+        router.push('/admin/v2/products');
+      } else {
+        throw new Error(response.data.message || 'Failed to remove product');
+      }
+    } catch (err: unknown) {
+      const error = err as {
+        message?: string;
+        response?: {
+          data?: { message?: string; error?: { message?: string } };
+        };
+      };
+
+      const errorMsg =
+        error.response?.data?.error?.message ||
+        error.response?.data?.message ||
+        error.message ||
+        'Failed to remove product';
+
+      setSaveError(errorMsg);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="max-w-6xl mx-auto space-y-6">
@@ -742,10 +780,22 @@ export default function ProductFormPage() {
           ]}
           actions={
             <>
+              {isEditing && (
+                <Button
+                  variant="danger"
+                  leftIcon={<Trash2 size={18} />}
+                  onClick={handleDeleteProduct}
+                  isLoading={deleting}
+                  disabled={saving || deleting}
+                >
+                  Remove Product
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 leftIcon={<ArrowLeft size={18} />}
                 onClick={() => router.back()}
+                disabled={saving || deleting}
               >
                 Discard
               </Button>
@@ -753,14 +803,14 @@ export default function ProductFormPage() {
                 variant="secondary"
                 onClick={() => handleSave(false)}
                 isLoading={saving}
-                disabled={saving}
+                disabled={saving || deleting}
               >
                 Save as Draft
               </Button>
               <Button
                 onClick={() => handleSave(true)}
                 isLoading={saving}
-                disabled={saving}
+                disabled={saving || deleting}
                 leftIcon={<Check size={18} />}
               >
                 {isEditing ? 'Update Product' : 'Publish Product'}
