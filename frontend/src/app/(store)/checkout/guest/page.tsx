@@ -40,7 +40,7 @@ const INDIAN_STATES = [
 
 export default function GuestCheckoutPage() {
   const router = useRouter();
-  const { items, getTotal, clearCart, hasHydrated } = useCartStore();
+  const { items, getTotal, clearCart, removeItem, hasHydrated } = useCartStore();
   const { user, loading: authLoading } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -114,6 +114,29 @@ export default function GuestCheckoutPage() {
     setError('');
 
     try {
+      const orderItems = items
+        .map((item) => ({
+          productId: item.productId || item.id,
+          quantity: item.quantity,
+        }))
+        .filter((item) => !!item.productId);
+
+      if (orderItems.length !== items.length) {
+        const validIds = new Set(orderItems.map((item) => item.productId));
+        items
+          .filter((item) => !validIds.has(item.productId || item.id))
+          .forEach((item) => removeItem(item.productId || item.id));
+
+        setError('Some items in your cart are no longer available. Please review your cart.');
+        setLoading(false);
+        return;
+      }
+
+      console.log('[GuestCheckout][FE] Payload debug:', {
+        itemsCount: orderItems.length,
+        productIds: orderItems.map((item) => item.productId),
+      });
+
       // Call guest checkout API
       const { data } = await api.post('/orders/guest-checkout', {
         email: form.email,
@@ -126,8 +149,8 @@ export default function GuestCheckoutPage() {
           zipCode: form.zipCode,
           country: 'India',
         },
-        items: items.map(item => ({
-          productId: item.id,
+        items: orderItems.map(item => ({
+          productId: item.productId,
           quantity: item.quantity,
         })),
         paymentMethod: isCODSelected ? 'COD' : undefined,
@@ -193,7 +216,26 @@ export default function GuestCheckoutPage() {
       const rzp = new (window.Razorpay as any)(options);
       rzp.open();
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { error?: string } } };
+      const axiosErr = err as {
+        response?: {
+          data?: {
+            error?: string;
+            code?: string;
+            missingProductIds?: string[];
+          };
+        };
+      };
+
+      const errorCode = axiosErr.response?.data?.code;
+      const missingProductIds = axiosErr.response?.data?.missingProductIds || [];
+
+      if (errorCode === 'CART_ITEMS_UNAVAILABLE' && missingProductIds.length > 0) {
+        missingProductIds.forEach((productId) => removeItem(productId));
+        setError('Some items in your cart are no longer available. Please review your cart.');
+        setLoading(false);
+        return;
+      }
+
       setError(axiosErr.response?.data?.error || 'Checkout failed. Please try again.');
       setLoading(false);
     }

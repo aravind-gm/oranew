@@ -45,7 +45,8 @@ interface GuestCheckoutBody {
     country?: string;
   };
   items: Array<{
-    productId: string;
+    productId?: string;
+    id?: string;
     quantity: number;
   }>;
   couponCode?: string;
@@ -65,6 +66,14 @@ export const guestCheckout = asyncHandler(async (req: Request, res: Response) =>
   const { email, fullName, phone, address, items, couponCode, paymentMethod } = req.body as GuestCheckoutBody & { paymentMethod?: string };
 
   const isCOD = paymentMethod === 'COD';
+  const rawItems = Array.isArray(items) ? items : [];
+  const normalizedItems = rawItems.map((item) => {
+    const productId = (item.productId || item.id || '').trim();
+    return {
+      productId,
+      quantity: Number(item.quantity),
+    };
+  });
 
   // ====== VALIDATION ======
   if (!email || !email.includes('@')) {
@@ -79,12 +88,15 @@ export const guestCheckout = asyncHandler(async (req: Request, res: Response) =>
   if (!address || !address.street || !address.city || !address.state || !address.zipCode) {
     throw new AppError('Complete address is required (street, city, state, zipCode)', 400);
   }
-  if (!items || !Array.isArray(items) || items.length === 0) {
+  if (normalizedItems.length === 0) {
     throw new AppError('At least one item is required', 400);
   }
 
   // Validate quantities
-  for (const item of items) {
+  for (const item of normalizedItems) {
+    if (!item.productId) {
+      throw new AppError('Invalid cart item payload: missing productId', 400);
+    }
     if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
       throw new AppError('Invalid quantity: must be a positive integer', 400);
     }
@@ -96,7 +108,9 @@ export const guestCheckout = asyncHandler(async (req: Request, res: Response) =>
   console.log('[GuestCheckout] Request received:', {
     email,
     fullName,
-    itemsCount: items.length,
+    itemsCount: normalizedItems.length,
+    rawItemIds: rawItems.map((item) => item.productId || item.id || 'missing'),
+    normalizedProductIds: normalizedItems.map((item) => item.productId),
     couponCode: couponCode || 'None',
   });
 
@@ -155,17 +169,42 @@ export const guestCheckout = asyncHandler(async (req: Request, res: Response) =>
   });
 
   // ====== FETCH AND VALIDATE PRODUCTS ======
-  const productIds = items.map(i => i.productId);
+  const productIds = normalizedItems.map((i) => i.productId);
+  const uniqueProductIds = [...new Set(productIds)];
+
+  console.log('[GuestCheckout] Product lookup started:', {
+    requestedIds: uniqueProductIds,
+    requestedCount: uniqueProductIds.length,
+  });
+
   const products = await prisma.product.findMany({
-    where: { id: { in: productIds } },
+    where: {
+      id: { in: uniqueProductIds },
+      isActive: true,
+      deletedAt: null,
+    },
     include: { images: true, category: { select: { slug: true } } },
   });
 
-  if (products.length !== productIds.length) {
-    throw new AppError('One or more products not found', 400);
+  if (products.length !== uniqueProductIds.length) {
+    const foundIds = new Set(products.map((p) => p.id));
+    const missingProductIds = uniqueProductIds.filter((id) => !foundIds.has(id));
+
+    console.warn('[GuestCheckout] Unavailable products detected:', {
+      requestedIds: uniqueProductIds,
+      foundIds: products.map((p) => p.id),
+      missingProductIds,
+    });
+
+    return res.status(409).json({
+      success: false,
+      code: 'CART_ITEMS_UNAVAILABLE',
+      error: 'Some items in your cart are no longer available. Please review your cart.',
+      missingProductIds,
+    });
   }
 
-  const cartItems = items.map(item => {
+  const cartItems = normalizedItems.map(item => {
     const product = products.find(p => p.id === item.productId);
     if (!product || product.deletedAt || !product.isActive) {
       throw new AppError(`Product "${product?.name || item.productId}" is unavailable`, 400);

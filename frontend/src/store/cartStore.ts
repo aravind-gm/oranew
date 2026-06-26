@@ -195,6 +195,7 @@ export const useCartStore = create<CartState>()(
           const productIds = state.items.map((i) => i.productId);
           const stockResults: StockInfo[] = [];
           const errors: string[] = [];
+          const unavailableProductIds: string[] = [];
           
           // Fetch stock for each product
           for (const productId of productIds) {
@@ -223,10 +224,31 @@ export const useCartStore = create<CartState>()(
                   errors.push(`Only ${product.stockQuantity} ${product.name} available (you have ${cartItem?.quantity})`);
                 }
               }
-            } catch {
-              // Product might be deleted
-              errors.push(`Product not available`);
+            } catch (error: unknown) {
+              const status =
+                typeof error === 'object' &&
+                error !== null &&
+                'response' in error &&
+                typeof (error as { response?: { status?: number } }).response?.status === 'number'
+                  ? (error as { response?: { status?: number } }).response?.status
+                  : undefined;
+
+              // Product was deleted/unpublished; remove it from cart automatically.
+              if (status === 404) {
+                unavailableProductIds.push(productId);
+                errors.push('Some items in your cart are no longer available. Please review your cart.');
+              } else {
+                errors.push('Product not available');
+              }
             }
+          }
+
+          if (unavailableProductIds.length > 0) {
+            const nextItems = get().items.filter(
+              (item) => !unavailableProductIds.includes(item.productId)
+            );
+            const nextTotalPrice = nextItems.reduce((total, item) => total + item.price * item.quantity, 0);
+            set({ items: nextItems, totalPrice: nextTotalPrice });
           }
           
           set({ stockValidating: false, stockErrors: errors });
