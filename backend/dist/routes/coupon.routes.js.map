@@ -1,1 +1,0 @@
-{"version":3,"file":"coupon.routes.js","sourceRoot":"","sources":["../../src/routes/coupon.routes.ts"],"names":[],"mappings":";;AAAA,qCAAiC;AACjC,wEAAkE;AAClE,6CAA6C;AAC7C,2DAA0D;AAE1D,MAAM,MAAM,GAAG,IAAA,gBAAM,GAAE,CAAC;AAExB,+CAA+C;AAC/C,0DAA0D;AAC1D,gDAAgD;AAEhD,4CAA4C;AAC5C,MAAM,CAAC,IAAI,CAAC,WAAW,EAAE,cAAO,EAAE,2BAAa,EAAE,kCAAc,CAAC,CAAC;AAEjE,kBAAe,MAAM,CAAC"}
