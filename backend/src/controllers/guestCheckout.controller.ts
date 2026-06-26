@@ -369,15 +369,6 @@ export const guestCheckout = asyncHandler(async (req: Request, res: Response) =>
       include: { items: true },
     });
 
-    // Lock inventory (uses global prisma — not part of this transaction)
-    await lockInventory(
-      newOrder.id,
-      cartItems.map((item) => ({
-        productId: item.productId,
-        quantity: item.quantity,
-      }))
-    );
-
     // Update coupon usage
     if (appliedCouponCode) {
       await tx.coupon.update({
@@ -388,6 +379,24 @@ export const guestCheckout = asyncHandler(async (req: Request, res: Response) =>
 
     return newOrder;
   }, { timeout: 30000, maxWait: 10000 });
+
+  // Lock inventory AFTER transaction commits — order now exists in DB.
+  // Must NOT be inside the transaction: lockInventory uses the global prisma
+  // client, so calling it inside $transaction causes a foreign key violation
+  // because the order row isn't visible to other connections until commit.
+  try {
+    await lockInventory(
+      order.id,
+      cartItems.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+      }))
+    );
+  } catch (lockErr) {
+    // Non-fatal: log and continue — order is already created.
+    // Inventory lock is a best-effort safety net, not a hard requirement.
+    console.error('[GuestCheckout] Inventory lock failed (non-fatal):', lockErr);
+  }
 
   // 🔔 Notify owners/partners via WhatsApp about the new order (non-blocking)
   try {
