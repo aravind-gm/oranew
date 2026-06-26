@@ -15,7 +15,7 @@
  *  5. On success → redirect to /checkout/success
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ShoppingBag, Lock, Truck } from 'lucide-react';
 import api from '@/lib/api';
@@ -45,6 +45,7 @@ export default function GuestCheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'razorpay' | 'cod'>('razorpay');
+  const orderCompletedRef = useRef(false);
   const [showGuestForm, setShowGuestForm] = useState(false);
 
   const COD_MAX_AMOUNT = 5000;
@@ -69,9 +70,10 @@ export default function GuestCheckoutPage() {
     }
   }, [authLoading, user, router]);
 
-  // If cart is empty, redirect to products
+  // If cart is empty, redirect to products (guarded: skip if order just completed)
   useEffect(() => {
     if (!hasHydrated) return;
+    if (orderCompletedRef.current) return;
     if (items.length === 0) {
       router.replace('/products');
     }
@@ -158,6 +160,7 @@ export default function GuestCheckoutPage() {
 
       // COD: order confirmed immediately — redirect to success
       if (data.codOrder) {
+        orderCompletedRef.current = true;
         clearCart();
         router.push(`/checkout/success?orderNumber=${data.order.orderNumber}`);
         return;
@@ -191,6 +194,7 @@ export default function GuestCheckoutPage() {
               razorpay_signature: response.razorpay_signature,
             });
 
+            orderCompletedRef.current = true;
             clearCart();
             // Pass orderId so success page polls payment status and shows correct payment type
             router.push(`/checkout/success?orderId=${data.order.id}`);
