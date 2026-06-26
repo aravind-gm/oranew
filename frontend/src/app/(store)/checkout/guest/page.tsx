@@ -192,7 +192,8 @@ export default function GuestCheckoutPage() {
             });
 
             clearCart();
-            router.push(`/checkout/success?orderNumber=${data.order.orderNumber}`);
+            // Pass orderId so success page polls payment status and shows correct payment type
+            router.push(`/checkout/success?orderId=${data.order.id}`);
           } catch {
             router.push(`/checkout/failed?orderId=${data.order.id}`);
           }

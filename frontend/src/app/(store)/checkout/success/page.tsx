@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useCartStore } from '@/store/cartStore';
+import { useAuthStore } from '@/store/authStore';
 import OrderSuccessAnimation from '@/components/order-success/OrderSuccessAnimation';
 
 // ============================================================================
@@ -231,6 +232,7 @@ function SuccessContent() {
   const [animPhase, setAnimPhase] = useState<'truck' | 'reveal'>('truck');
   const [upsellCategoryId, setUpsellCategoryId] = useState<string | undefined>(undefined);
   const clearCart = useCartStore((state) => state.clearCart);
+  const { user } = useAuthStore();
   const purchaseTrackedRef = useRef(false);
   const confettiKey = orderId || orderNumber || 'unknown';
 
@@ -512,12 +514,21 @@ function SuccessContent() {
 
             {/* CTA Buttons */}
             <div className="space-y-3">
-              <Link
-                href="/account"
-                className="block w-full py-4 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-full font-semibold text-center hover:from-pink-700 hover:to-rose-700 transition-all shadow-lg"
-              >
-                View Order Status
-              </Link>
+              {user ? (
+                <Link
+                  href="/account"
+                  className="block w-full py-4 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-full font-semibold text-center hover:from-pink-700 hover:to-rose-700 transition-all shadow-lg"
+                >
+                  View Order Status
+                </Link>
+              ) : (
+                <Link
+                  href="/auth/login"
+                  className="block w-full py-4 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-full font-semibold text-center hover:from-pink-700 hover:to-rose-700 transition-all shadow-lg"
+                >
+                  Create Account to Track Order
+                </Link>
+              )}
               <Link
                 href="/products"
                 className="block w-full py-4 border-2 border-gray-200 text-gray-900 rounded-full font-semibold text-center hover:bg-gray-50 transition-all"
