@@ -23,6 +23,7 @@ import HomeHero from '@/components/home/HomeHero';
 import BrandStatement from '@/components/home/BrandStatement';
 import CuratedProducts from '@/components/home/CuratedProducts';
 import ShopByCategory from '@/components/home/ShopByCategory';
+import OfferBanner from '@/components/home/OfferBanner';
 import CuratedDuos from '@/components/home/CuratedDuos';
 import OraPhilosophy from '@/components/home/OraPhilosophy';
 import TrustStrip from '@/components/home/TrustStrip';
@@ -57,7 +58,10 @@ export default function HomePage() {
       {/* 4. SHOP BY CATEGORY — Clean cards, no discount labels */}
       <ShopByCategory heading="Shop by Category" />
 
-      {/* 5. NEW ARRIVALS — No hype */}
+      {/* 5. LAUNCH OFFER — Buy Any Necklace, Get a Ring FREE */}
+      <OfferBanner />
+
+      {/* 6. NEW ARRIVALS — No hype */}
       <CuratedProducts
         heading="New Arrivals"
         subheading=""
@@ -66,9 +70,6 @@ export default function HomePage() {
         ctaLabel="See All New Arrivals"
         ctaHref="/collections/new-arrivals"
       />
-
-      {/* 6. CURATED ORA DUOS — Subtle, intentional combos */}
-      <CuratedDuos />
 
       {/* 7. THE ORA PHILOSOPHY — Brand depth & emotional storytelling */}
       <OraPhilosophy />

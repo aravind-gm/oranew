@@ -136,7 +136,7 @@ const navigationItems: NavItem[] = [
     label: 'Marketing',
     icon: Megaphone,
     children: [
-      { id: 'bogo-campaign', label: 'BOGO Campaign', href: '/admin/v2/marketing/bogo', badge: 'LIVE' },
+      { id: 'offer-campaign', label: 'Offer Campaign', href: '/admin/v2/marketing/bogo', badge: 'LIVE' },
       { id: 'offers-management', label: 'Offers & Deals', href: '/admin/v2/marketing/offers', badge: 'NEW' },
       { id: 'campaigns', label: 'Campaigns', href: '/admin/v2/marketing/campaigns' },
       { id: 'discounts', label: 'Discounts', href: '/admin/v2/marketing/discounts' },

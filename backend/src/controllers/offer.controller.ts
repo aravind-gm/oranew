@@ -159,30 +159,21 @@ export const getOfferProducts = async (
       prisma.product.findMany({
         where,
         select: {
-          id: true,
-          name: true,
-          slug: true,
-          price: true,
-          finalPrice: true,
-          isBOGOEligible: true,
-          bogoCategory: true,
-          bogoActive: true,
-          stockQuantity: true,
-          averageRating: true,
-          reviewCount: true,
-          isActive: true,
+          id: true, name: true, slug: true, price: true, finalPrice: true,
+          isBOGOEligible: true, bogoCategory: true, bogoActive: true,
+          stockQuantity: true, averageRating: true, reviewCount: true, isActive: true,
           images: { where: { isPrimary: true }, take: 1, select: { imageUrl: true } },
         },
         skip: (pageNum - 1) * limitNum,
         take: limitNum,
         orderBy: [{ isBOGOEligible: 'desc' }, { name: 'asc' }],
-      }),
+      }) as Promise<any[]>,
       prisma.product.count({ where }),
     ]);
 
     res.json({
       success: true,
-      data: products.map(mapProduct),
+      data: (products as any[]).map(mapProduct),
       pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) },
     });
   } catch (err) {
@@ -283,7 +274,7 @@ export const listEligibleNecklaces = async (
   try {
     const { search } = req.query as { search?: string };
     const products = await getEligibleNecklaces(search);
-    res.json({ success: true, data: products.map(mapProduct) });
+    res.json({ success: true, data: (products as any[]).map(mapProduct) });
   } catch (err) {
     next(err);
   }
@@ -299,7 +290,7 @@ export const listEligibleRings = async (
   try {
     const { search } = req.query as { search?: string };
     const products = await getEligibleRings(search);
-    res.json({ success: true, data: products.map(mapProduct) });
+    res.json({ success: true, data: (products as any[]).map(mapProduct) });
   } catch (err) {
     next(err);
   }

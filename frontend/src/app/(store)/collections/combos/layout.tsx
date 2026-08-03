@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Combos for Her — Buy 1 Get 1 Free | ORA Jewellery',
-  description: "Buy 1 Get 1 Free on curated jewellery combos. Perfectly paired necklaces, earrings & bracelets — crafted for gifting, celebrating, and glowing.",
-  keywords: ['jewellery combos', 'buy 1 get 1 free', 'BOGO jewellery', 'jewellery gift sets', 'combo offers', 'ORA combos', 'gift for her', 'jewellery bundles'],
+  title: 'Buy Any Necklace, Get a Ring FREE — ORA Jewellery',
+  description: 'ORA Launch Offer: Purchase any eligible necklace and receive a complimentary ring of your choice, absolutely free. Shop the exclusive collection now.',
+  keywords: ['free ring with necklace', 'necklace offer', 'ORA launch offer', 'buy necklace get ring free', 'jewellery gift offer', 'ORA jewellery campaign'],
   openGraph: {
-    title: 'Buy 1 Get 1 Free — Combos for Her | ORA',
-    description: 'Curated jewellery combos crafted for gifting, celebrating, and glowing. 2 pieces at 1 price.',
+    title: 'Buy Any Necklace, Get a Ring FREE | ORA Jewellery',
+    description: 'Purchase any eligible necklace and receive a complimentary ring of your choice. Limited time launch offer.',
     type: 'website',
   },
   alternates: {
@@ -14,10 +14,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function CombosLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function CampaignLayout({ children }: { children: React.ReactNode }) {
   return children;
 }
+

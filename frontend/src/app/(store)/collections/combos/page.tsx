@@ -1,27 +1,14 @@
 'use client';
 
 /**
- * Combos for Her — /collections/combos
- * 
- * PREMIUM BOGO LANDING EXPERIENCE
- * 
- * This is NOT a normal collection page.
- * Separate architecture, styling, and components.
- * 
- * Features:
- *   - Emotional hero section with countdown
- *   - Value proposition strip
- *   - How it works (3-step)
- *   - Urgency bar (social proof + scarcity)
- *   - Bundle card grid (split product images, BOGO pricing)
- *   - Testimonials
- *   - Newsletter CTA
- *   - Mobile sticky CTA
- *   - Fully CMS-controlled from Admin
+ * ORA Launch Campaign — /collections/combos
+ *
+ * "Buy Any Necklace, Get a Ring FREE"
+ * This URL is preserved for SEO; the page is a full redesign.
  */
 
-import CombosPage from '@/components/combos/CombosPage';
+import CampaignPage from '@/components/campaign/CampaignPage';
 
-export default function CombosForHerPage() {
-  return <CombosPage />;
+export default function CampaignRoute() {
+  return <CampaignPage />;
 }

@@ -11,13 +11,14 @@ interface CartItem {
   quantity: number;
   stockQuantity?: number;
   isOutOfStock?: boolean;
-  // Offer fields
+  // Free-gift tracking — rings given as complimentary gifts
+  isFreeGift?: boolean;
+  // Legacy offer fields (kept for backwards compat)
   isOnOffer?: boolean;
   offerType?: string;
   offerValue?: number;
   offerExpiry?: string;
   offerPrice?: number;
-  bogoPartnerId?: string;
 }
 
 interface OfferValidationResult {
@@ -25,7 +26,6 @@ interface OfferValidationResult {
   adjustedItems: CartItem[];
   totalDiscount: number;
   messages: string[];
-  bogoApplied: boolean;
 }
 
 interface SavedItem {

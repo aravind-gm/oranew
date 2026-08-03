@@ -134,7 +134,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="smooth-scroll">
+    <html lang="en" className="smooth-scroll" suppressHydrationWarning>
       <head>
         <GoogleAnalytics />
         <MetaPixel />

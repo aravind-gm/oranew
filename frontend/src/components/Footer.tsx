@@ -32,7 +32,7 @@ export default function Footer() {
             <h4 className="font-serif text-sm sm:text-base mb-4 sm:mb-6 text-white">Shop</h4>
             <ul className="space-y-2 sm:space-y-3">
               <li><Link href="/collections" className="text-sm text-white/50 hover:text-white transition-colors inline-block py-1">All Collections</Link></li>
-              <li><Link href="/collections/combos" className="text-sm text-white/50 hover:text-white transition-colors inline-block py-1">Combos for Her</Link></li>
+              <li><Link href="/collections/combos" className="text-sm text-[#C6A85B]/80 hover:text-[#C6A85B] transition-colors inline-block py-1">✦ Free Ring Offer</Link></li>
               <li><Link href="/collections/gifts-for-her" className="text-sm text-white/50 hover:text-white transition-colors inline-block py-1">Gifts for Her</Link></li>
               <li><Link href="/collections/tumblers" className="text-sm text-white/50 hover:text-white transition-colors inline-block py-1">Tumblers</Link></li>
             </ul>

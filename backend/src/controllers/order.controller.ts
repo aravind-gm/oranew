@@ -236,7 +236,7 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
   // Force free-gift items to ₹0 (server-enforced — never trust frontend price)
   for (const item of cartItems) {
     if ((item as any).isFreeGift) {
-      item.product.finalPrice = new (require('@prisma/client/runtime/library').Decimal)(0);
+      item.product.finalPrice = new Decimal(0);
     }
   }
 

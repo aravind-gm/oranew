@@ -37,7 +37,7 @@ export interface OfferValidationResult {
 
 /** Get the active campaign from DB (cached for this request lifetime) */
 export async function getActiveCampaign() {
-  return withRetry(() =>
+  return withRetry<Awaited<ReturnType<typeof prisma.bOGOCampaign.findFirst>>>(() =>
     prisma.bOGOCampaign.findFirst({
       where: { isActive: true },
       orderBy: { createdAt: 'desc' },
@@ -101,19 +101,18 @@ export async function validateOfferCart(
 
   // Fetch all product offer fields in a single batch
   const productIds = [...new Set(cartItems.map((i) => i.productId))];
-  const products = await withRetry(() =>
+  type ProductOfferFields = {
+    id: string; name: string; finalPrice: any; isBOGOEligible: boolean;
+    bogoCategory: string | null; bogoActive: boolean; stockQuantity: number;
+  };
+  const products = await withRetry<ProductOfferFields[]>(() =>
     prisma.product.findMany({
       where: { id: { in: productIds }, deletedAt: null, isActive: true },
       select: {
-        id: true,
-        name: true,
-        finalPrice: true,
-        isBOGOEligible: true,
-        bogoCategory: true,
-        bogoActive: true,
-        stockQuantity: true,
+        id: true, name: true, finalPrice: true, isBOGOEligible: true,
+        bogoCategory: true, bogoActive: true, stockQuantity: true,
       },
-    })
+    }) as unknown as Promise<ProductOfferFields[]>
   );
   const productMap = new Map(products.map((p) => [p.id, p]));
 

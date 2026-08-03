@@ -25,7 +25,7 @@ import announcementsRoutes from './routes/announcements.routes';
 import pagesRoutes from './routes/pages.routes';
 import shopallCmsRoutes from './routes/shopall-cms.routes';
 import comboRoutes from './routes/combo.routes';
-import bogoRoutes from './routes/bogo.routes';
+import offerRoutes from './routes/offer.routes';
 import offersRoutes from './routes/offers.routes';
 import contactRoutes from './routes/contact.routes';
 
@@ -386,7 +386,7 @@ app.get('/api/health/detailed', detailedHealthCheck);
 // API Routes
 app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api/products/bogo-eligible', bogoRoutes);
+app.use('/api/offer', offerRoutes); // "Buy Necklace → Get Ring Free" offer engine
 app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/cart', cartRoutes);
