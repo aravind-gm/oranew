@@ -21,6 +21,7 @@
 
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
+import { useOfferStore } from '@/store/offerStore';
 import { trackViewCart } from '@/lib/analytics';
 import RelatedProductsCart from '@/components/RelatedProductsCart';
 import CartUpsell from '@/components/cart/CartUpsell';
@@ -297,6 +298,14 @@ export default function CartPage() {
   const router = useRouter();
   const { items, removeItem, updateQuantity, validateStock, stockErrors, stockValidating } = useCartStore();
   const { user, loading: authLoading } = useAuthStore();
+  const { cartNecklaceCount, syncCartCounts } = useOfferStore();
+
+  // Derive whether the free-ring offer banner should show
+  const hasFreeRing = items.some((i) => i.isFreeGift);
+  const hasRegularItems = items.some((i) => !i.isFreeGift);
+  const showFreeRingBanner = hasRegularItems && !hasFreeRing;
+
+  useEffect(() => { syncCartCounts(); }, [syncCartCounts, items]);
 
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
@@ -424,6 +433,64 @@ export default function CartPage() {
               <p className="text-xs text-emerald-600">Estimated delivery in 5-7 business days</p>
             </div>
           </motion.div>
+
+          {/* Free Ring Offer Banner */}
+          <AnimatePresence>
+            {showFreeRingBanner && (
+              <motion.div
+                initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                transition={{ duration: 0.35 }}
+                className="relative overflow-hidden rounded-xl border-2 border-[#C6A85B]/60 bg-[#0F0F14] px-5 py-4 shadow-lg"
+              >
+                {/* Gold glow */}
+                <div className="pointer-events-none absolute -top-8 right-0 h-24 w-40 rounded-full bg-[#C6A85B]/20 blur-2xl" />
+
+                <div className="relative flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <div className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[#C6A85B]/40 bg-[#C6A85B]/10 text-xl">
+                      🎁
+                    </div>
+                    <div>
+                      <p className="font-semibold text-white">
+                        You qualify for a FREE ring!
+                      </p>
+                      <p className="mt-0.5 text-xs text-neutral-400">
+                        Pick any ring from our collection — complimentary with your necklace.
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    href="/collections/combos#rings"
+                    className="flex-shrink-0 inline-flex items-center gap-2 rounded-full bg-[#C6A85B] px-5 py-2.5 text-sm font-semibold text-[#0F0F14] hover:bg-[#b8985a] transition-colors whitespace-nowrap"
+                  >
+                    Claim Your Free Ring <ChevronRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Already claimed — confirmation */}
+          <AnimatePresence>
+            {hasFreeRing && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="flex items-center gap-3 rounded-xl border border-[#C6A85B]/50 bg-[#C6A85B]/8 px-4 py-3"
+              >
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#C6A85B]/20 text-base">
+                  ✓
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[#C6A85B]">Complimentary ring added!</p>
+                  <p className="text-xs text-neutral-500">Your free gift is included in this order.</p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* ============================================================

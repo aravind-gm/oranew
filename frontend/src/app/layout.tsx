@@ -1,4 +1,5 @@
 import AddToCartPopup from '@/components/AddToCartPopup';
+import FreeRingPopup from '@/components/FreeRingPopup';
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
 import MetaPixel from '@/components/analytics/MetaPixel';
 import AuthStateSync from '@/components/AuthStateSync';
@@ -149,6 +150,7 @@ export default function RootLayout({
         </main>
         <Footer />
         <AddToCartPopup />
+        <FreeRingPopup />
         <PromotionalAds />
       </body>
     </html>
