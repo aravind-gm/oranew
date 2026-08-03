@@ -8,6 +8,7 @@ import { enqueueJob } from '../services/jobQueue.service';
 import { sendWhatsAppOrderConfirmation, notifyPartnersNewOrder } from '../services/whatsapp.service';
 import { AppError, asyncHandler, generateOrderNumber } from '../utils/helpers';
 import { lockInventory, releaseInventoryLocks, restockInventory } from '../utils/inventory';
+import { validateOfferCart } from '../services/offerService';
 // Shipping — single source of truth: always FREE
 function calculateShipping(): number {
   return 0;
@@ -25,6 +26,7 @@ interface ShippingAddressInput {
 interface CartItemInput {
   productId: string;
   quantity: number;
+  isFreeGift?: boolean;
 }
 
 // COD constants
@@ -216,7 +218,26 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
     (item as any)._categorySlug = freshProduct.category?.slug || null;
     (item as any)._isBOGOEligible = freshProduct.isBOGOEligible;
     (item as any)._bogoActive = freshProduct.bogoActive;
-    (item as any)._bogoPriceTier = freshProduct.bogoPriceTier;
+    (item as any)._bogoCategory = freshProduct.bogoCategory;
+  }
+
+  // ====== OFFER CAMPAIGN VALIDATION ======
+  // Validate "Buy Necklace → Get Ring Free" — server-side, never trust frontend
+  const offerCartItems = cartItems.map((item: any) => ({
+    productId: item.productId,
+    quantity: item.quantity,
+    isFreeGift: !!(item as any).isFreeGift,
+  }));
+  const offerResult = await validateOfferCart(offerCartItems);
+  if (!offerResult.valid) {
+    throw new AppError(offerResult.message || 'Offer validation failed', 400);
+  }
+
+  // Force free-gift items to ₹0 (server-enforced — never trust frontend price)
+  for (const item of cartItems) {
+    if ((item as any).isFreeGift) {
+      item.product.finalPrice = new (require('@prisma/client/runtime/library').Decimal)(0);
+    }
   }
 
   // Calculate subtotal from re-validated DB prices
@@ -225,65 +246,12 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
     subtotal += Number(item.product.finalPrice) * item.quantity;
   }
 
-  // ====== DISCOUNT LOGIC (Steps 3 & 4) ======
+  // ====== DISCOUNT LOGIC ======
   let discountAmount = 0;
   let appliedCouponCode: string | null = null;
-  let bogoDiscountApplied = false;
 
-  // --- Check for BOGO discount ---
-  const bogoItems = cartItems.filter((item: any) => item._isBOGOEligible && item._bogoActive);
-  if (bogoItems.length >= 2) {
-    const activeBOGOCampaign = await prisma.bOGOCampaign.findFirst({
-      where: {
-        isActive: true,
-        OR: [{ endDate: null }, { endDate: { gte: new Date() } }],
-      },
-    });
-
-    if (activeBOGOCampaign) {
-      // Group by price tier
-      const tierGroups: Record<number, typeof bogoItems> = {};
-      for (const item of bogoItems) {
-        const tier = (item as any)._bogoPriceTier;
-        if (tier) {
-          if (!tierGroups[tier]) tierGroups[tier] = [];
-          tierGroups[tier].push(item);
-        }
-      }
-
-      // Apply BOGO per tier (pairs of 2)
-      for (const [, tierItems] of Object.entries(tierGroups)) {
-        if (tierItems.length >= 2) {
-          // Sort by price ascending — cheaper item gets the discount
-          const sorted = [...tierItems].sort(
-            (a, b) => Number(a.product.finalPrice) - Number(b.product.finalPrice)
-          );
-          const cheaperPrice = Number(sorted[0].product.finalPrice);
-
-          let bogoDiscount = 0;
-          if (activeBOGOCampaign.discountType === 'FREE_CHEAPER') {
-            bogoDiscount = cheaperPrice;
-          } else if (activeBOGOCampaign.discountType === 'PERCENT') {
-            bogoDiscount = Math.round(cheaperPrice * (Number(activeBOGOCampaign.discountValue) / 100));
-          } else if (activeBOGOCampaign.discountType === 'FIXED') {
-            bogoDiscount = Math.min(Number(activeBOGOCampaign.discountValue), cheaperPrice);
-          }
-
-          discountAmount += bogoDiscount;
-          bogoDiscountApplied = true;
-        }
-      }
-    }
-  }
-
-  // --- Apply coupon (with stacking protection) ---
-  if (couponCode) {
-    // STACKING RULE: If BOGO is applied, reject coupon stacking
-    if (bogoDiscountApplied) {
-      throw new AppError('Cannot combine BOGO discount with a coupon code. Remove BOGO items or the coupon.', 400);
-    }
-
-    try {
+  // --- Apply coupon ---
+  if (couponCode) {    try {
       const coupon = await withRetry(() =>
         prisma.coupon.findUnique({
           where: { code: couponCode.toUpperCase() },
@@ -455,6 +423,7 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
     }
 
     // 2️⃣ Create order (server-computed values only — never trust frontend)
+    // First pass: create non-gift items to get their IDs for gift linking
     const newOrder = await tx.order.create({
       data: {
         orderNumber: generateOrderNumber(),
@@ -471,15 +440,17 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
         paymentMethod: isCOD ? 'COD' : 'RAZORPAY',
         paymentStatus: 'PENDING',
         items: {
-          create: cartItems.map((item, index) => ({
+          create: cartItems.map((item: any, index: number) => ({
             productId: item.productId,
             productName: item.product.name,
             productImage: item.product.images?.[0]?.imageUrl || null,
             quantity: item.quantity,
-            unitPrice: item.product.finalPrice,
+            unitPrice: new Decimal(Number(item.product.finalPrice)),
             gstRate: new Decimal(itemGstRates[index] || 3),
             discount: new Decimal(0),
             totalPrice: new Decimal(Number(item.product.finalPrice) * item.quantity),
+            isFreeGift: !!(item as any).isFreeGift,
+            // giftForOrderItemId linked in a second pass below
           })),
         },
       },
@@ -489,6 +460,20 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
         user: { select: { fullName: true, email: true } },
       },
     });
+
+    // Second pass: link free-gift order items to their necklace order item
+    // Match by cart position: first N necklace items → first N ring gifts
+    const necklaceItems = newOrder.items.filter((oi: any) => !oi.isFreeGift);
+    const giftItems = newOrder.items.filter((oi: any) => oi.isFreeGift);
+    for (let i = 0; i < giftItems.length; i++) {
+      const necklaceItem = necklaceItems[i] || necklaceItems[0];
+      if (necklaceItem) {
+        await tx.orderItem.update({
+          where: { id: giftItems[i].id },
+          data: { giftForOrderItemId: necklaceItem.id },
+        });
+      }
+    }
 
     // 3️⃣ Create inventory locks (10-minute expiry to prevent spam locking)
     const lockExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes

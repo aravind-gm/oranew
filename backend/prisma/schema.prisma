@@ -132,17 +132,20 @@ model Product {
   averageRating     Decimal         @default(0) @map("average_rating") @db.Decimal(3, 2)
   reviewCount       Int             @default(0) @map("review_count")
 
-  // BOGO Campaign fields
+  // Offer Campaign fields (repurposed from BOGO)
+  // isBOGOEligible = product is eligible for the current offer campaign
+  // bogoCategory   = "necklace" (triggers free gift) | "ring" (claimable as free gift)
+  // bogoActive     = product is live in the active campaign
   isBOGOEligible    Boolean         @default(false) @map("is_bogo_eligible")
-  bogoPriceTier     Int?            @map("bogo_price_tier")
-  bogoCategory      String?         @map("bogo_category")
+  bogoPriceTier     Int?            @map("bogo_price_tier") // kept for future tier-based campaigns
+  bogoCategory      String?         @map("bogo_category")   // "necklace" | "ring"
 
   // Tumbler-specific fields
   isTumbler         Boolean         @default(false) @map("is_tumbler")
   capacity          String?         // e.g., "300ml", "500ml"
   isBestseller      Boolean         @default(false) @map("is_bestseller")
 
-  // BOGO active toggle (separate from eligibility)
+  // Offer active toggle (separate from eligibility)
   bogoActive        Boolean         @default(false) @map("bogo_active")
 
   // Per-product GST rate (percentage). Defaults to 3% for jewellery.
@@ -399,19 +402,26 @@ model Order {
 }
 
 model OrderItem {
-  id           String  @id @default(uuid())
-  orderId      String  @map("order_id")
-  productId    String  @map("product_id")
-  productName  String  @map("product_name")
-  productImage String? @map("product_image")
-  quantity     Int
-  unitPrice    Decimal @map("unit_price") @db.Decimal(10, 2)
-  discount     Decimal @default(0) @db.Decimal(10, 2)
-  gstRate      Decimal @map("gst_rate") @db.Decimal(5, 2)
-  totalPrice   Decimal @map("total_price") @db.Decimal(10, 2)
-  order        Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product      Product @relation(fields: [productId], references: [id])
+  id                  String     @id @default(uuid())
+  orderId             String     @map("order_id")
+  productId           String     @map("product_id")
+  productName         String     @map("product_name")
+  productImage        String?    @map("product_image")
+  quantity            Int
+  unitPrice           Decimal    @map("unit_price") @db.Decimal(10, 2)
+  discount            Decimal    @default(0) @db.Decimal(10, 2)
+  gstRate             Decimal    @map("gst_rate") @db.Decimal(5, 2)
+  totalPrice          Decimal    @map("total_price") @db.Decimal(10, 2)
+  // Free-gift tracking: if isFreeGift=true this item costs ₹0 and was given as a complimentary ring
+  isFreeGift          Boolean    @default(false) @map("is_free_gift")
+  giftForOrderItemId  String?    @map("gift_for_order_item_id") // links ring → necklace
+  giftForOrderItem    OrderItem? @relation("GiftLink", fields: [giftForOrderItemId], references: [id])
+  giftOrderItems      OrderItem[] @relation("GiftLink")
+  order               Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product             Product    @relation(fields: [productId], references: [id])
 
+  @@index([isFreeGift])
+  @@index([giftForOrderItemId])
   @@map("order_items")
 }
 
