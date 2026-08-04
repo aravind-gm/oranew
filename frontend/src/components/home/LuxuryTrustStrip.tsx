@@ -42,30 +42,25 @@ const TRUST_ITEMS = [
 
 export default function LuxuryTrustStrip() {
   return (
-    <section className="py-12 md:py-16 bg-[#FAFAF8] border-y border-neutral-100">
+    <section className="bg-[#0F0F14] border-y border-[#C6A85B]/15">
       <div className="max-w-6xl mx-auto px-5 lg:px-8">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-10">
+        <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-[#C6A85B]/10">
           {TRUST_ITEMS.map((item, index) => (
             <motion.div
               key={item.id}
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 0, y: 12 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-30px' }}
               transition={{ duration: 0.5, delay: index * 0.08 }}
-              className="text-center"
+              className="flex flex-col items-center text-center gap-1.5 py-4 px-4 md:px-6"
             >
-              {/* Icon */}
-              <div className="w-12 h-12 md:w-14 md:h-14 bg-white rounded-full flex items-center justify-center mx-auto mb-3 text-[#1A1A1A] shadow-sm">
-                <item.icon className="w-5 h-5 md:w-6 md:h-6" strokeWidth={1.5} />
+              <div className="w-10 h-10 rounded-full border border-[#C6A85B]/25 bg-[#C6A85B]/8 flex items-center justify-center text-[#C6A85B]">
+                <item.icon className="w-4.5 h-4.5" strokeWidth={1.5} />
               </div>
-
-              {/* Title */}
-              <h3 className="text-sm md:text-base font-medium text-[#1A1A1A] mb-1">
+              <h3 className="text-xs md:text-sm font-semibold text-white/90 leading-tight">
                 {item.title}
               </h3>
-
-              {/* Description */}
-              <p className="text-xs md:text-sm text-neutral-400">
+              <p className="text-[10px] md:text-xs text-neutral-500 leading-snug">
                 {item.description}
               </p>
             </motion.div>

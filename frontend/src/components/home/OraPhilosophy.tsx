@@ -13,7 +13,7 @@ import { ArrowRight } from 'lucide-react';
 
 export default function OraPhilosophy() {
   return (
-    <section className="py-20 md:py-28 lg:py-32 bg-white relative overflow-hidden">
+    <section className="py-7 md:py-10 bg-white relative overflow-hidden">
       {/* Subtle ambient background */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-pink-50/60 blur-3xl" />
@@ -27,33 +27,24 @@ export default function OraPhilosophy() {
           transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
         >
           {/* Section label */}
-          <p className="text-xs tracking-[0.3em] uppercase text-neutral-400 mb-6 font-medium">
+          <p className="text-[10px] tracking-[0.28em] uppercase text-neutral-400 mb-3 font-medium">
             Our Story
           </p>
 
           {/* Heading */}
-          <h2 className="text-3xl md:text-4xl lg:text-[2.75rem] font-serif font-light text-[#1A1A1A] leading-tight mb-6">
+          <h2 className="text-2xl md:text-3xl font-serif font-light text-[#1A1A1A] leading-tight mb-4">
             Own. Radiate. Adorn.
           </h2>
 
           {/* Decorative line */}
-          <div className="w-12 h-[1px] bg-neutral-300 mx-auto mb-10" />
+          <div className="w-10 h-[1px] bg-neutral-300 mx-auto mb-4" />
 
-          {/* Body copy */}
-          <div className="space-y-6">
-            <p className="text-base md:text-lg font-light text-neutral-500 leading-relaxed">
+          {/* Body copy — condensed to one focused paragraph */}
+          <div className="space-y-4">
+            <p className="text-sm md:text-base font-light text-neutral-500 leading-relaxed">
               ORA was born from a simple belief — every woman deserves jewellery 
               that feels as premium as fine gold, without the fine-gold price tag.
-            </p>
-
-            <p className="text-base md:text-lg font-light text-neutral-500 leading-relaxed">
-              We design necklaces, rings &amp; bracelets that are anti-tarnish, skin-safe,
-              and crafted to be worn every single day. No compromises. No occasion needed.
-            </p>
-
-            <p className="text-base md:text-lg font-light text-neutral-500 leading-relaxed">
-              From layered necklaces that move with you, to minimal rings that speak volumes — 
-              ORA is for the woman who doesn&apos;t wait for permission to shine.
+              Anti-tarnish, skin-safe, crafted for every single day.
             </p>
           </div>
 
@@ -63,7 +54,7 @@ export default function OraPhilosophy() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.3 }}
-            className="mt-12 flex items-center justify-center gap-8 sm:gap-12"
+            className="mt-6 flex items-center justify-center gap-8 sm:gap-12"
           >
             <div className="text-center">
               <p className="text-2xl sm:text-3xl font-serif font-light text-[#1A1A1A]">✦</p>

@@ -153,7 +153,7 @@ function CategoryCard({
 
 export default function LuxuryCategories() {
   return (
-    <section className="py-14 md:py-20 lg:py-24 bg-[#FAFAF8]">
+    <section className="py-5 md:py-7 bg-[#FAFAF8]">
       <div className="max-w-7xl mx-auto px-5 lg:px-8">
         {/* Header */}
         <motion.div
@@ -161,21 +161,21 @@ export default function LuxuryCategories() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-50px' }}
           transition={{ duration: 0.7 }}
-          className="text-center mb-10 md:mb-14"
+          className="text-center mb-5 md:mb-7"
         >
           <p className="text-xs tracking-[0.25em] uppercase text-neutral-400 mb-3 font-medium">
             Collections
           </p>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-light text-[#1A1A1A] mb-3">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-serif font-light text-[#1A1A1A] mb-2">
             Shop by Category
           </h2>
-          <p className="text-base md:text-lg text-neutral-500 max-w-xl mx-auto">
+          <p className="text-sm text-neutral-500 max-w-xl mx-auto">
             Three essentials. Endless ways to style.
           </p>
         </motion.div>
 
         {/* Featured Chains (hero card) + Rings & Bracelets side-by-side */}
-        <div className="grid grid-cols-2 gap-4 md:gap-6">
+        <div className="grid grid-cols-2 gap-3 md:gap-4">
           {/* Chains — full width hero */}
           <CategoryCard item={CATEGORIES[0]} index={0} featured />
 

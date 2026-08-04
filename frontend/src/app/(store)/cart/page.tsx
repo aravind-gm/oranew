@@ -298,12 +298,12 @@ export default function CartPage() {
   const router = useRouter();
   const { items, removeItem, updateQuantity, validateStock, stockErrors, stockValidating } = useCartStore();
   const { user, loading: authLoading } = useAuthStore();
-  const { cartNecklaceCount, syncCartCounts } = useOfferStore();
+  const { cartNecklaceCount, claimedRingCount, syncCartCounts } = useOfferStore();
 
-  // Derive whether the free-ring offer banner should show
-  const hasFreeRing = items.some((i) => i.isFreeGift);
-  const hasRegularItems = items.some((i) => !i.isFreeGift);
-  const showFreeRingBanner = hasRegularItems && !hasFreeRing;
+  // 1 necklace = 1 free ring; show banner for every unclaimed ring
+  const ringsUnclaimed = Math.max(0, cartNecklaceCount - claimedRingCount);
+  const showFreeRingBanner = ringsUnclaimed > 0;
+  const hasFreeRing = claimedRingCount > 0;
 
   useEffect(() => { syncCartCounts(); }, [syncCartCounts, items]);
 
@@ -454,10 +454,14 @@ export default function CartPage() {
                     </div>
                     <div>
                       <p className="font-semibold text-white">
-                        You qualify for a FREE ring!
+                        {ringsUnclaimed === 1
+                          ? 'You have 1 free ring to claim!'
+                          : `You have ${ringsUnclaimed} free rings to claim!`}
                       </p>
                       <p className="mt-0.5 text-xs text-neutral-400">
-                        Pick any ring from our collection — complimentary with your necklace.
+                        {ringsUnclaimed === 1
+                          ? 'Pick any ring — complimentary with your necklace.'
+                          : `${cartNecklaceCount} necklace${cartNecklaceCount !== 1 ? 's' : ''} = ${ringsUnclaimed} free ring${ringsUnclaimed !== 1 ? 's' : ''}. Choose them on the offer page.`}
                       </p>
                     </div>
                   </div>
@@ -465,7 +469,7 @@ export default function CartPage() {
                     href="/collections/combos#rings"
                     className="flex-shrink-0 inline-flex items-center gap-2 rounded-full bg-[#C6A85B] px-5 py-2.5 text-sm font-semibold text-[#0F0F14] hover:bg-[#b8985a] transition-colors whitespace-nowrap"
                   >
-                    Claim Your Free Ring <ChevronRight className="h-4 w-4" />
+                    Claim {ringsUnclaimed} Free Ring{ringsUnclaimed !== 1 ? 's' : ''} <ChevronRight className="h-4 w-4" />
                   </Link>
                 </div>
               </motion.div>
@@ -485,8 +489,12 @@ export default function CartPage() {
                   ✓
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-[#C6A85B]">Complimentary ring added!</p>
-                  <p className="text-xs text-neutral-500">Your free gift is included in this order.</p>
+                  <p className="text-sm font-semibold text-[#C6A85B]">
+                    {claimedRingCount === 1
+                      ? 'Complimentary ring added!'
+                      : `${claimedRingCount} complimentary rings added!`}
+                  </p>
+                  <p className="text-xs text-neutral-500">Your free gift{claimedRingCount !== 1 ? 's are' : ' is'} included in this order.</p>
                 </div>
               </motion.div>
             )}

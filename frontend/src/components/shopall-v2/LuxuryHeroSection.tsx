@@ -167,14 +167,14 @@ export default function LuxuryHeroSection({ config }: LuxuryHeroSectionProps) {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 flex items-center justify-center min-h-[75vh] md:min-h-[85vh] px-6">
+      <div className="relative z-10 flex items-center justify-center min-h-[42vh] md:min-h-[52vh] px-6">
         <div className="text-center max-w-3xl mx-auto">
           {/* Sparkle icon */}
           <motion.div
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="mb-6"
+            className="mb-4"
           >
             <Sparkles 
               size={20} 
@@ -187,7 +187,7 @@ export default function LuxuryHeroSection({ config }: LuxuryHeroSectionProps) {
             initial={{ scaleX: 0 }}
             animate={{ scaleX: 1 }}
             transition={{ duration: 1, delay: 0.2, ease: 'easeOut' }}
-            className="w-20 h-[1px] bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent mx-auto mb-8"
+            className="w-16 h-[1px] bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent mx-auto mb-5"
           />
 
           {/* Main Heading */}
@@ -195,7 +195,7 @@ export default function LuxuryHeroSection({ config }: LuxuryHeroSectionProps) {
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.9, delay: 0.3, ease: 'easeOut' }}
-            className={`font-serif text-5xl md:text-6xl lg:text-7xl font-light tracking-[-0.02em] leading-[1.1] mb-5 ${
+            className={`font-serif text-3xl md:text-4xl lg:text-5xl font-light tracking-[-0.02em] leading-[1.1] mb-3 ${
               hasDesktopImage || hasVideo ? 'text-white' : 'text-[#1A1A1A]'
             }`}
             style={{ fontFamily: "'Cormorant Garamond', 'Playfair Display', serif" }}
@@ -208,7 +208,7 @@ export default function LuxuryHeroSection({ config }: LuxuryHeroSectionProps) {
             initial={{ opacity: 0, y: 25 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.5, ease: 'easeOut' }}
-            className={`text-base md:text-lg lg:text-xl tracking-wide leading-relaxed mb-10 max-w-lg mx-auto font-light ${
+            className={`text-sm md:text-base tracking-wide leading-relaxed mb-6 max-w-lg mx-auto font-light ${
               hasDesktopImage || hasVideo ? 'text-white/75' : 'text-neutral-500'
             }`}
           >
@@ -226,7 +226,7 @@ export default function LuxuryHeroSection({ config }: LuxuryHeroSectionProps) {
             <button
               onClick={scrollToProducts}
               className={`
-                group inline-flex items-center gap-3 px-10 py-4 text-[11px] tracking-[0.25em] uppercase font-medium
+                group inline-flex items-center gap-2 px-7 py-3 text-[11px] tracking-[0.2em] uppercase font-medium
                 rounded-full transition-all duration-500 hover:shadow-xl
                 ${hasDesktopImage || hasVideo
                   ? 'bg-white text-[#1A1A1A] hover:bg-[#D4AF37] hover:text-white'
@@ -242,7 +242,7 @@ export default function LuxuryHeroSection({ config }: LuxuryHeroSectionProps) {
             <button
               onClick={scrollToMood}
               className={`
-                inline-flex items-center gap-2 px-8 py-4 text-[11px] tracking-[0.25em] uppercase font-medium
+                inline-flex items-center gap-2 px-7 py-3 text-[11px] tracking-[0.2em] uppercase font-medium
                 rounded-full transition-all duration-500 border
                 ${hasDesktopImage || hasVideo
                   ? 'border-white/40 text-white hover:bg-white/10 hover:border-white/70'

@@ -20,6 +20,7 @@
 
 import Bestsellers from '@/components/home/Bestsellers';
 import OfferBanner from '@/components/home/OfferBanner';
+import CategoryQuickLinks from '@/components/home/CategoryQuickLinks';
 import LuxuryCategories from '@/components/home/LuxuryCategories';
 import LuxuryHero from '@/components/home/LuxuryHero';
 import LuxuryNewsletter from '@/components/home/LuxuryNewsletter';
@@ -35,33 +36,34 @@ export default function HomePage() {
       {/* 1. HERO — Emotional hook */}
       <LuxuryHero />
 
-      {/* 2. LAUNCH OFFER — Above trending/bestsellers for max visibility */}
+      {/* 2. CATEGORY QUICK-LINKS — GIVA-style horizontal scroll pills */}
+      <CategoryQuickLinks />
+
+      {/* 3. LAUNCH OFFER */}
       <OfferBanner />
 
-      {/* 3. BESTSELLERS — First product grid */}
-      <Bestsellers />
-
-      {/* 3. CATEGORIES — Chains, Rings, Bracelets */}
-      <LuxuryCategories />
-
-      {/* 4. BRAND STORY — The ORA Philosophy */}
-      <OraPhilosophy />
-
-      {/* 5. THE ORA LIFE — Fast infinite lifestyle strip */}
-      <VideoReelStrip />
-
-      {/* 6. NEW ARRIVALS — Fresh drops */}
-      <NewArrivals />
-
-
-
-      {/* 8. TRUST STRIP — Clean icons */}
+      {/* 4. TRUST — Dark bar between offer and products */}
       <LuxuryTrustStrip />
 
-      {/* 9. NEWSLETTER — Dark bg, minimal */}
+      {/* 5. BESTSELLERS — First product grid */}
+      <Bestsellers />
+
+      {/* 6. CATEGORIES — Chains, Rings, Bracelets */}
+      <LuxuryCategories />
+
+      {/* 7. BRAND STORY — The ORA Philosophy */}
+      <OraPhilosophy />
+
+      {/* 8. THE ORA LIFE — Fast infinite lifestyle strip */}
+      <VideoReelStrip />
+
+      {/* 9. NEW ARRIVALS — Fresh drops */}
+      <NewArrivals />
+
+      {/* 10. NEWSLETTER — Dark bg, minimal */}
       <LuxuryNewsletter />
 
-      {/* 10. STICKY CART BAR — Mobile only */}
+      {/* 11. STICKY CART BAR — Mobile only */}
       <StickyCartBar />
     </main>
   );

@@ -107,7 +107,7 @@ export default function Bestsellers() {
   };
 
   return (
-    <section className="py-14 md:py-20 lg:py-24 bg-white">
+    <section className="py-6 md:py-9 bg-white">
       <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
         {/* Section Header */}
         <motion.div
@@ -115,12 +115,16 @@ export default function Bestsellers() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-60px' }}
           transition={{ duration: 0.7 }}
-          className="text-center mb-10 md:mb-14"
+          className="text-center mb-5 md:mb-7"
         >
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-light text-[#1A1A1A] mb-3">
+          <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.25em] text-[#C6A85B]">
+            Most Loved
+          </p>
+          <div className="w-10 h-[1px] bg-[#C6A85B] mx-auto mb-4" />
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-serif font-light text-[#1A1A1A] mb-2">
             Trending Now
           </h2>
-          <p className="text-base md:text-lg text-neutral-500 max-w-xl mx-auto">
+          <p className="text-sm md:text-base text-neutral-400 max-w-md mx-auto">
             The pieces everyone&apos;s loving right now.
           </p>
         </motion.div>
@@ -145,7 +149,7 @@ export default function Bestsellers() {
             variants={{
               visible: { transition: { staggerChildren: 0.06 } },
             }}
-            className="grid grid-cols-2 lg:grid-cols-4 gap-x-2 gap-y-5 sm:gap-x-4 md:gap-6 lg:gap-8"
+            className="grid grid-cols-2 lg:grid-cols-4 gap-x-2 gap-y-4 sm:gap-x-3 md:gap-4 lg:gap-5"
           >
             {products.slice(0, 8).map((product, index) => (
               <motion.div
@@ -176,7 +180,7 @@ export default function Bestsellers() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.3 }}
-          className="text-center mt-10 md:mt-14"
+          className="text-center mt-8"
         >
           <Link
             href="/collections"

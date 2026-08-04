@@ -1,5 +1,6 @@
 import AddToCartPopup from '@/components/AddToCartPopup';
 import FreeRingPopup from '@/components/FreeRingPopup';
+import AnnouncementBar from '@/components/home/AnnouncementBar';
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
 import MetaPixel from '@/components/analytics/MetaPixel';
 import AuthStateSync from '@/components/AuthStateSync';
@@ -144,6 +145,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} ${cormorant.variable} font-sans antialiased bg-background text-foreground`}>
         <AuthStateSync />
+        <AnnouncementBar />
         <Header />
         <main className="min-h-screen">
           {children}
