@@ -378,6 +378,10 @@ export default function CampaignPage() {
   const { necklaces, rings, isLoading, fetchNecklaces, fetchRings, cartNecklaceCount, claimedRingCount } =
     useOfferStore();
   const { addItem, removeItem, items } = useCartStore();
+  const [showAllNecklaces, setShowAllNecklaces] = useState(false);
+
+  const NECKLACE_LIMIT = 8;
+  const visibleNecklaces = showAllNecklaces ? necklaces : necklaces.slice(0, NECKLACE_LIMIT);
 
   useEffect(() => {
     fetchNecklaces();
@@ -452,11 +456,33 @@ export default function CampaignPage() {
           ) : necklaces.length === 0 ? (
             <p className="py-16 text-center text-neutral-400">No necklaces found. Check back soon.</p>
           ) : (
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-              {necklaces.map((p) => (
-                <NecklaceCard key={p.id} product={p} onAdd={handleAddNecklace} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+                {visibleNecklaces.map((p) => (
+                  <NecklaceCard key={p.id} product={p} onAdd={handleAddNecklace} />
+                ))}
+              </div>
+
+              {/* Show More / See All */}
+              {necklaces.length > NECKLACE_LIMIT && (
+                <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+                  {!showAllNecklaces && (
+                    <button
+                      onClick={() => setShowAllNecklaces(true)}
+                      className="inline-flex items-center gap-2 rounded-full border-2 border-[#C6A85B] px-8 py-3 text-sm font-semibold text-[#C6A85B] hover:bg-[#C6A85B] hover:text-[#0F0F14] transition-all"
+                    >
+                      Show More Necklaces ({necklaces.length - NECKLACE_LIMIT} more)
+                    </button>
+                  )}
+                  <Link
+                    href="/collections/necklaces"
+                    className="inline-flex items-center gap-2 rounded-full bg-[#0F0F14] px-8 py-3 text-sm font-semibold text-white hover:bg-neutral-800 transition-all"
+                  >
+                    Shop All Necklaces <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>
@@ -480,14 +506,12 @@ export default function CampaignPage() {
               </p>
             ) : (
               <p className="mt-2 text-sm text-neutral-500">
-                Add an eligible necklace above to unlock your free ring.
+                Add any necklace above — then claim your ring here for free.
               </p>
             )}
           </div>
 
-          {cartNecklaceCount === 0 ? (
-            <RingLockedState />
-          ) : isLoading ? (
+          {isLoading ? (
             <GridSkeleton count={6} />
           ) : rings.length === 0 ? (
             <p className="py-16 text-center text-neutral-400">No rings available. Check back soon.</p>

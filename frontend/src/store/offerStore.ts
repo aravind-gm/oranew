@@ -76,13 +76,15 @@ export const useOfferStore = create<OfferState>()((set, _get) => ({
     try {
       let raw: any[] = [];
       try {
-        // Try offer-eligible rings first (admin-curated list)
-        const params: Record<string, string> = {};
-        if (search) params.search = search;
-        const res = await api.get('/offer/rings', { params });
+        const offerParams: Record<string, string> = {};
+        if (search) offerParams.search = search;
+        const res = await api.get('/offer/rings', { params: offerParams });
         raw = res.data?.data || [];
       } catch {
-        // Fallback: all rings from the category
+        // swallow — fall through to category fallback
+      }
+      // Always fallback to category query when offer endpoint returns nothing
+      if (raw.length === 0) {
         const params: Record<string, string> = { category: 'rings', limit: '40', isActive: 'true' };
         if (search) params.search = search;
         const res = await api.get('/products', { params });

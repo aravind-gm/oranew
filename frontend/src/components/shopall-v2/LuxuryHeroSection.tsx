@@ -93,7 +93,7 @@ export default function LuxuryHeroSection({ config }: LuxuryHeroSectionProps) {
   };
 
   return (
-    <section ref={containerRef} className="relative w-full min-h-[75vh] md:min-h-[85vh] overflow-hidden">
+    <section ref={containerRef} className="relative w-full min-h-[42vh] md:min-h-[52vh] overflow-hidden">
       {/* Background Layer */}
       <motion.div className="absolute inset-0" style={{ y: backgroundY }}>
         {hasVideo ? (

@@ -42,10 +42,13 @@ export default function HomePage() {
         secondaryCTA={{ label: 'New Arrivals', href: '/collections/new-arrivals' }}
       />
 
-      {/* 2. BRAND STATEMENT — Calm, refined messaging */}
+      {/* 2. LAUNCH OFFER — Positioned immediately after hero for max visibility */}
+      <OfferBanner />
+
+      {/* 3. BRAND STATEMENT — Calm, refined messaging */}
       <BrandStatement />
 
-      {/* 3. FEATURED STYLES — Primary selling section */}
+      {/* 4. FEATURED STYLES — Primary selling section */}
       <CuratedProducts
         heading="Featured Styles"
         subheading=""
@@ -55,11 +58,8 @@ export default function HomePage() {
         ctaHref="/collections"
       />
 
-      {/* 4. SHOP BY CATEGORY — Clean cards, no discount labels */}
+      {/* 5. SHOP BY CATEGORY — Clean cards, no discount labels */}
       <ShopByCategory heading="Shop by Category" />
-
-      {/* 5. LAUNCH OFFER — Buy Any Necklace, Get a Ring FREE */}
-      <OfferBanner />
 
       {/* 6. NEW ARRIVALS — No hype */}
       <CuratedProducts

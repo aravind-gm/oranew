@@ -25,6 +25,14 @@ const CATEGORY_THEMES = [
   { gradient: 'from-[#F2EDE8] to-[#E0D6CA]', accent: '#8C7A60' },
 ];
 
+// CDN fallback per category name when CMS has no image
+const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
+  necklaces: 'https://cdn.orashop.in/banners/categories/necklaces.webp',
+  rings: 'https://cdn.orashop.in/banners/categories/rings.webp',
+  bracelets: 'https://cdn.orashop.in/banners/categories/bracelets.webp',
+  earrings: 'https://cdn.orashop.in/banners/mood/mood-7.webp',
+};
+
 export default function LuxuryHighlightedCollections({ config }: LuxuryHighlightedCollectionsProps) {
   if (!config.enabled || config.items.length === 0) return null;
 
@@ -62,7 +70,9 @@ export default function LuxuryHighlightedCollections({ config }: LuxuryHighlight
         {/* Cards Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {visibleItems.map((item, index) => {
-            const hasImage = item.image && item.image.length > 0;
+            const cmsImage = item.image && item.image.length > 0 ? normalizeImageUrl(item.image) : null;
+            const fallbackImage = CATEGORY_FALLBACK_IMAGES[item.title.toLowerCase()] || null;
+            const displayImage = cmsImage || fallbackImage;
             const theme = CATEGORY_THEMES[index % CATEGORY_THEMES.length];
 
             return (
@@ -76,24 +86,21 @@ export default function LuxuryHighlightedCollections({ config }: LuxuryHighlight
                 <Link href={item.link}>
                   <div className="group relative overflow-hidden rounded-2xl cursor-pointer transition-shadow duration-500 hover:shadow-2xl">
                     <div className="relative aspect-[3/4]">
-                      {hasImage ? (
+                      {displayImage ? (
                         <Image
-                          src={normalizeImageUrl(item.image)}
+                          src={displayImage}
                           alt={item.title}
                           fill
                           className="object-cover transition-transform duration-700 group-hover:scale-110"
                           sizes="(max-width: 768px) 50vw, 25vw"
                         />
                       ) : (
-                        <div className={`absolute inset-0 bg-gradient-to-br ${theme.gradient}`}>
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="text-[100px] md:text-[120px] opacity-[0.06] font-serif font-light" style={{ color: theme.accent }}>
+                        <div className={`absolute inset-0 bg-gradient-to-br ${theme.gradient} flex items-end`}>
+                          <div className="absolute inset-0 flex items-center justify-center opacity-10">
+                            <span className="font-serif text-[90px] font-light" style={{ color: theme.accent }}>
                               {item.title.charAt(0)}
-                            </div>
+                            </span>
                           </div>
-                          {/* Subtle corner accent */}
-                          <div className="absolute top-6 right-6 w-12 h-[1px] bg-black/8" />
-                          <div className="absolute top-6 right-6 w-[1px] h-12 bg-black/8" />
                         </div>
                       )}
 

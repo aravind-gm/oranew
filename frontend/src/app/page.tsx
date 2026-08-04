@@ -19,7 +19,7 @@
  */
 
 import Bestsellers from '@/components/home/Bestsellers';
-import BOGOCampaign from '@/components/home/BOGOCampaign';
+import OfferBanner from '@/components/home/OfferBanner';
 import LuxuryCategories from '@/components/home/LuxuryCategories';
 import LuxuryHero from '@/components/home/LuxuryHero';
 import LuxuryNewsletter from '@/components/home/LuxuryNewsletter';
@@ -35,7 +35,10 @@ export default function HomePage() {
       {/* 1. HERO — Emotional hook */}
       <LuxuryHero />
 
-      {/* 2. BESTSELLERS — First product grid */}
+      {/* 2. LAUNCH OFFER — Above trending/bestsellers for max visibility */}
+      <OfferBanner />
+
+      {/* 3. BESTSELLERS — First product grid */}
       <Bestsellers />
 
       {/* 3. CATEGORIES — Chains, Rings, Bracelets */}
@@ -50,8 +53,7 @@ export default function HomePage() {
       {/* 6. NEW ARRIVALS — Fresh drops */}
       <NewArrivals />
 
-      {/* 7. BOGO CAMPAIGN — Revenue driver */}
-      <BOGOCampaign />
+
 
       {/* 8. TRUST STRIP — Clean icons */}
       <LuxuryTrustStrip />
