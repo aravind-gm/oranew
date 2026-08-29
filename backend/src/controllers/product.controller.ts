@@ -493,23 +493,15 @@ export const getProducts = async (
       whereClause.isTumbler = true;
     }
 
-    // 🔍 Handle 'search' filter
+    // 🔍 Handle 'search' filter with Smart Search Normalizer & Synonyms
     if (search && typeof search === 'string' && search.trim()) {
-      const normalizedSearch = search.trim().toLowerCase();
-      const rawTokens = normalizedSearch.split(/\s+/).filter(Boolean);
-
-      const tokenSet = new Set<string>([normalizedSearch, ...rawTokens]);
-      rawTokens.forEach((token) => {
-        if (token.endsWith('s') && token.length > 3) tokenSet.add(token.slice(0, -1));
-        else tokenSet.add(`${token}s`);
-      });
-
-      const searchTokens = Array.from(tokenSet).filter(Boolean);
+      const searchTokens = getSmartSearchTokens(search);
       const searchConditions = searchTokens.flatMap((token) => [
         { name: { contains: token, mode: 'insensitive' as const } },
         { description: { contains: token, mode: 'insensitive' as const } },
         { shortDescription: { contains: token, mode: 'insensitive' as const } },
         { material: { contains: token, mode: 'insensitive' as const } },
+        { sku: { contains: token, mode: 'insensitive' as const } },
         { category: { is: { name: { contains: token, mode: 'insensitive' as const } } } },
         { category: { is: { slug: { contains: token, mode: 'insensitive' as const } } } },
       ]);
@@ -1235,6 +1227,95 @@ export const getRecommendedProducts = async (
     res.status(500).json({ message: 'Failed to fetch recommendations' });
   }
 };
+/**
+ * Smart Search Normalizer & Domain Synonym Dictionary for Jewellery & Store Products
+ * Handles typos, plural/singular forms, domain synonyms, and multi-word variations.
+ */
+function getSmartSearchTokens(inputQuery: string): string[] {
+  if (!inputQuery || typeof inputQuery !== 'string') return [];
+
+  const rawClean = inputQuery.trim().toLowerCase().replace(/[^\w\s-]/g, '');
+  const words = rawClean.split(/\s+/).filter(Boolean);
+
+  const SYNONYM_MAP: Record<string, string[]> = {
+    // Typos & Variations for Necklaces
+    necklace: ['necklace', 'necklaces', 'chain', 'pendant', 'choker', 'locket', 'mangalsutra', 'necklac', 'neklace', 'neckles'],
+    necklaces: ['necklace', 'necklaces', 'chain', 'pendant', 'choker'],
+    necklac: ['necklace', 'necklaces', 'chain'],
+    neklace: ['necklace', 'necklaces', 'chain'],
+    chain: ['chain', 'necklace', 'pendant'],
+    pendant: ['pendant', 'pendants', 'necklace', 'locket', 'pendent'],
+    pendent: ['pendant', 'pendants', 'necklace'],
+
+    // Typos & Variations for Earrings
+    earring: ['earring', 'earrings', 'stud', 'hoop', 'jhumka', 'earings', 'ering', 'earing'],
+    earrings: ['earring', 'earrings', 'stud', 'hoop', 'jhumka', 'earings', 'ering'],
+    earings: ['earring', 'earrings', 'stud', 'hoop'],
+    earing: ['earring', 'earrings', 'stud'],
+    jhumka: ['jhumka', 'jhumkas', 'earring', 'earrings'],
+    stud: ['stud', 'studs', 'earring', 'earrings'],
+    hoop: ['hoop', 'hoops', 'earring', 'earrings'],
+
+    // Typos & Variations for Rings
+    ring: ['ring', 'rings', 'band', 'solitaire', 'ringh'],
+    rings: ['ring', 'rings', 'band', 'solitaire'],
+    solitaire: ['solitaire', 'ring', 'rings', 'diamond'],
+
+    // Typos & Variations for Bracelets & Bangles
+    bracelet: ['bracelet', 'bracelets', 'bangle', 'bangles', 'braclet', 'bracelete'],
+    bracelets: ['bracelet', 'bracelets', 'bangle', 'bangles'],
+    braclet: ['bracelet', 'bracelets', 'bangle'],
+    bangle: ['bangle', 'bangles', 'bracelet'],
+    bangles: ['bangle', 'bangles', 'bracelet'],
+
+    // Metals & Materials
+    gold: ['gold', 'golden', 'rose gold', 'yellow gold', 'gld'],
+    rose: ['rose', 'rose gold', 'pink gold'],
+    silver: ['silver', 'sterling', 'sterling silver', 'slver'],
+    diamond: ['diamond', 'diamonds', 'dimond', 'cz', 'cubic zirconia', 'daimond'],
+    dimond: ['diamond', 'diamonds'],
+    crystal: ['crystal', 'cz', 'gemstone'],
+
+    // Tumbler & Bottle category
+    tumbler: ['tumbler', 'tumblers', 'bottle', 'flask', 'mug', 'cup', 'tumblar'],
+    tumblers: ['tumbler', 'tumblers', 'bottle', 'flask'],
+    tumblar: ['tumbler', 'tumblers', 'bottle'],
+    bottle: ['bottle', 'bottles', 'tumbler', 'flask'],
+    flask: ['flask', 'tumbler', 'bottle'],
+
+    // Gifts & Occasions
+    gift: ['gift', 'gifts', 'gifting', 'valentine', 'birthday', 'anniversary'],
+    gifts: ['gift', 'gifts', 'gifting'],
+    valentine: ['valentine', 'love', 'romantic', 'heart', 'gift'],
+    her: ['her', 'girlfriend', 'wife', 'women', 'ladies'],
+  };
+
+  const tokens = new Set<string>();
+  
+  // Add original phrase
+  if (rawClean) tokens.add(rawClean);
+
+  for (const word of words) {
+    if (word.length < 2) continue;
+    tokens.add(word);
+
+    // Singular/plural stemming
+    if (word.endsWith('s') && word.length > 3) {
+      tokens.add(word.slice(0, -1));
+    } else {
+      tokens.add(`${word}s`);
+    }
+
+    // Synonym dictionary lookup
+    const synonyms = SYNONYM_MAP[word];
+    if (synonyms) {
+      synonyms.forEach((s) => tokens.add(s));
+    }
+  }
+
+  return Array.from(tokens);
+}
+
 export const searchProducts = async (
   req: AuthRequest,
   res: Response,
@@ -1243,47 +1324,101 @@ export const searchProducts = async (
   try {
     const { q, categoryId, minPrice, maxPrice, limit = '12', page = '1' } = req.query;
 
-    if (!q) {
+    if (!q || typeof q !== 'string' || !q.trim()) {
       throw new AppError('Search query is required', 400);
     }
 
+    const rawQuery = q.trim();
+    const tokens = getSmartSearchTokens(rawQuery);
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+    const take = Math.min(parseInt(limit as string) || 20, 100);
 
-    const where: any = {
+    const priceFilter: any = {};
+    if (minPrice || maxPrice) {
+      if (minPrice) priceFilter.gte = parseFloat(minPrice as string);
+      if (maxPrice) priceFilter.lte = parseFloat(maxPrice as string);
+    }
+
+    const baseWhere: any = {
       isActive: true,
-      OR: [
-        { name: { contains: q as string, mode: 'insensitive' } },
-        { description: { contains: q as string, mode: 'insensitive' } },
-        { material: { contains: q as string, mode: 'insensitive' } },
-      ],
+      ...(categoryId && { categoryId: categoryId as string }),
+      ...(Object.keys(priceFilter).length > 0 && { finalPrice: priceFilter }),
     };
 
-    if (categoryId) {
-      where.categoryId = categoryId as string;
-    }
+    const searchConditions = tokens.flatMap((token) => [
+      { name: { contains: token, mode: 'insensitive' as const } },
+      { description: { contains: token, mode: 'insensitive' as const } },
+      { shortDescription: { contains: token, mode: 'insensitive' as const } },
+      { material: { contains: token, mode: 'insensitive' as const } },
+      { sku: { contains: token, mode: 'insensitive' as const } },
+      { category: { is: { name: { contains: token, mode: 'insensitive' as const } } } },
+      { category: { is: { slug: { contains: token, mode: 'insensitive' as const } } } },
+      { collections: { has: token } },
+      { occasions: { has: token } },
+    ]);
 
-    if (minPrice || maxPrice) {
-      where.finalPrice = {};
-      if (minPrice) {
-        where.finalPrice.gte = parseFloat(minPrice as string);
-      }
-      if (maxPrice) {
-        where.finalPrice.lte = parseFloat(maxPrice as string);
-      }
-    }
+    const where: any = {
+      ...baseWhere,
+      OR: searchConditions,
+    };
 
-    const [products, total] = await Promise.all([
+    let [products, total] = await Promise.all([
       prisma.product.findMany({
         where,
         include: { images: true, category: true },
         skip,
-        take: Math.min(parseInt(limit as string) || 20, 100),
-        orderBy: { createdAt: 'desc' },
+        take,
+        orderBy: [
+          { isBestseller: 'desc' },
+          { isFeatured: 'desc' },
+          { createdAt: 'desc' },
+        ],
       }),
       prisma.product.count({ where }),
     ]);
 
-    // Transform image URLs to signed URLs for reliable access
+    let suggestion: string | null = null;
+
+    // Pass 2 Fallback: If 0 results, relax search to raw query prefix/substring ILIKE or return popular items
+    if (products.length === 0) {
+      console.log(`[Search] 0 exact token matches for "${rawQuery}". Executing fallback search...`);
+      const prefix = rawQuery.slice(0, Math.min(rawQuery.length, 4));
+
+      const fallbackWhere: any = {
+        isActive: true,
+        ...(categoryId && { categoryId: categoryId as string }),
+        OR: [
+          { name: { contains: prefix, mode: 'insensitive' } },
+          { description: { contains: prefix, mode: 'insensitive' } },
+          { category: { is: { name: { contains: prefix, mode: 'insensitive' } } } },
+        ],
+      };
+
+      [products, total] = await Promise.all([
+        prisma.product.findMany({
+          where: fallbackWhere,
+          include: { images: true, category: true },
+          take,
+          orderBy: { isFeatured: 'desc' },
+        }),
+        prisma.product.count({ where: fallbackWhere }),
+      ]);
+
+      if (products.length > 0) {
+        suggestion = `Showing similar items for "${rawQuery}"`;
+      } else {
+        // Pass 3: Popular Items Fallback — return top featured / bestsellers
+        products = await prisma.product.findMany({
+          where: { isActive: true },
+          include: { images: true, category: true },
+          take: 8,
+          orderBy: [{ isBestseller: 'desc' }, { isFeatured: 'desc' }],
+        });
+        total = products.length;
+        suggestion = `No exact matches for "${rawQuery}". Check out our bestsellers below:`;
+      }
+    }
+
     const productsWithSignedUrls = await Promise.all(
       products.map((product) => transformProductImages(product))
     );
@@ -1291,11 +1426,12 @@ export const searchProducts = async (
     res.json({
       success: true,
       data: productsWithSignedUrls,
+      suggestion,
       pagination: {
         total,
         page: parseInt(page as string),
-        limit: parseInt(limit as string),
-        pages: Math.ceil(total / parseInt(limit as string)),
+        limit: take,
+        pages: Math.ceil(total / take),
       },
     });
   } catch (error) {

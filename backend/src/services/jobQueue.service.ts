@@ -334,6 +334,7 @@ async function processPaymentReconciliation(): Promise<void> {
   const stalePayments = await prisma.payment.findMany({
     where: {
       status: { in: ['PENDING', 'VERIFIED'] },
+      paymentGateway: { not: 'COD' },
       createdAt: { lt: tenMinutesAgo },
     },
     include: {
@@ -347,6 +348,8 @@ async function processPaymentReconciliation(): Promise<void> {
   let confirmed = 0, failed = 0;
 
   for (const payment of stalePayments) {
+    if (payment.paymentGateway === 'COD') continue;
+
     try {
       const rzpOrder = await razorpay.orders.fetchPayments(payment.transactionId) as any;
       const payments: any[] = rzpOrder.items ?? [];

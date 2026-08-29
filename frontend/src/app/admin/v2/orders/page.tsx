@@ -84,7 +84,16 @@ const OrderStatusBadge = ({ status }: { status: Order['status'] }) => {
 // PAYMENT STATUS BADGE
 // ============================================
 
-const PaymentStatusBadge = ({ status }: { status: Order['paymentStatus'] }) => {
+const PaymentStatusBadge = ({ status, method }: { status: Order['paymentStatus']; method?: string }) => {
+  const isCOD = method?.toUpperCase() === 'COD';
+
+  if (isCOD) {
+    if (status === 'CONFIRMED') {
+      return <Badge variant="success">Paid (COD)</Badge>;
+    }
+    return <Badge variant="warning">COD (Pending)</Badge>;
+  }
+
   const config: Record<Order['paymentStatus'], { variant: 'success' | 'warning' | 'error' | 'info' | 'secondary'; label: string }> = {
     PENDING: { variant: 'warning', label: 'Pending' },
     VERIFIED: { variant: 'info', label: 'Verified' },
@@ -93,8 +102,8 @@ const PaymentStatusBadge = ({ status }: { status: Order['paymentStatus'] }) => {
     REFUNDED: { variant: 'secondary', label: 'Refunded' },
   };
 
-  const { variant, label } = config[status];
-  return <Badge variant={variant}>{label}</Badge>;
+  const item = config[status] || { variant: 'secondary', label: status };
+  return <Badge variant={item.variant}>{item.label}</Badge>;
 };
 
 // ============================================
@@ -303,7 +312,7 @@ export default function OrdersPage() {
     {
       id: 'payment',
       header: 'Payment',
-      accessor: (row) => <PaymentStatusBadge status={row.paymentStatus} />,
+      accessor: (row) => <PaymentStatusBadge status={row.paymentStatus} method={row.paymentMethod} />,
       width: '12%',
     },
     {

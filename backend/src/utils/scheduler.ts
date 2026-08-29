@@ -272,10 +272,11 @@ async function reconcilePayments(): Promise<void> {
   const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
   const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
 
-  // Find stale payments that should have been resolved by now
+  // Find stale online payments that should have been resolved by now (EXCLUDE COD)
   const stalePayments = await prisma.payment.findMany({
     where: {
       status: { in: ['PENDING', 'VERIFIED'] },
+      paymentGateway: { not: 'COD' },
       createdAt: { lt: tenMinutesAgo },
     },
     include: {
@@ -292,6 +293,12 @@ async function reconcilePayments(): Promise<void> {
   let confirmed = 0, failed = 0, skipped = 0;
 
   for (const payment of stalePayments) {
+    // COD orders do not use Razorpay API reconciliation
+    if (payment.paymentGateway === 'COD') {
+      skipped++;
+      continue;
+    }
+
     try {
       // transactionId = razorpay order_id (order_xxx)
       const rzpOrder = await razorpay.orders.fetchPayments(payment.transactionId) as any;

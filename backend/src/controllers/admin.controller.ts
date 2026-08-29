@@ -270,6 +270,15 @@ export const updateOrderStatus = async (
       }),
     };
 
+    // If COD order is marked as DELIVERED, cash was collected — confirm payment status
+    if (status === 'DELIVERED' && existingOrder.paymentMethod === 'COD') {
+      updateData.paymentStatus = 'CONFIRMED';
+      await prisma.payment.updateMany({
+        where: { orderId: id, paymentGateway: 'COD' },
+        data: { status: 'CONFIRMED' },
+      }).catch(err => console.error('[Admin] Failed to update COD payment record:', err));
+    }
+
     // If order is being cancelled, restore inventory
     if (status === 'CANCELLED' && existingOrder.status !== 'CANCELLED') {
       try {

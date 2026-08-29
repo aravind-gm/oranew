@@ -32,6 +32,7 @@ import { AppError, asyncHandler, generateOrderNumber } from '../utils/helpers';
 import { lockInventory } from '../utils/inventory';
 import { getGSTRate, calculateGSTAmount } from '../utils/tax';
 import { notifyPartnersNewOrder } from '../services/whatsapp.service';
+import { notifyAdminNewOrder } from '../services/notification.service';
 
 interface GuestCheckoutBody {
   email: string;
@@ -398,9 +399,9 @@ export const guestCheckout = asyncHandler(async (req: Request, res: Response) =>
     console.error('[GuestCheckout] Inventory lock failed (non-fatal):', lockErr);
   }
 
-  // 🔔 Notify owners/partners via WhatsApp about the new order (non-blocking)
+  // 🔔 Notify admin & partners via external channels (Email, WhatsApp, Telegram, Webhook)
   try {
-    notifyPartnersNewOrder({
+    notifyAdminNewOrder({
       orderNumber: order.orderNumber,
       customerName: fullName,
       customerPhone: phone,
@@ -419,7 +420,7 @@ export const guestCheckout = asyncHandler(async (req: Request, res: Response) =>
         state: address.state,
         pincode: address.zipCode,
       },
-    }).catch((err) => console.error('[WhatsApp] Guest checkout partner notification failed:', err));
+    }).catch((err) => console.error('[NotificationService] Guest checkout admin notification failed:', err));
   } catch {
     // non-critical
   }

@@ -677,6 +677,87 @@ export const sendReorderSuggestionEmail = async (data: {
   }
 };
 
+export const sendAdminNewOrderEmail = async (data: {
+  orderNumber: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone?: string;
+  totalAmount: number;
+  paymentMethod: string;
+  items: Array<{ productName: string; quantity: number; unitPrice: number }>;
+  shippingAddress: {
+    fullName: string;
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    state: string;
+    pincode: string;
+  };
+}) => {
+  const adminEmail = process.env.ORDER_ALERT_EMAIL || process.env.ADMIN_EMAIL || emailUser || 'admin@orashop.in';
+  if (!adminEmail) return;
+
+  const { orderNumber, customerName, customerEmail, customerPhone, totalAmount, paymentMethod, items, shippingAddress } = data;
+  const itemsHtml = items.map(i => `<tr><td style="padding: 8px; border-bottom: 1px solid #eee;">${i.productName}</td><td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${i.quantity}</td><td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">₹${(i.unitPrice * i.quantity).toLocaleString('en-IN')}</td></tr>`).join('');
+
+  const body = `
+    <div style="background: #1e293b; color: white; padding: 16px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
+      <h2 style="margin: 0; font-size: 20px;">🛍️ NEW ORDER RECEIVED</h2>
+      <p style="margin: 4px 0 0 0; font-size: 14px; color: #94a3b8;">Order #${orderNumber}</p>
+    </div>
+
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+      <p style="margin: 0 0 8px 0; font-weight: 600; color: #0f172a;">Customer Details</p>
+      <p style="margin: 0 0 4px 0; font-size: 14px;"><strong>Name:</strong> ${customerName}</p>
+      <p style="margin: 0 0 4px 0; font-size: 14px;"><strong>Email:</strong> ${customerEmail}</p>
+      <p style="margin: 0 0 4px 0; font-size: 14px;"><strong>Phone:</strong> ${customerPhone || 'N/A'}</p>
+      <p style="margin: 0; font-size: 14px;"><strong>Payment Method:</strong> ${paymentMethod === 'COD' ? '💵 Cash on Delivery (COD)' : '💳 Online Payment (Razorpay)'}</p>
+    </div>
+
+    <table style="width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 20px;">
+      <thead>
+        <tr style="background: #f1f5f9; text-align: left;">
+          <th style="padding: 8px;">Product</th>
+          <th style="padding: 8px; text-align: center;">Qty</th>
+          <th style="padding: 8px; text-align: right;">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemsHtml}
+      </tbody>
+    </table>
+
+    <div style="text-align: right; font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 24px;">
+      Total Amount: ₹${totalAmount.toLocaleString('en-IN')}
+    </div>
+
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+      <p style="margin: 0 0 8px 0; font-weight: 600; color: #0f172a;">Shipping Address</p>
+      <p style="margin: 0; font-size: 14px; color: #475569; line-height: 1.5;">
+        ${shippingAddress.fullName}<br/>
+        ${shippingAddress.addressLine1}${shippingAddress.addressLine2 ? ', ' + shippingAddress.addressLine2 : ''}<br/>
+        ${shippingAddress.city}, ${shippingAddress.state} ${shippingAddress.pincode}
+      </p>
+    </div>
+
+    <div style="text-align: center;">
+      <a href="${FRONTEND_URL}/admin/v2/orders" style="display: inline-block; background: #0f172a; color: white; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px;">Open Admin Panel V2</a>
+    </div>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: EMAIL_FROM,
+      to: adminEmail,
+      subject: `🚨 [NEW ORDER] #${orderNumber} — ₹${totalAmount.toLocaleString('en-IN')} (${paymentMethod})`,
+      html: emailWrapper('New Order Alert', body),
+    });
+    console.log(`✓ Admin order alert email sent to ${adminEmail}`);
+  } catch (error) {
+    console.error('Failed to send admin order alert email:', error);
+  }
+};
+
 export default {
   sendOrderPlacedEmail,
   sendOrderConfirmedEmail,
@@ -686,4 +767,5 @@ export default {
   sendShippingReassuranceEmail,
   sendReviewRequestEmail,
   sendReorderSuggestionEmail,
+  sendAdminNewOrderEmail,
 };

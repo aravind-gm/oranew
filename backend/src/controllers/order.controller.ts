@@ -6,6 +6,7 @@ import { AuthRequest } from '../middleware/auth';
 import { sendOrderPlacedEmail } from '../services/email.service';
 import { enqueueJob } from '../services/jobQueue.service';
 import { sendWhatsAppOrderConfirmation, notifyPartnersNewOrder } from '../services/whatsapp.service';
+import { notifyAdminNewOrder } from '../services/notification.service';
 import { AppError, asyncHandler, generateOrderNumber } from '../utils/helpers';
 import { lockInventory, releaseInventoryLocks, restockInventory } from '../utils/inventory';
 import { validateOfferCart } from '../services/offerService';
@@ -568,9 +569,9 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
     console.error('Email error (non-blocking):', emailError);
   }
 
-  // 🔔 Notify partners via WhatsApp about the new order (non-blocking)
+  // 🔔 Notify admin & partners via external channels (Email, WhatsApp, Telegram, Webhook)
   try {
-    notifyPartnersNewOrder({
+    notifyAdminNewOrder({
       orderNumber: (order as any).orderNumber,
       customerName: (order as any).user.fullName || 'Customer',
       customerPhone: (shippingAddr as any)?.phone || '',
@@ -590,7 +591,7 @@ export const checkout = asyncHandler(async (req: AuthRequest, res: Response) => 
         state: (order as any).shippingAddress.state,
         pincode: (order as any).shippingAddress.pincode,
       },
-    }).catch(err => console.error('[WhatsApp] Partner notification failed:', err));
+    }).catch(err => console.error('[NotificationService] Admin notification failed:', err));
   } catch { /* non-critical */ }
 
   // ====== COD: Create payment record & confirm immediately ======
