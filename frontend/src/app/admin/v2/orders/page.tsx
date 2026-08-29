@@ -27,6 +27,7 @@ import {
   FileText,
   ShoppingCart,
   Package,
+  Trash2,
 } from 'lucide-react';
 import { useAdminStore } from '@/store/adminStore';
 
@@ -172,13 +173,26 @@ const StatusTabs = ({ activeStatus, onStatusChange, counts }: StatusTabsProps) =
 export default function OrdersPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { orders, ordersLoading, ordersPagination, fetchOrders, updateOrderStatus } = useAdminStore();
+  const { orders, ordersLoading, ordersPagination, fetchOrders, updateOrderStatus, deleteOrder } = useAdminStore();
   
   // State
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('status') || 'all');
   const [page, setPage] = useState(1);
+  const [deleteTargetOrder, setDeleteTargetOrder] = useState<{ id: string; orderNumber: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTargetOrder) return;
+    setDeleting(true);
+    const success = await deleteOrder(deleteTargetOrder.id);
+    setDeleting(false);
+    if (success) {
+      setDeleteTargetOrder(null);
+      fetchOrders(page, statusFilter !== 'all' ? statusFilter : undefined);
+    }
+  };
 
   // Fetch orders with server-side status filter
   useEffect(() => {
@@ -461,6 +475,13 @@ export default function OrdersPage() {
                   Cancel Order
                 </TableActionItem>
               )}
+              <TableActionItem
+                icon={<Trash2 size={16} />}
+                onClick={() => setDeleteTargetOrder({ id: row.id as string, orderNumber: row.orderNumber as string })}
+                variant="danger"
+              >
+                Delete Order
+              </TableActionItem>
             </TableActions>
           )}
           pagination={{
@@ -483,6 +504,38 @@ export default function OrdersPage() {
             </div>
           }
         />
+
+        {/* Delete Order Confirmation Modal */}
+        {deleteTargetOrder && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl border border-red-200">
+              <h3 className="text-lg font-bold text-red-600 flex items-center gap-2">
+                <Trash2 className="text-red-600" size={22} />
+                Delete Order #{deleteTargetOrder.orderNumber}?
+              </h3>
+              <p className="text-sm text-[var(--admin-text-secondary)]">
+                This action is permanent and cannot be undone. The order and its associated records will be deleted.
+              </p>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setDeleteTargetOrder(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  isLoading={deleting}
+                  onClick={handleConfirmDelete}
+                >
+                  Delete Permanently
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );

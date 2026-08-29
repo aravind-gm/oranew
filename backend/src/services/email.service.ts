@@ -694,8 +694,11 @@ export const sendAdminNewOrderEmail = async (data: {
     pincode: string;
   };
 }) => {
-  const adminEmail = process.env.ORDER_ALERT_EMAIL || process.env.ADMIN_EMAIL || emailUser || 'admin@orashop.in';
-  if (!adminEmail) return;
+  const adminEmail = Array.from(new Set([
+    'admin@orashop.in',
+    process.env.ORDER_ALERT_EMAIL,
+    process.env.ADMIN_EMAIL,
+  ].filter(Boolean))).join(', ');
 
   const { orderNumber, customerName, customerEmail, customerPhone, totalAmount, paymentMethod, items, shippingAddress } = data;
   const itemsHtml = items.map(i => `<tr><td style="padding: 8px; border-bottom: 1px solid #eee;">${i.productName}</td><td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${i.quantity}</td><td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">₹${(i.unitPrice * i.quantity).toLocaleString('en-IN')}</td></tr>`).join('');
@@ -752,9 +755,9 @@ export const sendAdminNewOrderEmail = async (data: {
       subject: `🚨 [NEW ORDER] #${orderNumber} — ₹${totalAmount.toLocaleString('en-IN')} (${paymentMethod})`,
       html: emailWrapper('New Order Alert', body),
     });
-    console.log(`✓ Admin order alert email sent to ${adminEmail}`);
+    console.log(`✓ Admin order alert email sent successfully to ${adminEmail}`);
   } catch (error) {
-    console.error('Failed to send admin order alert email:', error);
+    console.error('Failed to send admin order alert email to', adminEmail, 'Error:', error);
   }
 };
 

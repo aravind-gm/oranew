@@ -19,6 +19,7 @@ import {
     getInventory,
     getLowStockProducts,
     getOrderById,
+    deleteOrder,
     getOrdersReport,
     getPaymentsReport,
     getReturnById,
@@ -75,6 +76,7 @@ router.get('/dashboard/stats', getDashboardStats);
 router.get('/orders', getAllOrders);
 router.get('/orders/:id', getOrderById);
 router.put('/orders/:id/status', updateOrderStatus);
+router.delete('/orders/:id', authorize('ADMIN'), deleteOrder);
 
 // ============================================
 // CUSTOMERS

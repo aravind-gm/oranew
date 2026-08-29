@@ -187,6 +187,7 @@ interface AdminStore {
   fetchDashboardStats: () => Promise<void>;
   fetchOrders: (page?: number, status?: string) => Promise<void>;
   updateOrderStatus: (orderId: string, status: string, trackingNumber?: string) => Promise<boolean>;
+  deleteOrder: (orderId: string) => Promise<boolean>;
   fetchProducts: (page?: number, params?: Record<string, string>) => Promise<void>;
   fetchLowStockProducts: () => Promise<void>;
   fetchCustomers: (page?: number, search?: string) => Promise<void>;
@@ -279,6 +280,22 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
       const err = error as { response?: { data?: { message?: string } } };
       set({
         error: err.response?.data?.message || 'Failed to update order status',
+      });
+      return false;
+    }
+  },
+
+  deleteOrder: async (orderId: string) => {
+    try {
+      set({ error: null });
+      await api.delete(`/admin/orders/${orderId}`);
+      const orders = get().orders.filter((order) => order.id !== orderId);
+      set({ orders });
+      return true;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      set({
+        error: err.response?.data?.message || 'Failed to delete order',
       });
       return false;
     }

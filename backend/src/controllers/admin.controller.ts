@@ -381,6 +381,61 @@ export const updateOrderStatus = async (
   }
 };
 
+export const deleteOrder = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+
+    console.log('[Admin] Deleting order:', id);
+
+    const existingOrder = await prisma.order.findUnique({
+      where: { id },
+      include: { items: true },
+    });
+
+    if (!existingOrder) {
+      throw new AppError('Order not found', 404);
+    }
+
+    // Restore stock if order wasn't cancelled yet
+    if (existingOrder.status !== 'CANCELLED') {
+      try {
+        const itemsToRestore = existingOrder.items.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+        }));
+        await restoreInventory(itemsToRestore);
+      } catch (invErr) {
+        console.error('[Admin] Inventory restore during delete error:', invErr);
+      }
+    }
+
+    // Delete related child records & order atomically
+    await prisma.$transaction([
+      prisma.inventoryLock.deleteMany({ where: { orderId: id } }),
+      prisma.paymentRetryToken.deleteMany({ where: { orderId: id } }),
+      prisma.couponUsage.deleteMany({ where: { orderId: id } }),
+      prisma.return.deleteMany({ where: { orderId: id } }),
+      prisma.payment.deleteMany({ where: { orderId: id } }),
+      prisma.orderItem.deleteMany({ where: { orderId: id } }),
+      prisma.order.delete({ where: { id } }),
+    ]);
+
+    logAdminAction(req, 'DELETE', 'ORDER', id, {
+      orderNumber: existingOrder.orderNumber,
+      totalAmount: existingOrder.totalAmount,
+    });
+
+    res.json({ success: true, message: `Order #${existingOrder.orderNumber} deleted successfully` });
+  } catch (error) {
+    console.error('[Admin DeleteOrder Error]:', error);
+    next(error);
+  }
+};
+
 // ============================================
 // CUSTOMERS MANAGEMENT
 // ============================================

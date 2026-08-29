@@ -53,6 +53,7 @@ import {
   RotateCcw,
   IndianRupee,
   Eye,
+  Trash2,
 } from 'lucide-react';
 
 // ============================================
@@ -246,9 +247,26 @@ export default function OrderDetailsPage() {
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [trackingNumberInput, setTrackingNumberInput] = useState('');
   const [courierInput, setCourierInput] = useState('bluedart');
+
+  // Handle order deletion
+  const handleDeleteOrder = async () => {
+    setUpdating(true);
+    try {
+      const response = await api.delete(`/admin/orders/${orderId}`);
+      if (response.data.success) {
+        router.push('/admin/v2/orders');
+      }
+    } catch (err: any) {
+      console.error('Error deleting order:', err);
+      alert(err.response?.data?.message || 'Failed to delete order');
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   // Fetch order details from API
   useEffect(() => {
@@ -492,6 +510,14 @@ export default function OrderDetailsPage() {
               onClick={() => window.print()}
             >
               Invoice
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              leftIcon={<Trash2 size={16} />}
+              onClick={() => setShowDeleteModal(true)}
+            >
+              Delete Order
             </Button>
           </div>
         </div>
@@ -880,6 +906,38 @@ export default function OrderDetailsPage() {
                   onClick={() => handleStatusUpdate('CANCELLED')}
                 >
                   Confirm Cancellation
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Order Confirmation Modal */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl border border-red-200">
+              <h3 className="text-lg font-bold text-red-600 flex items-center gap-2">
+                <Trash2 className="text-red-600" size={22} />
+                Delete Order #{order.orderNumber}?
+              </h3>
+              <p className="text-sm text-[var(--admin-text-secondary)]">
+                This action is permanent and cannot be undone. All order items, payment records, and inventory locks will be deleted from the system.
+              </p>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShowDeleteModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  isLoading={updating}
+                  onClick={handleDeleteOrder}
+                >
+                  Delete Permanently
                 </Button>
               </div>
             </div>
