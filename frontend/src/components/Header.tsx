@@ -94,9 +94,11 @@ export default function Header() {
 
   const menuItems = [
     { label: 'Shop All', href: '/collections' },
-    { label: 'ORA Exclusive', href: '/collections/combos' },
+    { label: 'Necklaces', href: '/collections?category=necklaces' },
+    { label: 'Rings', href: '/collections?category=rings' },
+    { label: 'Bracelets', href: '/collections?category=bracelets' },
     { label: 'Gifts for Her', href: '/collections/gifts-for-her' },
-    { label: 'Tumblers', href: '/collections/tumblers' },
+    { label: 'New Arrivals', href: '/collections/new-arrivals' },
     { label: 'About', href: '/about-ora' },
     { label: 'Contact', href: '/contact' },
   ];

@@ -3,19 +3,18 @@
 /**
  * ORA Premium Home Page — Luxury D2C Conversion Flow
  *
- * Architecture: Inspire → Products → Categories → Brand → Lifestyle → More → Trust → Close
- *
- * Sections:
- *  1. LuxuryHero        — Emotional above-the-fold hook
- *  2. Bestsellers       — First product grid (most loved, 8 items)
- *  3. LuxuryCategories  — 3 categories: Chains, Rings, Bracelets
- *  4. OraPhilosophy     — Brand story & philosophy
- *  5. VideoReelStrip    — The ORA Life lifestyle strip (fast loop)
- *  6. NewArrivals       — Smaller grid (4 items only)
- *  7. BOGOCampaign      — Revenue driver (Buy 1 Get 1 Free)
- *  8. LuxuryTrustStrip  — Trust icons (Gift, Returns, Shipping, Premium)
- *  9. LuxuryNewsletter  — Dark bg, minimal email capture
- * 10. StickyCartBar     — Mobile sticky bottom bar
+ * Optimised Section Order:
+ *  1. LuxuryHero          — Campaign banner first, then brand slides
+ *  2. CategoryQuickLinks  — Compact pill shortcuts for fast discovery
+ *  3. LuxuryCategories    — Compact 3-column category grid
+ *  4. OfferBanner         — Compact offer details strip (supports the hero campaign)
+ *  5. LuxuryTrustStrip    — Trust icons (Gift, Returns, Shipping, Premium)
+ *  6. Bestsellers         — First product grid (most loved)
+ *  7. OraPhilosophy       — Brand story & philosophy
+ *  8. VideoReelStrip      — The ORA Life lifestyle strip
+ *  9. NewArrivals         — Fresh drops
+ * 10. LuxuryNewsletter    — Dark bg, minimal email capture
+ * 11. StickyCartBar       — Mobile sticky bottom bar
  */
 
 import Bestsellers from '@/components/home/Bestsellers';
@@ -33,23 +32,23 @@ import VideoReelStrip from '@/components/home/VideoReelStrip';
 export default function HomePage() {
   return (
     <main className="bg-white min-h-screen">
-      {/* 1. HERO — Emotional hook */}
+      {/* 1. HERO — Campaign banner as first slide, then brand slides */}
       <LuxuryHero />
 
-      {/* 2. CATEGORY QUICK-LINKS — GIVA-style horizontal scroll pills */}
+      {/* 2. CATEGORY QUICK-LINKS — Compact pill shortcuts */}
       <CategoryQuickLinks />
 
-      {/* 3. LAUNCH OFFER */}
+      {/* 3. CATEGORIES — Compact 3-column grid: Necklaces, Rings, Bracelets */}
+      <LuxuryCategories />
+
+      {/* 4. LAUNCH OFFER — Compact strip with offer details */}
       <OfferBanner />
 
-      {/* 4. TRUST — Dark bar between offer and products */}
+      {/* 5. TRUST — Dark bar */}
       <LuxuryTrustStrip />
 
-      {/* 5. BESTSELLERS — First product grid */}
+      {/* 6. BESTSELLERS — First product grid */}
       <Bestsellers />
-
-      {/* 6. CATEGORIES — Chains, Rings, Bracelets */}
-      <LuxuryCategories />
 
       {/* 7. BRAND STORY — The ORA Philosophy */}
       <OraPhilosophy />
