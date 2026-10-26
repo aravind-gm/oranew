@@ -161,26 +161,73 @@ function fireFBQ(eventName: string, params: Record<string, unknown>) {
 // ── Duplicate Purchase Guard ──────────────────────────────────────────
 
 const PURCHASE_STORAGE_KEY = 'ora_tracked_purchases';
+const MAX_TRACKED_PURCHASES = 50;
+
+function getStoredTrackedPurchases(storage: Storage): string[] {
+  try {
+    const raw = storage.getItem(PURCHASE_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
 
 function isPurchaseTracked(orderId: string): boolean {
+  if (!orderId || typeof orderId !== 'string') return true;
   try {
-    const tracked = sessionStorage.getItem(PURCHASE_STORAGE_KEY);
-    if (!tracked) return false;
-    const ids: string[] = JSON.parse(tracked);
-    return ids.includes(orderId);
+    // 1. Check current tab session storage
+    if (typeof sessionStorage !== 'undefined') {
+      const sessionIds = getStoredTrackedPurchases(sessionStorage);
+      if (sessionIds.includes(orderId)) return true;
+    }
+
+    // 2. Check persistent local storage (cross-tab / return visits)
+    if (typeof localStorage !== 'undefined') {
+      const localIds = getStoredTrackedPurchases(localStorage);
+      if (localIds.includes(orderId)) return true;
+    }
+
+    return false;
   } catch {
     return false;
   }
 }
 
 function markPurchaseTracked(orderId: string): void {
+  if (!orderId) return;
+
+  // Persist in current session storage
   try {
-    const tracked = sessionStorage.getItem(PURCHASE_STORAGE_KEY);
-    const ids: string[] = tracked ? JSON.parse(tracked) : [];
-    ids.push(orderId);
-    sessionStorage.setItem(PURCHASE_STORAGE_KEY, JSON.stringify(ids));
+    if (typeof sessionStorage !== 'undefined') {
+      const sessionIds = getStoredTrackedPurchases(sessionStorage);
+      if (!sessionIds.includes(orderId)) {
+        sessionIds.push(orderId);
+        sessionStorage.setItem(
+          PURCHASE_STORAGE_KEY,
+          JSON.stringify(sessionIds.slice(-MAX_TRACKED_PURCHASES))
+        );
+      }
+    }
   } catch {
-    // sessionStorage unavailable — silent
+    // Storage quota or private mode restriction
+  }
+
+  // Persist in local storage across tabs and sessions
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const localIds = getStoredTrackedPurchases(localStorage);
+      if (!localIds.includes(orderId)) {
+        localIds.push(orderId);
+        localStorage.setItem(
+          PURCHASE_STORAGE_KEY,
+          JSON.stringify(localIds.slice(-MAX_TRACKED_PURCHASES))
+        );
+      }
+    }
+  } catch {
+    // Storage quota or private mode restriction
   }
 }
 
@@ -381,7 +428,7 @@ export function trackAddPaymentInfo({ orderId, total, paymentMethod, items }: Pa
   pushToDataLayer('add_payment_info', ga4Payload);
 }
 
-// ── Purchase (with duplicate guard) ───────────────────────────────────
+// ── Purchase (with duplicate guard & input validation) ────────────────
 
 export function trackPurchase({
   orderId,
@@ -392,9 +439,21 @@ export function trackPurchase({
   shipping,
   items,
 }: PurchaseParams): boolean {
+  const primaryId = orderId || orderNumber || '';
+  if (!primaryId) {
+    debugLog('purchase [SKIPPED — missing order identifier]', {});
+    return false;
+  }
+
+  // ── Input validation: must have positive order amount and non-empty items ──
+  if (typeof total !== 'number' || total <= 0 || !Array.isArray(items) || items.length === 0) {
+    debugLog('purchase [SKIPPED — invalid amount or empty items]', { total, itemsCount: items?.length });
+    return false;
+  }
+
   // ── Duplicate prevention ──
-  if (isPurchaseTracked(orderId)) {
-    debugLog('purchase [SKIPPED — already tracked]', { orderId });
+  if (isPurchaseTracked(primaryId)) {
+    debugLog('purchase [SKIPPED — already tracked]', { orderId: primaryId });
     return false;
   }
 
@@ -421,7 +480,7 @@ export function trackPurchase({
   fireFBQ('Purchase', fbPayload);
   pushToDataLayer('purchase', { ...ga4Payload, subtotal });
 
-  markPurchaseTracked(orderId);
+  markPurchaseTracked(primaryId);
   return true;
 }
 
@@ -461,33 +520,78 @@ export function trackAddToWishlist({ id, name, price, category }: ViewItemParams
 // ── Enhanced Conversions (hashed PII) ─────────────────────────────────
 
 /**
+ * Normalises phone numbers to Meta's Advanced Matching requirements:
+ * - Strip formatting characters (spaces, dashes, parentheses, dots).
+ * - Remove leading zeros.
+ * - For Indian 10-digit mobile numbers, prefix with country code '91'.
+ * - Preserve already present country codes (11-15 digits) without double-prefixing.
+ * - Return empty string if length is outside valid international range (10-15 digits).
+ */
+function normalizePhoneForMeta(rawPhone: string): string {
+  if (!rawPhone || typeof rawPhone !== 'string') return '';
+
+  let digits = rawPhone.replace(/\D/g, '');
+  digits = digits.replace(/^0+/, '');
+
+  if (!digits) return '';
+
+  // Standard Indian 10-digit mobile numbers matching /^[6-9]\d{9}$/: prepend country code 91
+  if (digits.length === 10 && /^[6-9]\d{9}$/.test(digits)) {
+    return `91${digits}`;
+  }
+
+  // Already prefixed Indian number (12 digits starting with 91 followed by valid 10-digit mobile)
+  if (digits.length === 12 && /^91[6-9]\d{9}$/.test(digits)) {
+    return digits;
+  }
+
+  // Other international formats (11-15 digits)
+  if (digits.length >= 11 && digits.length <= 15) {
+    return digits;
+  }
+
+  return '';
+}
+
+function normalizeEmail(rawEmail: string): string {
+  if (!rawEmail || typeof rawEmail !== 'string') return '';
+  return rawEmail.trim().toLowerCase();
+}
+
+/**
  * Send hashed email/phone for Enhanced Conversions.
  * Call this after login / at checkout when user info is available.
  */
 export async function setEnhancedConversions({ email, phone }: EnhancedConversionsData) {
   if (typeof window === 'undefined') return;
 
-  const userData: Record<string, string> = {};
-  if (email) userData.sha256_email_address = await sha256(email);
-  if (phone) userData.sha256_phone_number = await sha256(phone);
+  const normEmail = email ? normalizeEmail(email) : '';
+  const normPhone = phone ? normalizePhoneForMeta(phone) : '';
 
-  if (Object.keys(userData).length === 0) return;
+  const hashedEmail = normEmail ? await sha256(normEmail) : undefined;
+  const hashedPhone = normPhone ? await sha256(normPhone) : undefined;
 
-  debugLog('enhanced_conversions', userData);
+  if (!hashedEmail && !hashedPhone) return;
 
-  // GA4 Enhanced Conversions
+  // Never log raw customer PII or hashes in production or debug mode
+  debugLog('enhanced_conversions', { hasEmail: !!hashedEmail, hasPhone: !!hashedPhone });
+
+  // GA4 Enhanced Conversions (GA4 user_data accepts normalized email and E.164 phone)
   if (window.gtag) {
     window.gtag('set', 'user_data', {
-      ...(email && { email: email.trim().toLowerCase() }),
-      ...(phone && { phone_number: phone.trim() }),
+      ...(normEmail && { email: normEmail }),
+      ...(normPhone && { phone_number: normPhone.startsWith('+') ? normPhone : `+${normPhone}` }),
     });
   }
 
   // Meta Advanced Matching (hashed)
   if (window.fbq) {
-    window.fbq('init', process.env.NEXT_PUBLIC_META_PIXEL_ID || '', {
-      em: email ? await sha256(email) : undefined,
-      ph: phone ? await sha256(phone) : undefined,
-    });
+    const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
+    if (pixelId) {
+      window.fbq('init', pixelId, {
+        ...(hashedEmail && { em: hashedEmail }),
+        ...(hashedPhone && { ph: hashedPhone }),
+      });
+    }
   }
 }

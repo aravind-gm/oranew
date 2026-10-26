@@ -7,7 +7,7 @@ import {
     webhook,
 } from '../controllers/payment.controller';
 import { generateRetryToken, executeRetryPayment } from '../controllers/retryPayment.controller';
-import { authorize, protect } from '../middleware/auth';
+import { authorize, optionalAuth, protect } from '../middleware/auth';
 import { paymentLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
@@ -31,20 +31,20 @@ router.post('/create', protect, paymentLimiter, createPayment);
  * Verifies Razorpay payment signature from frontend callback
  * Updates order status to CONFIRMED and clears cart
  * 
- * Protected endpoint - requires authentication
+ * Accessible to authenticated users OR guests with cryptographic guestToken
  * Rate limited: 5 per 10 minutes
  * Called from frontend Razorpay success callback
  */
-router.post('/verify', protect, paymentLimiter, verifyPayment);
+router.post('/verify', optionalAuth, paymentLimiter, verifyPayment);
 
 /**
  * GET /api/payments/:orderId/status
  * Returns current payment and order status
  * 
- * Protected endpoint - requires authentication
+ * Accessible to authenticated users OR guests with cryptographic guestToken
  * Frontend polls this to check if order is confirmed
  */
-router.get('/:orderId/status', protect, getPaymentStatus);
+router.get('/:orderId/status', optionalAuth, getPaymentStatus);
 
 /**
  * POST /api/payments/webhook

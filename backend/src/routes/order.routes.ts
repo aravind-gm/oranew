@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { cancelOrder, checkout, getOrderById, getOrders, processRefund, requestReturn, trackOrder } from '../controllers/order.controller';
-import { guestCheckout } from '../controllers/guestCheckout.controller';
+import { guestCheckout, getGuestOrder } from '../controllers/guestCheckout.controller';
 import { authorize, optionalAuth, protect } from '../middleware/auth';
 import { checkoutLimiter, codLimiter } from '../middleware/rateLimiter';
 
@@ -11,6 +11,9 @@ router.post('/guest-checkout', checkoutLimiter, optionalAuth, guestCheckout);
 
 // Public track order — no auth required
 router.post('/track', trackOrder);
+
+// Guest / authenticated order verification endpoint (requires user auth OR cryptographic guestToken)
+router.get('/guest-order/:id', optionalAuth, getGuestOrder);
 
 // Authenticated routes
 router.use(protect);

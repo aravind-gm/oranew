@@ -21,6 +21,7 @@ import { ArrowLeft, ShoppingBag, Lock, Truck } from 'lucide-react';
 import api from '@/lib/api';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
+import { trackBeginCheckout, trackAddPaymentInfo, setEnhancedConversions } from '@/lib/analytics';
 import Image from 'next/image';
 import Link from 'next/link';
 import { GuestCheckoutSkeleton } from '@/components/checkout/SkeletonBlock';
@@ -46,6 +47,7 @@ export default function GuestCheckoutPage() {
   const [error, setError] = useState('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'razorpay' | 'cod'>('razorpay');
   const orderCompletedRef = useRef(false);
+  const beginCheckoutTrackedRef = useRef(false);
   const [showGuestForm, setShowGuestForm] = useState(false);
 
   const COD_MAX_AMOUNT = 5000;
@@ -79,6 +81,23 @@ export default function GuestCheckoutPage() {
     }
   }, [hasHydrated, items.length, router]);
 
+  // Analytics: InitiateCheckout / begin_checkout on load
+  useEffect(() => {
+    if (!hasHydrated || orderCompletedRef.current || items.length === 0) return;
+    if (beginCheckoutTrackedRef.current) return;
+
+    beginCheckoutTrackedRef.current = true;
+    trackBeginCheckout({
+      items: items.map((item) => ({
+        id: item.productId || item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+      })),
+      total: cartTotal,
+    });
+  }, [hasHydrated, items, cartTotal]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
     setError('');
@@ -111,6 +130,11 @@ export default function GuestCheckoutPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
+
+    // Enhanced conversions: send hashed PII
+    if (form.email || form.phone) {
+      setEnhancedConversions({ email: form.email, phone: form.phone });
+    }
 
     setLoading(true);
     setError('');
@@ -158,11 +182,53 @@ export default function GuestCheckoutPage() {
         paymentMethod: isCODSelected ? 'COD' : undefined,
       });
 
-      // COD: order confirmed immediately — redirect to success
+      const createdOrder = data.order;
+      const orderTotal = Number(createdOrder.totalAmount) || cartTotal;
+
+      // Analytics: add_payment_info
+      trackAddPaymentInfo({
+        orderId: createdOrder.id,
+        total: orderTotal,
+        paymentMethod: isCODSelected ? 'cod' : 'razorpay',
+        items: items.map((item) => ({
+          id: item.productId || item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+        })),
+      });
+
+      // COD: order confirmed immediately by backend — redirect to success
       if (data.codOrder) {
         orderCompletedRef.current = true;
+        try {
+          if (data.guestToken) {
+            sessionStorage.setItem(`ora_guest_token_${createdOrder.id}`, data.guestToken);
+          }
+          sessionStorage.setItem(
+            'ora_last_order',
+            JSON.stringify({
+              orderId: createdOrder.id,
+              orderNumber: createdOrder.orderNumber,
+              total: orderTotal,
+              subtotal: Number(createdOrder.subtotal) || orderTotal,
+              tax: Number(createdOrder.gstAmount) || 0,
+              shipping: Number(createdOrder.shippingFee) || 0,
+              items: items.map((item) => ({
+                id: item.productId || item.id,
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity,
+              })),
+            })
+          );
+        } catch {
+          // ignore storage quota errors
+        }
+
         clearCart();
-        router.push(`/checkout/success?orderNumber=${data.order.orderNumber}`);
+        const tokenQuery = data.guestToken ? `&token=${encodeURIComponent(data.guestToken)}` : '';
+        router.push(`/checkout/success?orderNumber=${createdOrder.orderNumber}&orderId=${createdOrder.id}&cod=true${tokenQuery}`);
         return;
       }
 
@@ -183,23 +249,57 @@ export default function GuestCheckoutPage() {
         amount: data.razorpayOrder.amount,
         currency: data.razorpayOrder.currency,
         name: 'Ora Global — ORA Jewellery',
-        description: `Order ${data.order.orderNumber}`,
+        description: `Order ${createdOrder.orderNumber}`,
         order_id: data.razorpayOrder.id,
         handler: async (response: Record<string, string>) => {
           try {
-            // Verify payment
-            await api.post('/payments/verify', {
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-            });
+            // Verify payment with backend Razorpay HMAC signature verification
+            await api.post(
+              '/payments/verify',
+              {
+                orderId: createdOrder.id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                guestToken: data.guestToken,
+              },
+              {
+                headers: data.guestToken ? { 'x-guest-token': data.guestToken } : undefined,
+              }
+            );
+
+            // Payment verified by backend — save guest token and order snapshot
+            try {
+              if (data.guestToken) {
+                sessionStorage.setItem(`ora_guest_token_${createdOrder.id}`, data.guestToken);
+              }
+              sessionStorage.setItem(
+                'ora_last_order',
+                JSON.stringify({
+                  orderId: createdOrder.id,
+                  orderNumber: createdOrder.orderNumber,
+                  total: orderTotal,
+                  subtotal: Number(createdOrder.subtotal) || orderTotal,
+                  tax: Number(createdOrder.gstAmount) || 0,
+                  shipping: Number(createdOrder.shippingFee) || 0,
+                  items: items.map((item) => ({
+                    id: item.productId || item.id,
+                    name: item.name,
+                    price: item.price,
+                    quantity: item.quantity,
+                  })),
+                })
+              );
+            } catch {
+              // ignore storage quota errors
+            }
 
             orderCompletedRef.current = true;
             clearCart();
-            // Pass orderId so success page polls payment status and shows correct payment type
-            router.push(`/checkout/success?orderId=${data.order.id}`);
+            const tokenQuery = data.guestToken ? `&token=${encodeURIComponent(data.guestToken)}` : '';
+            router.push(`/checkout/success?orderId=${createdOrder.id}&orderNumber=${createdOrder.orderNumber}${tokenQuery}`);
           } catch {
-            router.push(`/checkout/failed?orderId=${data.order.id}`);
+            router.push(`/checkout/failed?orderId=${createdOrder.id}`);
           }
         },
         prefill: {

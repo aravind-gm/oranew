@@ -9,6 +9,7 @@ import { AppError, asyncHandler } from '../utils/helpers';
 import { sendPaymentAlert } from '../utils/alerts';
 import { captureException } from '../config/sentry';
 import { logAdminAction } from '../utils/auditLog';
+import { verifyGuestOrderToken } from '../utils/guestToken';
 
 // ============================================
 // RAZORPAY SINGLETON
@@ -237,21 +238,19 @@ export const verifyPayment = asyncHandler(async (req: any, res: Response) => {
 
   console.log('[Payment.verify] ════════════════════════════════════════');
   console.log('[Payment.verify] Starting verification');
-  console.log('[Payment.verify] Input:', { orderId, userId });
+  console.log('[Payment.verify] Input:', { orderId, userId, isGuest: !userId });
 
   // ────────────────────────────────────────────
   // VALIDATION
   // ────────────────────────────────────────────
-  if (!userId) {
-    throw new AppError('Authentication required', 401);
-  }
-
   if (!orderId || !razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
     throw new AppError(
       'Missing required fields: orderId, razorpay_payment_id, razorpay_order_id, razorpay_signature',
       400
     );
   }
+
+  const guestToken = (req.headers['x-guest-token'] as string) || req.body.guestToken;
 
   // ────────────────────────────────────────────
   // FETCH ORDER & VERIFY OWNERSHIP
@@ -271,13 +270,21 @@ export const verifyPayment = asyncHandler(async (req: any, res: Response) => {
     throw new AppError('Order not found', 404);
   }
 
-  if ((order as any).userId !== userId) {
-    throw new AppError('Unauthorized - order belongs to another user', 403);
+  let isAuthorized = false;
+  if (userId && (order as any).userId === userId) {
+    isAuthorized = true;
+  } else if (guestToken && verifyGuestOrderToken(guestToken, orderId)) {
+    isAuthorized = true;
+  }
+
+  if (!isAuthorized) {
+    throw new AppError('Unauthorized - order access requires authentication or a valid guest verification token', 403);
   }
 
   console.log('[Payment.verify] ✓ Order found and verified:', {
     orderNumber: (order as any).orderNumber,
     totalAmount: (order as any).totalAmount,
+    authorizedVia: userId ? 'USER_SESSION' : 'GUEST_TOKEN',
   });
 
   // ────────────────────────────────────────────
@@ -1129,10 +1136,7 @@ async function handlePaymentRefunded(event: any, res: Response) {
 export const getPaymentStatus = asyncHandler(async (req: any, res: Response) => {
   const { orderId } = req.params;
   const userId = req.user?.id;
-
-  if (!userId) {
-    throw new AppError('Authentication required', 401);
-  }
+  const guestToken = (req.headers['x-guest-token'] as string) || (req.query.token as string);
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
@@ -1143,8 +1147,15 @@ export const getPaymentStatus = asyncHandler(async (req: any, res: Response) => 
     throw new AppError('Order not found', 404);
   }
 
-  if ((order as any).userId !== userId) {
-    throw new AppError('Unauthorized', 403);
+  let isAuthorized = false;
+  if (userId && (order as any).userId === userId) {
+    isAuthorized = true;
+  } else if (guestToken && verifyGuestOrderToken(guestToken, orderId)) {
+    isAuthorized = true;
+  }
+
+  if (!isAuthorized) {
+    throw new AppError('Unauthorized - access to this order requires authentication or a valid guest verification token', 403);
   }
 
   const payment = (order as any).payments?.[0];

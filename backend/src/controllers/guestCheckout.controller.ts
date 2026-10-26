@@ -33,6 +33,7 @@ import { lockInventory } from '../utils/inventory';
 import { getGSTRate, calculateGSTAmount } from '../utils/tax';
 import { notifyPartnersNewOrder } from '../services/whatsapp.service';
 import { notifyAdminNewOrder } from '../services/notification.service';
+import { generateGuestOrderToken, verifyGuestOrderToken } from '../utils/guestToken';
 
 interface GuestCheckoutBody {
   email: string;
@@ -452,9 +453,12 @@ export const guestCheckout = asyncHandler(async (req: Request, res: Response) =>
       isGuest: !req.user?.id,
     });
 
+    const guestToken = generateGuestOrderToken(order.id, order.orderNumber);
+
     return res.status(201).json({
       success: true,
       codOrder: true,
+      guestToken,
       order: {
         id: order.id,
         orderNumber: order.orderNumber,
@@ -511,9 +515,12 @@ export const guestCheckout = asyncHandler(async (req: Request, res: Response) =>
     razorpayOrderId: razorpayOrder.id,
   });
 
+  const guestToken = generateGuestOrderToken(order.id, order.orderNumber);
+
   res.status(201).json({
     success: true,
     codOrder: false,
+    guestToken,
     order: {
       id: order.id,
       orderNumber: order.orderNumber,
@@ -530,5 +537,92 @@ export const guestCheckout = asyncHandler(async (req: Request, res: Response) =>
       currency: razorpayOrder.currency,
     },
     razorpayKeyId: process.env.RAZORPAY_KEY_ID,
+  });
+});
+
+/**
+ * GET /api/orders/guest-order/:id
+ * Authoritatively retrieves order status and item metadata for guests or authenticated users.
+ * Requires either user session (req.user) OR valid cryptographic guestToken.
+ * Returns only non-sensitive order verification fields.
+ */
+export const getGuestOrder = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const userId = req.user?.id;
+  const guestToken = (req.headers['x-guest-token'] as string) || (req.query.token as string);
+
+  if (!id) {
+    throw new AppError('Order ID is required', 400);
+  }
+
+  const order = await prisma.order.findUnique({
+    where: { id },
+    include: {
+      items: {
+        include: {
+          product: {
+            select: {
+              id: true,
+              name: true,
+              category: { select: { name: true } },
+            },
+          },
+        },
+      },
+      payments: {
+        select: {
+          id: true,
+          status: true,
+          amount: true,
+          paymentGateway: true,
+          transactionId: true,
+        },
+      },
+    },
+  });
+
+  if (!order) {
+    throw new AppError('Order not found', 404);
+  }
+
+  // Strict ownership check
+  let isAuthorized = false;
+  if (userId && order.userId === userId) {
+    isAuthorized = true;
+  } else if (guestToken && verifyGuestOrderToken(guestToken, id)) {
+    isAuthorized = true;
+  }
+
+  if (!isAuthorized) {
+    throw new AppError('Unauthorized - access to this order requires authentication or a valid guest verification token', 403);
+  }
+
+  const isConfirmed =
+    (order.paymentMethod === 'COD' && order.status === 'CONFIRMED') ||
+    (order.paymentMethod === 'RAZORPAY' && order.paymentStatus === 'CONFIRMED' && order.status === 'CONFIRMED');
+
+  res.json({
+    success: true,
+    data: {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      paymentMethod: order.paymentMethod,
+      totalAmount: Number(order.totalAmount),
+      subtotal: Number(order.subtotal),
+      taxAmount: Number(order.gstAmount),
+      shippingCost: Number(order.shippingFee),
+      isConfirmed,
+      createdAt: order.createdAt,
+      items: order.items.map((item) => ({
+        id: item.productId || item.id,
+        productId: item.productId,
+        name: item.productName || item.product?.name || 'Product',
+        price: Number(item.unitPrice),
+        quantity: item.quantity,
+        category: item.product?.category?.name,
+      })),
+    },
   });
 });

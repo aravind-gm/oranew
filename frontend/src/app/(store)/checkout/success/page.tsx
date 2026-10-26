@@ -5,7 +5,7 @@ import { trackPurchase } from '@/lib/analytics';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
 import OrderSuccessAnimation from '@/components/order-success/OrderSuccessAnimation';
@@ -220,11 +220,35 @@ function PostCheckoutUpsell({ categoryId }: { categoryId?: string }) {
 // MAIN SUCCESS CONTENT
 // ============================================================================
 
+interface AuthoritativeOrder {
+  id: string;
+  orderNumber: string;
+  status: string;
+  paymentStatus: string;
+  paymentMethod: 'RAZORPAY' | 'COD';
+  totalAmount: number;
+  subtotal: number;
+  taxAmount: number;
+  shippingCost: number;
+  isConfirmed: boolean;
+  items: Array<{
+    id: string;
+    productId: string;
+    name: string;
+    price: number;
+    quantity: number;
+    category?: string;
+  }>;
+}
+
 function SuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const orderId = searchParams.get('orderId');
   const orderNumber = searchParams.get('orderNumber');
+  const tokenFromUrl = searchParams.get('token');
+
+  const [order, setOrder] = useState<AuthoritativeOrder | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -234,129 +258,278 @@ function SuccessContent() {
   const clearCart = useCartStore((state) => state.clearCart);
   const { user } = useAuthStore();
   const purchaseTrackedRef = useRef(false);
-  const confettiKey = orderId || orderNumber || 'unknown';
 
-  // Check if this is a COD order (has orderNumber param but no orderId)
-  const isCODOrder = !orderId && !!orderNumber;
-
-  // ── Fetch order & fire purchase event once confirmed ──
-  const fireConversionEvent = async (status: PaymentStatus) => {
-    if (purchaseTrackedRef.current) return;
-    try {
-      const orderRes = await api.get(`/orders/${status.orderId}`);
-      const order: OrderDetails = orderRes.data.data || orderRes.data.order;
-      if (order) {
-        // Capture first item's productId for upsell (category fetched server-side)
-        const firstItem = order.items?.[0];
-        if (firstItem?.productId && !upsellCategoryId) {
-          // Use productId to seed recommended products upsell
-          setUpsellCategoryId(firstItem.productId);
-        }
-        const fired = trackPurchase({
-          orderId: order.id,
-          orderNumber: order.orderNumber || status.orderNumber,
-          total: Number(order.totalAmount) || 0,
-          subtotal: Number(order.subtotal) || Number(order.totalAmount) || 0,
-          tax: Number(order.taxAmount) || 0,
-          shipping: Number(order.shippingCost) || 0,
-          items: (order.items || []).map((item) => ({
-            id: item.productId || item.id,
-            name: item.product?.name || 'Product',
-            price: Number(item.unitPrice) || 0,
-            quantity: item.quantity,
-            category: item.product?.category?.name,
-          })),
-        });
-        if (fired) purchaseTrackedRef.current = true;
-      }
-    } catch {
-      // Order fetch failed — don't block success UI
-    }
-  };
-
-  // ── Handle COD order — immediate success ──
-  useEffect(() => {
-    if (!isCODOrder) return;
-    setLoading(false);
-    // Show confetti only once per order (localStorage guard)
-    const played = localStorage.getItem(`ora_success_${confettiKey}`);
-    if (!played) {
-      setShowConfetti(true);
-      localStorage.setItem(`ora_success_${confettiKey}`, '1');
-    }
-  }, [isCODOrder, confettiKey]);
-
-  // ── Poll for online payment confirmation ──
-  useEffect(() => {
-    if (!orderId) return;
-
-    // eslint-disable-next-line prefer-const
-    let pollInterval: NodeJS.Timeout | undefined;
-    let isMounted = true;
-    let attemptCount = 0;
-    const maxAttempts = 60;
-
-    const pollPaymentStatus = async () => {
+  // Read guest verification token from URL or session storage
+  const getGuestToken = useCallback((): string | null => {
+    if (tokenFromUrl) return tokenFromUrl;
+    if (orderId && typeof sessionStorage !== 'undefined') {
       try {
-        const response = await api.get(`/payments/${orderId}/status`);
-        if (!isMounted) return;
+        return sessionStorage.getItem(`ora_guest_token_${orderId}`);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }, [orderId, tokenFromUrl]);
 
-        const status = response.data.success ? response.data : response.data.data;
-        setPaymentStatus(status);
+  // Authoritatively fetch order from backend with authentication or guest verification token
+  const fetchAuthoritativeOrder = useCallback(
+    async (targetOrderId: string): Promise<AuthoritativeOrder | null> => {
+      const token = getGuestToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['x-guest-token'] = token;
+      }
 
-        // SUCCESS: Payment confirmed by webhook
-        if (status.isConfirmed && !status.isFailed) {
+      // Tier 1: /orders/guest-order/:id (authorizes either user session or guestToken)
+      try {
+        const res = await api.get(`/orders/guest-order/${targetOrderId}`, {
+          headers,
+          params: token ? { token } : undefined,
+        });
+        if (res.data?.success && res.data?.data) {
+          return res.data.data;
+        }
+      } catch {
+        // Tier 2: /orders/:id for authenticated session
+        try {
+          const res = await api.get(`/orders/${targetOrderId}`);
+          if (res.data?.success) {
+            const raw = res.data.data || res.data.order;
+            if (raw) {
+              const isConfirmed =
+                (raw.paymentMethod === 'COD' && raw.status === 'CONFIRMED') ||
+                (raw.paymentMethod === 'RAZORPAY' && raw.paymentStatus === 'CONFIRMED' && raw.status === 'CONFIRMED');
+              return {
+                id: raw.id,
+                orderNumber: raw.orderNumber,
+                status: raw.status,
+                paymentStatus: raw.paymentStatus,
+                paymentMethod: raw.paymentMethod,
+                totalAmount: Number(raw.totalAmount),
+                subtotal: Number(raw.subtotal || raw.totalAmount),
+                taxAmount: Number(raw.taxAmount || raw.gstAmount || 0),
+                shippingCost: Number(raw.shippingCost || raw.shippingFee || 0),
+                isConfirmed,
+                items: (raw.items || []).map((item: any) => ({
+                  id: item.productId || item.id,
+                  productId: item.productId || item.id,
+                  name: item.productName || item.product?.name || 'Product',
+                  price: Number(item.unitPrice || item.price || 0),
+                  quantity: item.quantity,
+                  category: item.product?.category?.name,
+                })),
+              };
+            }
+          }
+        } catch {
+          return null;
+        }
+      }
+      return null;
+    },
+    [getGuestToken]
+  );
+
+  // Authoritatively fire Meta Pixel Purchase event only when backend confirms order
+  const fireConversionEvent = useCallback(
+    (verifiedOrder: AuthoritativeOrder) => {
+      if (purchaseTrackedRef.current) return;
+
+      // Strict validation: must be confirmed, total > 0, items non-empty
+      if (
+        !verifiedOrder.id ||
+        !verifiedOrder.isConfirmed ||
+        verifiedOrder.totalAmount <= 0 ||
+        !Array.isArray(verifiedOrder.items) ||
+        verifiedOrder.items.length === 0
+      ) {
+        return;
+      }
+
+      // Capture first item's productId for upsell
+      const firstItem = verifiedOrder.items[0];
+      if (firstItem?.productId && !upsellCategoryId) {
+        setUpsellCategoryId(firstItem.productId);
+      }
+
+      const fired = trackPurchase({
+        orderId: verifiedOrder.id,
+        orderNumber: verifiedOrder.orderNumber,
+        total: Number(verifiedOrder.totalAmount),
+        subtotal: Number(verifiedOrder.subtotal) || Number(verifiedOrder.totalAmount),
+        tax: Number(verifiedOrder.taxAmount) || 0,
+        shipping: Number(verifiedOrder.shippingCost) || 0,
+        items: verifiedOrder.items.map((item) => ({
+          id: item.productId || item.id,
+          name: item.name,
+          price: Number(item.price) || 0,
+          quantity: item.quantity,
+          category: item.category,
+        })),
+      });
+
+      if (fired) {
+        purchaseTrackedRef.current = true;
+        try {
+          sessionStorage.removeItem('ora_last_order');
+        } catch {}
+      }
+    },
+    [upsellCategoryId]
+  );
+
+  // ── Authoritative verification and payment status polling ──
+  useEffect(() => {
+    if (!orderId) {
+      setLoading(false);
+      setError('Order identifier is missing. If you placed an order, please check your confirmation email.');
+      return;
+    }
+
+    let isMounted = true;
+    let pollInterval: NodeJS.Timeout | undefined;
+
+    const verifyAndTrack = async () => {
+      const fetchedOrder = await fetchAuthoritativeOrder(orderId);
+      if (!isMounted) return;
+
+      if (!fetchedOrder) {
+        setLoading(false);
+        setError('Unable to verify order details. Please check your email or contact support.');
+        return;
+      }
+
+      setOrder(fetchedOrder);
+
+      // CASE 1: Cash on Delivery (COD)
+      if (fetchedOrder.paymentMethod === 'COD') {
+        setLoading(false);
+        if (fetchedOrder.status === 'CONFIRMED' || fetchedOrder.isConfirmed) {
           clearCart();
-          setLoading(false);
-          clearInterval(pollInterval);
-
-          // Confetti once per order
-          const played = localStorage.getItem(`ora_success_${confettiKey}`);
+          const played = localStorage.getItem(`ora_success_${fetchedOrder.id}`);
           if (!played) {
             setShowConfetti(true);
-            localStorage.setItem(`ora_success_${confettiKey}`, '1');
+            try {
+              localStorage.setItem(`ora_success_${fetchedOrder.id}`, '1');
+            } catch {}
           }
-
-          fireConversionEvent(status);
-          return;
+          fireConversionEvent(fetchedOrder);
+        } else {
+          setError(`Order is in ${fetchedOrder.status} state.`);
         }
-        
-        // FAILURE: Payment failed
-        if (status.isFailed) {
-          clearInterval(pollInterval);
-          router.replace(`/checkout/failed?orderId=${orderId}`);
-          return;
-        }
-        
-        // TIMEOUT
-        if (attemptCount >= maxAttempts) {
-          setLoading(false);
-          setError('Payment is taking longer than expected. Check your email for confirmation or contact support.');
-          clearInterval(pollInterval);
-          return;
-        }
-      } catch (err: unknown) {
-        if (!isMounted) return;
-        console.error('[Success] Error polling payment status:', err);
-        
-        if (attemptCount >= maxAttempts) {
-          setLoading(false);
-          setError('Unable to confirm payment. Please check your email for order details.');
-          clearInterval(pollInterval);
-        }
+        return;
       }
 
-      attemptCount++;
+      // CASE 2: Online Payment (Razorpay)
+      // Check if already confirmed by backend verification endpoint
+      if (fetchedOrder.paymentStatus === 'CONFIRMED' && fetchedOrder.status === 'CONFIRMED') {
+        clearCart();
+        setLoading(false);
+        const played = localStorage.getItem(`ora_success_${fetchedOrder.id}`);
+        if (!played) {
+          setShowConfetti(true);
+          try {
+            localStorage.setItem(`ora_success_${fetchedOrder.id}`, '1');
+          } catch {}
+        }
+        fireConversionEvent(fetchedOrder);
+        return;
+      }
+
+      // If online payment is marked FAILED or order CANCELLED
+      if (fetchedOrder.paymentStatus === 'FAILED' || fetchedOrder.status === 'CANCELLED') {
+        setLoading(false);
+        router.replace(`/checkout/failed?orderId=${orderId}`);
+        return;
+      }
+
+      // Online payment PENDING: poll payment status endpoint
+      const guestToken = getGuestToken();
+      const pollHeaders: Record<string, string> = {};
+      if (guestToken) {
+        pollHeaders['x-guest-token'] = guestToken;
+      }
+
+      let attemptCount = 0;
+      const maxAttempts = 60;
+
+      const pollPayment = async () => {
+        try {
+          const res = await api.get(`/payments/${orderId}/status`, {
+            headers: pollHeaders,
+            params: guestToken ? { token: guestToken } : undefined,
+          });
+          if (!isMounted) return;
+
+          const status: PaymentStatus = res.data.success ? res.data : res.data.data;
+          setPaymentStatus(status);
+
+          if (status.isConfirmed && !status.isFailed) {
+            clearInterval(pollInterval);
+            // Re-fetch authoritative order to ensure full item metadata is up to date
+            const confirmedOrder = await fetchAuthoritativeOrder(orderId);
+            if (!isMounted) return;
+            const finalOrder =
+              confirmedOrder || {
+                ...fetchedOrder,
+                isConfirmed: true,
+                status: 'CONFIRMED',
+                paymentStatus: 'CONFIRMED',
+              };
+            setOrder(finalOrder);
+            clearCart();
+            setLoading(false);
+
+            const played = localStorage.getItem(`ora_success_${orderId}`);
+            if (!played) {
+              setShowConfetti(true);
+              try {
+                localStorage.setItem(`ora_success_${orderId}`, '1');
+              } catch {}
+            }
+
+            fireConversionEvent(finalOrder);
+            return;
+          }
+
+          if (status.isFailed) {
+            clearInterval(pollInterval);
+            router.replace(`/checkout/failed?orderId=${orderId}`);
+            return;
+          }
+
+          if (attemptCount >= maxAttempts) {
+            clearInterval(pollInterval);
+            setLoading(false);
+            setError(
+              'Payment verification is taking longer than expected. Please check your email for confirmation.'
+            );
+            return;
+          }
+        } catch (pollErr) {
+          if (!isMounted) return;
+          console.error('[Success] Error polling payment status:', pollErr);
+          if (attemptCount >= maxAttempts) {
+            clearInterval(pollInterval);
+            setLoading(false);
+            setError('Unable to confirm payment. Please check your email for order details.');
+          }
+        }
+        attemptCount++;
+      };
+
+      pollPayment();
+      pollInterval = setInterval(pollPayment, 3000);
     };
 
-    pollPaymentStatus();
-    pollInterval = setInterval(pollPaymentStatus, 3000);
+    verifyAndTrack();
 
     return () => {
       isMounted = false;
-      clearInterval(pollInterval);
+      if (pollInterval) clearInterval(pollInterval);
     };
-  }, [orderId, router]);
+  }, [orderId, fetchAuthoritativeOrder, fireConversionEvent, clearCart, getGuestToken, router]);
 
   // Auto-dismiss confetti after 6 seconds
   useEffect(() => {
@@ -365,9 +538,10 @@ function SuccessContent() {
     return () => clearTimeout(timer);
   }, [showConfetti]);
 
-  // Sequenced animation: package throw (1s) → truck starts (0.5s) → drives off (2s) → reveal content
-  const isConfirmed = isCODOrder || (paymentStatus?.isConfirmed && paymentStatus?.orderPaymentStatus === 'CONFIRMED');
-  const displayOrderId = orderId || orderNumber || '';
+  // Derived state
+  const isConfirmed = order ? order.isConfirmed : false;
+  const isCODOrder = order?.paymentMethod === 'COD';
+  const displayOrderId = order?.orderNumber || orderNumber || orderId || '';
 
   useEffect(() => {
     if (!isConfirmed || loading) return;

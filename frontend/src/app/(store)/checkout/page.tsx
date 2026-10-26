@@ -508,12 +508,34 @@ export default function CheckoutPage() {
         })),
       });
 
-      // COD: order is confirmed immediately — go to success
+      // COD: order is confirmed immediately by backend — go to success
       if (response.data.codOrder) {
+        try {
+          sessionStorage.setItem(
+            'ora_last_order',
+            JSON.stringify({
+              orderId: createdOrder.id,
+              orderNumber: createdOrder.orderNumber,
+              total: Number(createdOrder.totalAmount) || totalPrice,
+              subtotal: Number(createdOrder.subtotal) || totalPrice,
+              tax: Number(createdOrder.taxAmount) || 0,
+              shipping: Number(createdOrder.shippingCost) || 0,
+              items: items.map((item) => ({
+                id: item.productId || item.id,
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity,
+              })),
+            })
+          );
+        } catch {
+          // ignore quota / private mode
+        }
+
         orderCompletedRef.current = true;
         const { clearCart } = useCartStore.getState();
         clearCart();
-        router.push(`/checkout/success?orderNumber=${createdOrder.orderNumber}`);
+        router.push(`/checkout/success?orderNumber=${createdOrder.orderNumber}&orderId=${createdOrder.id}&cod=true`);
         return;
       }
 
@@ -550,10 +572,34 @@ export default function CheckoutPage() {
               razorpay_signature: rzpResponse.razorpay_signature,
             });
             if (!verifyRes.data.success) throw new Error('Payment verification failed');
+
+            // Save order snapshot only AFTER payment verification succeeded
+            try {
+              sessionStorage.setItem(
+                'ora_last_order',
+                JSON.stringify({
+                  orderId: createdOrder.id,
+                  orderNumber: createdOrder.orderNumber,
+                  total: Number(createdOrder.totalAmount) || totalPrice,
+                  subtotal: Number(createdOrder.subtotal) || totalPrice,
+                  tax: Number(createdOrder.taxAmount) || 0,
+                  shipping: Number(createdOrder.shippingCost) || 0,
+                  items: items.map((item) => ({
+                    id: item.productId || item.id,
+                    name: item.name,
+                    price: item.price,
+                    quantity: item.quantity,
+                  })),
+                })
+              );
+            } catch {
+              // ignore quota
+            }
+
             orderCompletedRef.current = true;
             const { clearCart } = useCartStore.getState();
             clearCart();
-            router.push(`/checkout/success?orderId=${createdOrder.id}`);
+            router.push(`/checkout/success?orderId=${createdOrder.id}&orderNumber=${createdOrder.orderNumber}`);
           } catch {
             setErrors({ submit: 'Payment verification failed. Please contact support.' });
             setLoading(false);
