@@ -76,6 +76,7 @@ interface PurchaseParams {
   shipping: number;
   items: Array<{
     id: string;
+    productId?: string;
     name: string;
     price: number;
     quantity: number;
@@ -148,10 +149,57 @@ function fireGA4(eventName: string, params: Record<string, unknown>) {
   }
 }
 
+interface QueuedFBQEvent {
+  type: 'track' | 'trackCustom';
+  eventName: string;
+  params: Record<string, unknown>;
+}
+
+const fbqQueue: QueuedFBQEvent[] = [];
+let fbqPollTimer: NodeJS.Timeout | null = null;
+
+function flushFBQQueue() {
+  if (typeof window === 'undefined' || typeof window.fbq !== 'function') return;
+  while (fbqQueue.length > 0) {
+    const item = fbqQueue.shift();
+    if (item) {
+      try {
+        window.fbq(item.type, item.eventName, item.params);
+      } catch {
+        // silent fail
+      }
+    }
+  }
+  if (fbqPollTimer) {
+    clearInterval(fbqPollTimer);
+    fbqPollTimer = null;
+  }
+}
+
+function startFBQPoll() {
+  if (fbqPollTimer || typeof window === 'undefined') return;
+  let attempts = 0;
+  fbqPollTimer = setInterval(() => {
+    attempts++;
+    if (typeof window.fbq === 'function') {
+      flushFBQQueue();
+    } else if (attempts > 50) { // 10 seconds timeout
+      if (fbqPollTimer) clearInterval(fbqPollTimer);
+      fbqPollTimer = null;
+    }
+  }, 200);
+}
+
 function fireFBQ(eventName: string, params: Record<string, unknown>) {
   try {
-    if (typeof window !== 'undefined' && window.fbq) {
-      window.fbq('track', eventName, params);
+    if (typeof window !== 'undefined') {
+      if (typeof window.fbq === 'function') {
+        window.fbq('track', eventName, params);
+      } else {
+        // Queue event and poll until Meta Pixel snippet creates window.fbq
+        fbqQueue.push({ type: 'track', eventName, params });
+        startFBQPoll();
+      }
     }
   } catch {
     // Meta Pixel not loaded — silent fail
@@ -160,8 +208,14 @@ function fireFBQ(eventName: string, params: Record<string, unknown>) {
 
 function fireFBQCustom(eventName: string, params: Record<string, unknown>) {
   try {
-    if (typeof window !== 'undefined' && window.fbq) {
-      window.fbq('trackCustom', eventName, params);
+    if (typeof window !== 'undefined') {
+      if (typeof window.fbq === 'function') {
+        window.fbq('trackCustom', eventName, params);
+      } else {
+        // Queue event and poll until Meta Pixel snippet creates window.fbq
+        fbqQueue.push({ type: 'trackCustom', eventName, params });
+        startFBQPoll();
+      }
     }
   } catch {
     // Meta Pixel not loaded — silent fail
@@ -184,19 +238,21 @@ function getStoredTrackedPurchases(storage: Storage): string[] {
   }
 }
 
-function isPurchaseTracked(orderId: string): boolean {
-  if (!orderId || typeof orderId !== 'string') return true;
+function isPurchaseTracked(...orderIds: Array<string | undefined | null>): boolean {
+  const validIds = orderIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0);
+  if (validIds.length === 0) return true;
+
   try {
     // 1. Check current tab session storage
     if (typeof sessionStorage !== 'undefined') {
       const sessionIds = getStoredTrackedPurchases(sessionStorage);
-      if (sessionIds.includes(orderId)) return true;
+      if (validIds.some((id) => sessionIds.includes(id))) return true;
     }
 
     // 2. Check persistent local storage (cross-tab / return visits)
     if (typeof localStorage !== 'undefined') {
       const localIds = getStoredTrackedPurchases(localStorage);
-      if (localIds.includes(orderId)) return true;
+      if (validIds.some((id) => localIds.includes(id))) return true;
     }
 
     return false;
@@ -205,15 +261,22 @@ function isPurchaseTracked(orderId: string): boolean {
   }
 }
 
-function markPurchaseTracked(orderId: string): void {
-  if (!orderId) return;
+function markPurchaseTracked(...orderIds: Array<string | undefined | null>): void {
+  const validIds = orderIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0);
+  if (validIds.length === 0) return;
 
   // Persist in current session storage
   try {
     if (typeof sessionStorage !== 'undefined') {
       const sessionIds = getStoredTrackedPurchases(sessionStorage);
-      if (!sessionIds.includes(orderId)) {
-        sessionIds.push(orderId);
+      let changed = false;
+      for (const id of validIds) {
+        if (!sessionIds.includes(id)) {
+          sessionIds.push(id);
+          changed = true;
+        }
+      }
+      if (changed) {
         sessionStorage.setItem(
           PURCHASE_STORAGE_KEY,
           JSON.stringify(sessionIds.slice(-MAX_TRACKED_PURCHASES))
@@ -228,8 +291,14 @@ function markPurchaseTracked(orderId: string): void {
   try {
     if (typeof localStorage !== 'undefined') {
       const localIds = getStoredTrackedPurchases(localStorage);
-      if (!localIds.includes(orderId)) {
-        localIds.push(orderId);
+      let changed = false;
+      for (const id of validIds) {
+        if (!localIds.includes(id)) {
+          localIds.push(id);
+          changed = true;
+        }
+      }
+      if (changed) {
         localStorage.setItem(
           PURCHASE_STORAGE_KEY,
           JSON.stringify(localIds.slice(-MAX_TRACKED_PURCHASES))
@@ -455,42 +524,54 @@ export function trackPurchase({
     return false;
   }
 
-  // ── Input validation: must have positive order amount and non-empty items ──
-  if (typeof total !== 'number' || total <= 0 || !Array.isArray(items) || items.length === 0) {
-    debugLog('purchase [SKIPPED — invalid amount or empty items]', { total, itemsCount: items?.length });
+  const numericTotal = Number(total);
+  if (isNaN(numericTotal) || numericTotal <= 0) {
+    debugLog('purchase [SKIPPED — invalid positive amount]', { total });
     return false;
   }
 
   // ── Duplicate prevention ──
-  if (isPurchaseTracked(primaryId)) {
-    debugLog('purchase [SKIPPED — already tracked]', { orderId: primaryId });
+  if (isPurchaseTracked(orderId, orderNumber)) {
+    debugLog('purchase [SKIPPED — already tracked]', { orderId, orderNumber });
     return false;
   }
 
-  const ga4Payload = {
+  const hasRealItems = Array.isArray(items) && items.length > 0;
+  const validItems = hasRealItems
+    ? items.filter((i) => Boolean(i.id || i.productId))
+    : [];
+
+  const ga4Payload: Record<string, unknown> = {
     transaction_id: orderNumber || orderId,
     currency: 'INR',
-    value: total,
-    tax,
-    shipping,
-    items: toGA4Items(items),
+    value: numericTotal,
+    tax: Number(tax) || 0,
+    shipping: Number(shipping) || 0,
+    ...(validItems.length > 0 && { items: toGA4Items(validItems) }),
   };
 
-  const fbPayload = {
-    content_ids: items.map((i) => i.id),
-    content_type: 'product',
-    value: total,
+  const fbPayload: Record<string, unknown> = {
+    value: numericTotal,
     currency: 'INR',
-    num_items: items.reduce((sum, i) => sum + i.quantity, 0),
     order_id: orderNumber || orderId,
+    ...(validItems.length > 0 && {
+      content_type: 'product',
+      content_ids: validItems.map((i) => i.id || i.productId || ''),
+      contents: validItems.map((i) => ({
+        id: i.id || i.productId || '',
+        quantity: Number(i.quantity) || 1,
+        item_price: Number(i.price) || 0,
+      })),
+      num_items: validItems.reduce((sum, i) => sum + (Number(i.quantity) || 1), 0),
+    }),
   };
 
   debugLog('purchase', { ga4: ga4Payload, fb: fbPayload });
   fireGA4('purchase', ga4Payload);
   fireFBQ('Purchase', fbPayload);
-  pushToDataLayer('purchase', { ...ga4Payload, subtotal });
+  pushToDataLayer('purchase', { ...ga4Payload, subtotal: Number(subtotal) || numericTotal });
 
-  markPurchaseTracked(primaryId);
+  markPurchaseTracked(orderId, orderNumber);
   return true;
 }
 

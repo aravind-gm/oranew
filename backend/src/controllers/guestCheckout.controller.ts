@@ -598,8 +598,8 @@ export const getGuestOrder = asyncHandler(async (req: Request, res: Response) =>
   }
 
   const isConfirmed =
-    (order.paymentMethod === 'COD' && order.status === 'CONFIRMED') ||
-    (order.paymentMethod === 'RAZORPAY' && order.paymentStatus === 'CONFIRMED' && order.status === 'CONFIRMED');
+    (order.paymentMethod?.toUpperCase() === 'COD' && order.status === 'CONFIRMED') ||
+    (order.paymentStatus === 'CONFIRMED' && order.status === 'CONFIRMED');
 
   res.json({
     success: true,

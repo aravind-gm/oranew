@@ -288,7 +288,15 @@ function SuccessContent() {
           params: token ? { token } : undefined,
         });
         if (res.data?.success && res.data?.data) {
-          return res.data.data;
+          const raw = res.data.data;
+          const isConfirmed =
+            (raw.paymentMethod?.toUpperCase() === 'COD' && raw.status === 'CONFIRMED') ||
+            (raw.paymentStatus === 'CONFIRMED' && raw.status === 'CONFIRMED') ||
+            Boolean(raw.isConfirmed);
+          return {
+            ...raw,
+            isConfirmed,
+          };
         }
       } catch {
         // Tier 2: /orders/:id for authenticated session
@@ -298,8 +306,9 @@ function SuccessContent() {
             const raw = res.data.data || res.data.order;
             if (raw) {
               const isConfirmed =
-                (raw.paymentMethod === 'COD' && raw.status === 'CONFIRMED') ||
-                (raw.paymentMethod === 'RAZORPAY' && raw.paymentStatus === 'CONFIRMED' && raw.status === 'CONFIRMED');
+                (raw.paymentMethod?.toUpperCase() === 'COD' && raw.status === 'CONFIRMED') ||
+                (raw.paymentStatus === 'CONFIRMED' && raw.status === 'CONFIRMED') ||
+                Boolean(raw.isConfirmed);
               return {
                 id: raw.id,
                 orderNumber: raw.orderNumber,
@@ -336,19 +345,52 @@ function SuccessContent() {
     (verifiedOrder: AuthoritativeOrder) => {
       if (purchaseTrackedRef.current) return;
 
-      // Strict validation: must be confirmed, total > 0, items non-empty
-      if (
-        !verifiedOrder.id ||
-        !verifiedOrder.isConfirmed ||
-        verifiedOrder.totalAmount <= 0 ||
-        !Array.isArray(verifiedOrder.items) ||
-        verifiedOrder.items.length === 0
-      ) {
+      // Authoritative confirmation guard:
+      // Order must be confirmed by backend:
+      // EITHER paymentStatus === 'CONFIRMED' && status === 'CONFIRMED'
+      // OR COD with status === 'CONFIRMED'
+      // OR verifiedOrder.isConfirmed === true
+      const isConfirmed =
+        Boolean(verifiedOrder.isConfirmed) ||
+        (verifiedOrder.paymentStatus === 'CONFIRMED' && verifiedOrder.status === 'CONFIRMED') ||
+        (verifiedOrder.paymentMethod?.toUpperCase() === 'COD' && verifiedOrder.status === 'CONFIRMED');
+
+      const orderTotal = Number(verifiedOrder.totalAmount);
+
+      if (!verifiedOrder.id || !isConfirmed || isNaN(orderTotal) || orderTotal <= 0) {
         return;
       }
 
+      // Resolve items: use backend verified items if available, or fall back to snapshot stored upon verified payment
+      let orderItems = Array.isArray(verifiedOrder.items) && verifiedOrder.items.length > 0
+        ? verifiedOrder.items
+        : [];
+
+      if (orderItems.length === 0 && typeof sessionStorage !== 'undefined') {
+        try {
+          const storedOrder = sessionStorage.getItem('ora_last_order');
+          if (storedOrder) {
+            const parsed = JSON.parse(storedOrder);
+            if (parsed.orderId === verifiedOrder.id || parsed.orderNumber === verifiedOrder.orderNumber) {
+              if (Array.isArray(parsed.items) && parsed.items.length > 0) {
+                orderItems = parsed.items.map((item: any) => ({
+                  id: item.productId || item.id,
+                  productId: item.productId || item.id,
+                  name: item.name || 'Product',
+                  price: Number(item.price) || 0,
+                  quantity: Number(item.quantity) || 1,
+                  category: item.category,
+                }));
+              }
+            }
+          }
+        } catch {
+          // ignore parse errors
+        }
+      }
+
       // Capture first item's productId for upsell
-      const firstItem = verifiedOrder.items[0];
+      const firstItem = orderItems[0];
       if (firstItem?.productId && !upsellCategoryId) {
         setUpsellCategoryId(firstItem.productId);
       }
@@ -356,15 +398,15 @@ function SuccessContent() {
       const fired = trackPurchase({
         orderId: verifiedOrder.id,
         orderNumber: verifiedOrder.orderNumber,
-        total: Number(verifiedOrder.totalAmount),
-        subtotal: Number(verifiedOrder.subtotal) || Number(verifiedOrder.totalAmount),
+        total: orderTotal,
+        subtotal: Number(verifiedOrder.subtotal) || orderTotal,
         tax: Number(verifiedOrder.taxAmount) || 0,
         shipping: Number(verifiedOrder.shippingCost) || 0,
-        items: verifiedOrder.items.map((item) => ({
+        items: orderItems.map((item) => ({
           id: item.productId || item.id,
           name: item.name,
           price: Number(item.price) || 0,
-          quantity: item.quantity,
+          quantity: Number(item.quantity) || 1,
           category: item.category,
         })),
       });
@@ -423,7 +465,10 @@ function SuccessContent() {
 
       // CASE 2: Online Payment (Razorpay)
       // Check if already confirmed by backend verification endpoint
-      if (fetchedOrder.paymentStatus === 'CONFIRMED' && fetchedOrder.status === 'CONFIRMED') {
+      if (
+        (fetchedOrder.paymentStatus === 'CONFIRMED' && fetchedOrder.status === 'CONFIRMED') ||
+        fetchedOrder.isConfirmed
+      ) {
         clearCart();
         setLoading(false);
         const played = localStorage.getItem(`ora_success_${fetchedOrder.id}`);
