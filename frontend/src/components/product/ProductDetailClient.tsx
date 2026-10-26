@@ -345,6 +345,15 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
       quantity,
       stockQuantity: product.stockQuantity,
     });
+
+    trackAddToCart({
+      id: product.id,
+      name: product.name,
+      price: product.finalPrice,
+      quantity,
+      category: product.category?.name,
+    });
+
     window.location.href = '/checkout';
   };
 

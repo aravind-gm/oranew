@@ -3,6 +3,7 @@
 import { useCartStore } from '@/store/cartStore';
 import { useWishlistStore } from '@/store/wishlistStore';
 import { normalizeImageUrl, isSupabaseImage } from '@/lib/imageUrlHelper';
+import { trackAddToCart } from '@/lib/analytics';
 import { motion } from 'framer-motion';
 import { Heart, ShoppingBag, Star } from 'lucide-react';
 import Image from 'next/image';
@@ -63,6 +64,7 @@ export default function ProductCard({ product, showQuickAdd = true }: ProductCar
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (isAddingToCart) return;
     setIsAddingToCart(true);
     try {
       addItem({
@@ -71,6 +73,13 @@ export default function ProductCard({ product, showQuickAdd = true }: ProductCar
         name: product.name,
         price: product.finalPrice,
         image: primaryImage?.imageUrl || '/oralogo.png',
+        quantity: 1,
+      });
+
+      trackAddToCart({
+        id: product.id,
+        name: product.name,
+        price: product.finalPrice,
         quantity: 1,
       });
     } catch (error) {

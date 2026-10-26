@@ -85,6 +85,8 @@ export default function FrequentlyBoughtTogether({
   };
 
   const handleAddAll = () => {
+    if (added) return;
+
     // Add current product
     const primaryImg = currentProduct.images?.find((i) => i.isPrimary) || currentProduct.images?.[0];
     addItem({
@@ -95,6 +97,13 @@ export default function FrequentlyBoughtTogether({
       image: primaryImg?.imageUrl || '/oralogo.png',
       quantity: 1,
       stockQuantity: 999,
+    });
+
+    trackAddToCart({
+      id: currentProduct.id,
+      name: currentProduct.name,
+      price: currentProduct.finalPrice,
+      quantity: 1,
     });
 
     // Add selected companions

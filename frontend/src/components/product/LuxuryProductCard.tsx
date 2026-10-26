@@ -23,6 +23,7 @@
 import { useCartStore } from '@/store/cartStore';
 import { useCartNotificationStore } from '@/store/cartNotificationStore';
 import { useWishlistStore } from '@/store/wishlistStore';
+import { trackAddToCart } from '@/lib/analytics';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check, Heart, ShoppingBag, Star } from 'lucide-react';
 import Image from 'next/image';
@@ -110,6 +111,12 @@ function LuxuryProductCard({
           name: product.name,
           price: product.finalPrice,
           image: primaryImage?.imageUrl || '/oralogo.png',
+          quantity: 1,
+        });
+        trackAddToCart({
+          id: product.id,
+          name: product.name,
+          price: product.finalPrice,
           quantity: 1,
         });
         showNotification({

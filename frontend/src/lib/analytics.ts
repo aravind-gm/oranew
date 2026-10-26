@@ -158,6 +158,16 @@ function fireFBQ(eventName: string, params: Record<string, unknown>) {
   }
 }
 
+function fireFBQCustom(eventName: string, params: Record<string, unknown>) {
+  try {
+    if (typeof window !== 'undefined' && window.fbq) {
+      window.fbq('trackCustom', eventName, params);
+    }
+  } catch {
+    // Meta Pixel not loaded — silent fail
+  }
+}
+
 // ── Duplicate Purchase Guard ──────────────────────────────────────────
 
 const PURCHASE_STORAGE_KEY = 'ora_tracked_purchases';
@@ -264,12 +274,12 @@ export function trackEvent(
     page_view: 'PageView',
     view_item: 'ViewContent',
     add_to_cart: 'AddToCart',
-    view_cart: 'CustomizeProduct', // closest FB standard
     begin_checkout: 'InitiateCheckout',
     add_payment_info: 'AddPaymentInfo',
     purchase: 'Purchase',
     search: 'Search',
     add_to_wishlist: 'AddToWishlist',
+    customize_product: 'CustomizeProduct', // genuine product customization only
   };
 
   const fbEvent = fbEventMap[eventName];
@@ -370,7 +380,7 @@ export function trackViewCart({ items, total }: CartParams) {
 
   debugLog('view_cart', { ga4: ga4Payload, fb: fbPayload });
   fireGA4('view_cart', ga4Payload);
-  fireFBQ('CustomizeProduct', fbPayload); // FB doesn't have native view_cart
+  fireFBQCustom('ViewCart', fbPayload); // Custom event for cart view (avoids polluting standard CustomizeProduct)
   pushToDataLayer('view_cart', ga4Payload);
 }
 

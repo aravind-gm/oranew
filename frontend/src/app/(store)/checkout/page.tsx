@@ -280,6 +280,7 @@ export default function CheckoutPage() {
   const paymentSectionRef = useRef<HTMLDivElement>(null);
   // Guard: prevents empty-cart redirect from firing after clearCart in payment handler
   const orderCompletedRef = useRef(false);
+  const beginCheckoutTrackedRef = useRef(false);
   
   const [address, setAddress] = useState<ShippingAddress>({
     fullName: '',
@@ -345,6 +346,23 @@ export default function CheckoutPage() {
       router.push('/cart');
     }
   }, [hasHydrated, items.length, router]);
+
+  // Analytics: InitiateCheckout / begin_checkout on load (when hydrated and has items)
+  useEffect(() => {
+    if (!hasHydrated || orderCompletedRef.current || items.length === 0) return;
+    if (beginCheckoutTrackedRef.current) return;
+
+    beginCheckoutTrackedRef.current = true;
+    trackBeginCheckout({
+      items: items.map((item) => ({
+        id: item.productId || item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+      })),
+      total: totalPrice,
+    });
+  }, [hasHydrated, items, totalPrice]);
 
   const handleUseSavedAddress = (saved: SavedAddress) => {
     setAddress(prev => ({
@@ -448,17 +466,6 @@ export default function CheckoutPage() {
   // Validate address and scroll to payment section
   const handleValidateAndProceed = () => {
     if (validateAddressForm()) {
-      // Analytics: begin_checkout
-      trackBeginCheckout({
-        items: items.map((item) => ({
-          id: item.productId || item.id,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-        })),
-        total: totalPrice,
-      });
-
       // Enhanced conversions: send hashed PII
       if (address.email || address.phone) {
         setEnhancedConversions({ email: address.email, phone: address.phone });
@@ -474,6 +481,11 @@ export default function CheckoutPage() {
   const codEligible = totalPrice <= COD_MAX_AMOUNT;
 
   const handlePlaceOrder = async () => {
+    // Enhanced conversions: send hashed PII
+    if (address.email || address.phone) {
+      setEnhancedConversions({ email: address.email, phone: address.phone });
+    }
+
     setLoading(true);
 
     try {

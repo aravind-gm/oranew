@@ -10,7 +10,7 @@
 
 import api from '@/lib/api';
 import { useCartStore } from '@/store/cartStore';
-import { trackEvent } from '@/lib/analytics';
+import { trackAddToCart, trackEvent } from '@/lib/analytics';
 import { Plus, Check } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -67,6 +67,8 @@ export default function CartUpsell() {
     '/oralogo.png';
 
   const handleAdd = () => {
+    if (added) return;
+
     addItem({
       id: `${product.id}-${Date.now()}`,
       productId: product.id,
@@ -78,6 +80,13 @@ export default function CartUpsell() {
     setAdded(true);
 
     try {
+      trackAddToCart({
+        id: product.id,
+        name: product.name,
+        price: product.finalPrice,
+        quantity: 1,
+      });
+
       trackEvent('cart_upsell_add', {
         product_id: product.id,
         product_name: product.name,
@@ -85,7 +94,7 @@ export default function CartUpsell() {
       });
     } catch { /* non-critical */ }
 
-    setTimeout(() => setAdded(true), 2000); // Keep "Added" state
+    setTimeout(() => setAdded(false), 2000); // Revert "Added" state after 2s
   };
 
   return (
