@@ -19,6 +19,7 @@ const CATEGORIES: QuickLinkItem[] = [
   { label: 'Necklaces',   href: '/collections?category=necklaces' },
   { label: 'Rings',       href: '/collections?category=rings' },
   { label: 'Bracelets',   href: '/collections?category=bracelets' },
+  { label: 'Tumblers',    href: '/collections/tumblers' },
   { label: 'Gifts for Her', href: '/collections/gifts-for-her' },
   { label: 'Free Ring Offer', href: '/collections/combos', isSpecial: true },
 ];

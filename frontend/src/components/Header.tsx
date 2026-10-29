@@ -97,6 +97,7 @@ export default function Header() {
     { label: 'Necklaces', href: '/collections?category=necklaces' },
     { label: 'Rings', href: '/collections?category=rings' },
     { label: 'Bracelets', href: '/collections?category=bracelets' },
+    { label: 'Tumblers', href: '/collections/tumblers' },
     { label: 'Gifts for Her', href: '/collections/gifts-for-her' },
     { label: 'New Arrivals', href: '/collections/new-arrivals' },
     { label: 'About', href: '/about-ora' },
@@ -244,14 +245,14 @@ export default function Header() {
       <nav className="bg-oraLight border-b border-oraPink/30 hidden md:block">
         <div className="max-w-7xl mx-auto px-4 lg:px-6">
           {/* Desktop Menu */}
-          <div className="flex items-center h-12 space-x-8">
+          <div className="flex items-center justify-between h-12 w-full overflow-x-auto scrollbar-hide gap-3 lg:gap-6">
             {menuItems.map((item) => {
               const isActive = pathname === item.href;
               return (
               <Link
                 key={`${item.label}-${item.href}`}
                 href={item.href}
-                className={`relative text-sm font-medium transition-colors px-3 py-2 rounded-md hover:bg-oraLight/60 ${
+                className={`relative text-sm font-medium transition-colors px-3 py-2 rounded-md hover:bg-oraLight/60 whitespace-nowrap flex-shrink-0 ${
                   isActive ? 'text-oraAccent font-semibold' : 'text-neutral-900 hover:text-oraAccent'
                 }`}
               >
